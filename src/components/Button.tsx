@@ -19,9 +19,11 @@ export default function Button({
   return (
     <button
       type="button"
-      onClick={() => {
+      onClick={(e) => {
         setActive((prev) => !prev)
         onClick?.()
+        // iOS 등에서 탭 후 sticky hover/focus 잔상 제거
+        e.currentTarget.blur()
       }}
       className={`btn btn-default ${active ? 'btn-active' : ''} ${size} ${className}`.trim()}
     >

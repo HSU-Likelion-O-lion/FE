@@ -105,10 +105,22 @@
     color: var(--color-gray-400);
   }
 
-  .btn-default:hover,
-  .btn-default:focus-visible,
-  .btn-default:active,
   .btn-active {
+    background-color: var(--color-primary-10);
+    color: var(--color-gray-900);
+    box-shadow: var(--shadow-button-hover);
+  }
+
+  /* 모바일 sticky hover 방지 — 마우스가 있는 기기에서만 hover */
+  @media (hover: hover) and (pointer: fine) {
+    .btn-default:hover {
+      background-color: var(--color-primary-10);
+      color: var(--color-gray-900);
+      box-shadow: var(--shadow-button-hover);
+    }
+  }
+
+  .btn-default:focus-visible {
     background-color: var(--color-primary-10);
     color: var(--color-gray-900);
     box-shadow: var(--shadow-button-hover);
