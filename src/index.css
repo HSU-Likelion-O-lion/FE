@@ -1,5 +1,77 @@
 @import 'tailwindcss';
 
+@theme {
+  --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui,
+    sans-serif;
+
+  /* Main / Primary */
+  --color-primary-10: #eff0f9;
+  --color-primary-50: #dfe1f3;
+  --color-primary-100: #ced3ed;
+  --color-primary-200: #bec4e7;
+  --color-primary-300: #9ea6dc;
+  --color-primary-400: #7d89d0;
+  --color-primary-500: #5d6bc4;
+  --color-primary-600: #4a569d;
+  --color-primary-700: #384076;
+  --color-primary-800: #252b4e;
+  --color-primary-900: #1c203b;
+
+  /* Gray */
+  --color-gray-0: #ffffff;
+  --color-gray-50: #f5f6fa;
+  --color-gray-100: #e6e8f0;
+  --color-gray-200: #cdd0dc;
+  --color-gray-300: #a9adbe;
+  --color-gray-400: #868aa0;
+  --color-gray-500: #666a80;
+  --color-gray-600: #4e5266;
+  --color-gray-700: #3a3d4d;
+  --color-gray-800: #262838;
+  --color-gray-900: #16171f;
+
+  /* Typography — letter-spacing -2.5% ≈ -0.025em */
+  --text-display: 32px;
+  --text-display--line-height: 40px;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 700;
+
+  --text-h1: 28px;
+  --text-h1--line-height: 36px;
+  --text-h1--letter-spacing: -0.025em;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 22px;
+  --text-h2--line-height: 30px;
+  --text-h2--letter-spacing: -0.025em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 18px;
+  --text-h3--line-height: 26px;
+  --text-h3--letter-spacing: -0.025em;
+  --text-h3--font-weight: 600;
+
+  --text-body1: 16px;
+  --text-body1--line-height: 24px;
+  --text-body1--letter-spacing: -0.025em;
+  --text-body1--font-weight: 400;
+
+  --text-button: 16px;
+  --text-button--line-height: 20px;
+  --text-button--letter-spacing: -0.025em;
+  --text-button--font-weight: 600;
+
+  --text-body2: 14px;
+  --text-body2--line-height: 20px;
+  --text-body2--letter-spacing: -0.025em;
+  --text-body2--font-weight: 400;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 26px;
+  --text-caption--letter-spacing: -0.025em;
+  --text-caption--font-weight: 400;
+}
+
 html,
 body,
 #root {
@@ -8,4 +80,9 @@ body,
 
 body {
   margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-gray-900);
+  background-color: var(--color-gray-0);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

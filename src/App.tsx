@@ -1,9 +1,16 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import HomePage from './pages/HomePage'
+import TestPage from './pages/TestPage'
+
 function App() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-stone-50 px-6 text-stone-900">
-      <h1 className="text-3xl font-semibold tracking-tight">O-lion</h1>
-      <p className="text-stone-600">React + Vite + TypeScript + Tailwind + PWA</p>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/test" element={<TestPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
