@@ -1,6 +1,11 @@
+import { useState } from "react";
+import NavigationBar, { type NavTab } from "../components/NavigationBar";
+
 export default function TestPage() {
+  const [activeTab, setActiveTab] = useState<NavTab>("mate");
+
   return (
-    <main className="min-h-dvh bg-gray-0 px-6 py-10 text-gray-900 md:px-10">
+    <main className="min-h-dvh bg-gray-0 px-6 pb-28 pt-10 text-gray-900 md:px-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-16">
         <header className="flex flex-col gap-2">
           <p className="text-caption text-primary-500">Design System</p>
@@ -187,6 +192,10 @@ export default function TestPage() {
             </div>
           </div>
         </section>
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 bg-[#fdfdff] pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
+        <NavigationBar active={activeTab} onChange={setActiveTab} />
       </div>
     </main>
   );
