@@ -1,5 +1,6 @@
 import { useState } from "react";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
+import Button from "../components/Button";
 
 export default function TestPage() {
   const [activeTab, setActiveTab] = useState<NavTab>("mate");
@@ -9,11 +10,27 @@ export default function TestPage() {
       <div className="mx-auto flex max-w-5xl flex-col gap-16">
         <header className="flex flex-col gap-2">
           <p className="text-caption text-primary-500">Design System</p>
-          <h1 className="text-display">O-lion Tokens</h1>
+          <h1 className="text-display">O-lion Test Page</h1>
           <p className="text-body1 text-gray-500">
-            Figma Typography · Main Colors · Gray Colors 적용 확인
+            Figma Typography · Main Colors · Gray Colors · Button 적용 확인
           </p>
         </header>
+
+        <section className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-h2">Button</h2>
+            <p className="text-body2 text-gray-500">
+              text/color/effect 고정 - size 변경 가능
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button
+              text="버튼입니다"
+              size="px-5 py-3"
+              onClick={() => console.log("clicked")}
+            />
+          </div>
+        </section>
 
         <section className="flex flex-col gap-6">
           <div className="flex flex-col gap-1">

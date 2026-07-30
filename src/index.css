@@ -1,8 +1,9 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @theme {
-  --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui,
-    sans-serif;
+  --font-sans:
+    "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont,
+    system-ui, sans-serif;
 
   /* Main / Primary */
   --color-primary-10: #eff0f9;
@@ -70,6 +71,48 @@
   --text-caption--line-height: 26px;
   --text-caption--letter-spacing: -0.025em;
   --text-caption--font-weight: 400;
+
+  /* Button typography */
+  --text-button1: 16px;
+  --text-button1--line-height: 1.6;
+  --text-button1--letter-spacing: -0.025em;
+  --text-button1--font-weight: 500;
+
+  /* Button shape / effect (버튼 자체 사이즈 제외) */
+  --radius-button: 16px;
+  --shadow-button-hover: 0 0 2px var(--color-primary-500);
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-button);
+    font-size: var(--text-button1);
+    line-height: var(--text-button1--line-height);
+    letter-spacing: var(--text-button1--letter-spacing);
+    font-weight: var(--text-button1--font-weight);
+    text-align: center;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .btn-default {
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-400);
+  }
+
+  .btn-default:hover,
+  .btn-default:focus-visible,
+  .btn-default:active,
+  .btn-active {
+    background-color: var(--color-primary-10);
+    color: var(--color-gray-900);
+    box-shadow: var(--shadow-button-hover);
+  }
 }
 
 html,
