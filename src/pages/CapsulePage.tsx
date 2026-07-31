@@ -25,7 +25,7 @@ export default function CapsulePage() {
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden">
-      {/* 배경 */}
+      {/* 배경 — safe area 포함 전체 채움 */}
       <div aria-hidden className="absolute inset-0">
         <img
           src={capsuleBg}
@@ -37,8 +37,8 @@ export default function CapsulePage() {
         <div className="absolute inset-x-0 bottom-0 h-[550px] bg-[linear-gradient(0deg,#EFF0F9_80%,transparent_100%)]" />
       </div>
 
-      {/* 상단 헤더 */}
-      <header className="relative z-10 flex items-center px-5 pt-[24px]">
+      {/* 상단 헤더 — safe-area 만큼만 콘텐츠 내림 */}
+      <header className="relative z-10 flex items-center px-5 pt-[calc(24px+env(safe-area-inset-top))]">
         <button
           type="button"
           aria-label="뒤로가기"
