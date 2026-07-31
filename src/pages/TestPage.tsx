@@ -1,9 +1,12 @@
 import { useState } from "react";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
 import Button from "../components/Button";
+import Input from "../components/Input";
 
 export default function TestPage() {
-  const [activeTab, setActiveTab] = useState<NavTab>("mate");
+  const [activeTab, setActiveTab] = useState<NavTab>("drawer");
+  const [inputValue, setInputValue] = useState("");
+  const [showError, setShowError] = useState(false);
 
   return (
     <main className="min-h-dvh bg-gray-0 px-6 pb-28 pt-10 text-gray-900 md:px-10">
@@ -15,6 +18,31 @@ export default function TestPage() {
             Figma Typography · Main Colors · Gray Colors · Button 적용 확인
           </p>
         </header>
+
+        <section className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-h2">Input</h2>
+            <p className="text-body2 text-gray-500">
+              기본 → 포커스 → 입력완료 → 오류
+            </p>
+          </div>
+          <div className="flex max-w-[313px] flex-col gap-3">
+            <Input
+              value={inputValue}
+              onChange={(e) => {
+                setInputValue(e.target.value);
+                if (showError) setShowError(false);
+              }}
+              error={showError}
+              placeholder="입력해주세요."
+            />
+            <Button
+              text={showError ? "오류 해제" : "오류 상태로"}
+              size="px-5 py-3"
+              onClick={() => setShowError((prev) => !prev)}
+            />
+          </div>
+        </section>
 
         <section className="flex flex-col gap-6">
           <div className="flex flex-col gap-1">
@@ -211,7 +239,7 @@ export default function TestPage() {
         </section>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-[#fdfdff] pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
+      <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
         <NavigationBar active={activeTab} onChange={setActiveTab} />
       </div>
     </main>

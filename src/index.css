@@ -31,6 +31,13 @@
   --color-gray-800: #262838;
   --color-gray-900: #16171f;
 
+  /* Error */
+  --color-error: #f37490;
+  --color-error-bg: rgba(243, 116, 144, 0.06);
+
+  /* Surface */
+  --color-white: #fdfdff;
+
   /* Typography — letter-spacing -2.5% ≈ -0.025em */
   --text-display: 32px;
   --text-display--line-height: 40px;
@@ -81,6 +88,10 @@
   /* Button shape / effect (버튼 자체 사이즈 제외) */
   --radius-button: 16px;
   --shadow-button-hover: 0 0 2px var(--color-primary-500);
+
+  /* Input */
+  --radius-input: 16px;
+  --shadow-input-focus: 0 0 3px var(--color-primary-500);
 }
 
 @layer components {
