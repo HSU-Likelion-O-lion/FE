@@ -1,6 +1,6 @@
 import { useState } from "react";
-import mateActive from "../assets/nav/mate-active.svg";
-import mateInactive from "../assets/nav/mate-inactive.svg";
+import libraryActive from "../assets/nav/library-active.svg";
+import libraryInactive from "../assets/nav/library-inactive.svg";
 import drawerActive from "../assets/nav/drawer-active.svg";
 import drawerInactive from "../assets/nav/drawer-inactive.svg";
 import shelterActive from "../assets/nav/shelter-active.svg";
@@ -9,7 +9,7 @@ import profileActive from "../assets/nav/profile-active.svg";
 import profileInactive from "../assets/nav/profile-inactive.svg";
 import centerIcon from "../assets/nav/center-icon.svg";
 
-export type NavTab = "mate" | "drawer" | "center" | "shelter" | "profile";
+export type NavTab = "library" | "drawer" | "center" | "shelter" | "profile";
 
 type NavigationBarProps = {
   active: NavTab;
@@ -19,16 +19,16 @@ type NavigationBarProps = {
 
 const tabs = [
   {
-    id: "mate" as const,
-    label: "메이트",
-    activeIcon: mateActive,
-    inactiveIcon: mateInactive,
-  },
-  {
     id: "drawer" as const,
     label: "서랍",
     activeIcon: drawerActive,
     inactiveIcon: drawerInactive,
+  },
+  {
+    id: "library" as const,
+    label: "서재",
+    activeIcon: libraryActive,
+    inactiveIcon: libraryInactive,
   },
   {
     id: "shelter" as const,
@@ -65,7 +65,7 @@ function NavItem({
       onClick={onClick}
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}
-      className="flex h-16 w-[78.6px] shrink-0 flex-col items-center justify-center gap-1 overflow-hidden px-[26px] py-2"
+      className="flex h-16 w-full min-w-0 flex-col items-center justify-center gap-1 overflow-hidden px-1 py-2"
     >
       <span className="relative size-[26px] shrink-0">
         <img
@@ -84,7 +84,7 @@ function NavItem({
         />
       </span>
       <span
-        className={`text-caption whitespace-nowrap flex h-4.5 items-center justify-center ${
+        className={`flex h-4.5 items-center justify-center whitespace-nowrap text-caption ${
           highlighted ? "text-primary-500" : "text-gray-900"
         }`}
       >
@@ -108,7 +108,7 @@ export default function NavigationBar({
 
   return (
     <nav
-      className={`relative mx-auto flex w-full max-w-[393px] items-center bg-[#fdfdff] ${className}`}
+      className={`relative mx-auto grid w-full max-w-[393px] grid-cols-5 items-center bg-white ${className}`}
       aria-label="하단 내비게이션"
     >
       {leftTabs.map((tab) => (
@@ -123,7 +123,7 @@ export default function NavigationBar({
         />
       ))}
 
-      <div className="relative h-16 w-[78.6px] shrink-0">
+      <div className="relative h-16 w-full min-w-0">
         {isOn("center") && (
           <span className="absolute bottom-[10px] left-1/2 size-1.5 -translate-x-1/2 rounded-full bg-[#172793]" />
         )}
