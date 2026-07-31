@@ -76,7 +76,7 @@ export default function FocusTimeModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="focus-time-modal-title"
-        className="relative z-10 w-full max-w-[393px] rounded-t-[24px] bg-white pb-[env(safe-area-inset-bottom)] will-change-transform"
+        className="relative z-10 w-full max-w-[430px] rounded-t-[24px] bg-white pb-[env(safe-area-inset-bottom)] will-change-transform"
         style={{
           transform: `translateY(${dragY}px)`,
           transition: dragging ? "none" : "transform 200ms ease-out",

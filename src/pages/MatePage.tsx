@@ -56,7 +56,7 @@ export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
   const hasBooks = books.length > 0;
 
   return (
-    <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] flex-col bg-white pb-[97px]">
+    <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px]">
       <header className="flex items-center gap-3 px-5 pt-[23px]">
         <h1 className="min-w-0 flex-1 text-h2 text-gray-900">
           이번 주 독서 기록

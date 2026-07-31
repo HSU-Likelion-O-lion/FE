@@ -24,7 +24,7 @@ export default function CapsulePage() {
   const navigate = useNavigate();
 
   return (
-    <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] flex-col overflow-hidden">
+    <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden">
       {/* 배경 */}
       <div aria-hidden className="absolute inset-0">
         <img

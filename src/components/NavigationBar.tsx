@@ -108,7 +108,7 @@ export default function NavigationBar({
 
   return (
     <nav
-      className={`relative mx-auto grid w-full max-w-[393px] grid-cols-5 items-center bg-white ${className}`}
+      className={`relative mx-auto grid w-full max-w-[430px] grid-cols-5 items-center bg-white ${className}`}
       aria-label="하단 내비게이션"
     >
       {leftTabs.map((tab) => (
