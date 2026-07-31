@@ -38,7 +38,7 @@ export default function CapsulePage() {
       </div>
 
       {/* 상단 헤더 */}
-      <header className="relative z-10 flex items-center px-5 pt-[84px]">
+      <header className="relative z-10 flex items-center px-5 pt-[24px]">
         <button
           type="button"
           aria-label="뒤로가기"
