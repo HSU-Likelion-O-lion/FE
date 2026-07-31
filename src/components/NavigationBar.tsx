@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import libraryActive from "../assets/nav/library-active.svg";
 import libraryInactive from "../assets/nav/library-inactive.svg";
 import drawerActive from "../assets/nav/drawer-active.svg";
@@ -10,6 +11,11 @@ import profileInactive from "../assets/nav/profile-inactive.svg";
 import centerIcon from "../assets/nav/center-icon.svg";
 
 export type NavTab = "library" | "drawer" | "center" | "shelter" | "profile";
+
+/** 탭별 경로 — 아직 없는 페이지는 생략 */
+const TAB_PATHS: Partial<Record<NavTab, string>> = {
+  center: "/mate",
+};
 
 type NavigationBarProps = {
   active: NavTab;
@@ -99,12 +105,19 @@ export default function NavigationBar({
   className = "",
   onChange,
 }: NavigationBarProps) {
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState<NavTab | null>(null);
 
   const leftTabs = tabs.slice(0, 2);
   const rightTabs = tabs.slice(2);
 
   const isOn = (tab: NavTab) => active === tab || hovered === tab;
+
+  const handleTabClick = (tab: NavTab) => {
+    onChange?.(tab);
+    const path = TAB_PATHS[tab];
+    if (path) navigate(path);
+  };
 
   return (
     <nav
@@ -118,7 +131,7 @@ export default function NavigationBar({
           activeIcon={tab.activeIcon}
           inactiveIcon={tab.inactiveIcon}
           highlighted={isOn(tab.id)}
-          onClick={() => onChange?.(tab.id)}
+          onClick={() => handleTabClick(tab.id)}
           onHoverChange={(isHovered) => setHovered(isHovered ? tab.id : null)}
         />
       ))}
@@ -129,9 +142,9 @@ export default function NavigationBar({
         )}
         <button
           type="button"
-          aria-label="작성"
+          aria-label="메이트"
           aria-current={active === "center" ? "page" : undefined}
-          onClick={() => onChange?.("center")}
+          onClick={() => handleTabClick("center")}
           onMouseEnter={() => setHovered("center")}
           onMouseLeave={() => setHovered(null)}
           className="absolute left-1/2 top-[-14px] flex size-[54px] -translate-x-1/2 items-center justify-center rounded-full bg-linear-to-b from-primary-500 to-[#0D1E8D]"
@@ -147,7 +160,7 @@ export default function NavigationBar({
           activeIcon={tab.activeIcon}
           inactiveIcon={tab.inactiveIcon}
           highlighted={isOn(tab.id)}
-          onClick={() => onChange?.(tab.id)}
+          onClick={() => handleTabClick(tab.id)}
           onHoverChange={(isHovered) => setHovered(isHovered ? tab.id : null)}
         />
       ))}
