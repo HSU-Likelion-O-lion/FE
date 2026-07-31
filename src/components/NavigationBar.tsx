@@ -1,6 +1,6 @@
 import { useState } from "react";
-import mateActive from "../assets/nav/mate-active.svg";
-import mateInactive from "../assets/nav/mate-inactive.svg";
+import libraryActive from "../assets/nav/library-active.svg";
+import libraryInactive from "../assets/nav/library-inactive.svg";
 import drawerActive from "../assets/nav/drawer-active.svg";
 import drawerInactive from "../assets/nav/drawer-inactive.svg";
 import shelterActive from "../assets/nav/shelter-active.svg";
@@ -9,7 +9,7 @@ import profileActive from "../assets/nav/profile-active.svg";
 import profileInactive from "../assets/nav/profile-inactive.svg";
 import centerIcon from "../assets/nav/center-icon.svg";
 
-export type NavTab = "mate" | "drawer" | "center" | "shelter" | "profile";
+export type NavTab = "library" | "drawer" | "center" | "shelter" | "profile";
 
 type NavigationBarProps = {
   active: NavTab;
@@ -19,16 +19,16 @@ type NavigationBarProps = {
 
 const tabs = [
   {
-    id: "mate" as const,
-    label: "메이트",
-    activeIcon: mateActive,
-    inactiveIcon: mateInactive,
-  },
-  {
     id: "drawer" as const,
     label: "서랍",
     activeIcon: drawerActive,
     inactiveIcon: drawerInactive,
+  },
+  {
+    id: "library" as const,
+    label: "서재",
+    activeIcon: libraryActive,
+    inactiveIcon: libraryInactive,
   },
   {
     id: "shelter" as const,
@@ -108,7 +108,7 @@ export default function NavigationBar({
 
   return (
     <nav
-      className={`relative mx-auto flex w-full max-w-[393px] items-center bg-[#fdfdff] ${className}`}
+      className={`relative mx-auto flex w-full max-w-[393px] items-center bg-white ${className}`}
       aria-label="하단 내비게이션"
     >
       {leftTabs.map((tab) => (
