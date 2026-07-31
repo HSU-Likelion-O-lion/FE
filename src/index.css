@@ -138,11 +138,16 @@
   }
 }
 
-html,
-body,
-#root {
-  min-height: 100%;
+/* FocusTimerPopup 시작 인트로 — RING_CIRCUMFERENCE = 2π * 151 */
+@keyframes focus-timer-ring-intro {
+  from {
+    stroke-dashoffset: 948.176;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
+
 
 body {
   margin: 0;

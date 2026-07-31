@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
 import bookCover from "../assets/mate/book-cover.png";
@@ -7,6 +7,10 @@ import iconCapsule from "../assets/mate/icon-capsule.svg";
 import MateBookSection from "../components/mate/MateBookSection";
 import MateEmptySection from "../components/mate/MateEmptySection";
 import FocusTimeModal from "../components/mate/FocusTimeModal";
+import FocusTimerPopup, {
+  clearFocusTimerSession,
+  loadFocusTimerSession,
+} from "../components/mate/FocusTimerPopup";
 import type { MateBookItem, MateBooks } from "../components/mate/types";
 
 export type { MateBookItem, MateBooks };
@@ -53,7 +57,33 @@ export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
   const [activeTab, setActiveTab] = useState<NavTab>("center");
   const [selectedDate, setSelectedDate] = useState(11);
   const [focusModalOpen, setFocusModalOpen] = useState(false);
+  const [timerOpen, setTimerOpen] = useState(false);
+  const [timerMinutes, setTimerMinutes] = useState(15);
+  const [timerInitialRemaining, setTimerInitialRemaining] = useState<
+    number | undefined
+  >();
+  const [timerInitialPaused, setTimerInitialPaused] = useState<
+    boolean | undefined
+  >();
+  const [timerStartKey, setTimerStartKey] = useState(0);
   const hasBooks = books.length > 0;
+
+  // 앱 종료 후 재진입 시 세션 복구
+  useEffect(() => {
+    const session = loadFocusTimerSession();
+    if (!session) return;
+    setTimerMinutes(session.minutes);
+    setTimerInitialRemaining(session.remainingSeconds);
+    setTimerInitialPaused(true);
+    setTimerOpen(true);
+  }, []);
+
+  const closeTimer = useCallback(() => {
+    clearFocusTimerSession();
+    setTimerOpen(false);
+    setTimerInitialRemaining(undefined);
+    setTimerInitialPaused(undefined);
+  }, []);
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px]">
@@ -146,6 +176,23 @@ export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
       <FocusTimeModal
         open={focusModalOpen}
         onClose={() => setFocusModalOpen(false)}
+        onSelect={(minutes) => {
+          clearFocusTimerSession();
+          setTimerInitialRemaining(undefined);
+          setTimerInitialPaused(undefined);
+          setTimerMinutes(minutes);
+          setTimerStartKey((key) => key + 1);
+          setTimerOpen(true);
+        }}
+      />
+
+      <FocusTimerPopup
+        open={timerOpen}
+        minutes={timerMinutes}
+        initialRemaining={timerInitialRemaining}
+        initialPaused={timerInitialPaused}
+        startKey={timerStartKey}
+        onClose={closeTimer}
       />
     </main>
   );

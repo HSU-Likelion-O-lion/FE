@@ -116,6 +116,7 @@ export default function FocusTimeModal({
               onClick={() => {
                 setSelected(option.minutes);
                 onSelect?.(option.minutes);
+                onClose();
               }}
             />
           ))}

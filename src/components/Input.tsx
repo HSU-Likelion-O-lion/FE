@@ -4,13 +4,8 @@ import {
   type ChangeEvent,
   type FocusEvent,
   type InputHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from "react";
-
-// html input 속성 중 size 제외한 속성
-type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & {
-  error?: boolean;
-  className?: string;
-};
 
 type FieldState = "default" | "focus" | "filled" | "error";
 
@@ -48,18 +43,39 @@ function resolveState({
   return "default";
 }
 
-export default function Input({
-  error = false,
-  className = "",
-  value,
-  defaultValue,
-  placeholder = "입력해주세요.",
-  onFocus,
-  onBlur,
-  onChange,
-  id,
-  ...rest
-}: InputProps) {
+type CommonProps = {
+  error?: boolean;
+  className?: string;
+  multiline?: boolean;
+};
+
+type SingleLineProps = CommonProps &
+  Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & {
+    multiline?: false;
+  };
+
+type MultiLineProps = CommonProps &
+  Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> & {
+    multiline: true;
+  };
+
+type InputProps = SingleLineProps | MultiLineProps;
+
+export default function Input(props: InputProps) {
+  const {
+    error = false,
+    className = "",
+    value,
+    defaultValue,
+    placeholder = "입력해주세요.",
+    onFocus,
+    onBlur,
+    onChange,
+    id,
+    multiline = false,
+    ...rest
+  } = props;
+
   const autoId = useId();
   const inputId = id ?? autoId;
   const [focused, setFocused] = useState(false);
@@ -70,6 +86,51 @@ export default function Input({
   const hasValue = currentValue.length > 0;
   const state = resolveState({ error, focused, hasValue });
 
+  const sharedClassName = [
+    "w-full rounded-[var(--radius-input)] px-5 py-3 outline-none transition-[background-color,box-shadow,border-color,color] duration-150",
+    multiline ? "h-[139px] resize-none" : "h-[54px]",
+    fieldStyles[state],
+    textStyles[state],
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (multiline) {
+    const textareaRest =
+      rest as Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size">;
+
+    return (
+      <textarea
+        id={inputId}
+        value={isControlled ? value : undefined}
+        defaultValue={isControlled ? undefined : defaultValue}
+        placeholder={placeholder}
+        aria-invalid={error || undefined}
+        onFocus={(e: FocusEvent<HTMLTextAreaElement>) => {
+          setFocused(true);
+          (onFocus as TextareaHTMLAttributes<HTMLTextAreaElement>["onFocus"])?.(
+            e,
+          );
+        }}
+        onBlur={(e: FocusEvent<HTMLTextAreaElement>) => {
+          setFocused(false);
+          (onBlur as TextareaHTMLAttributes<HTMLTextAreaElement>["onBlur"])?.(e);
+        }}
+        onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+          if (!isControlled) setUncontrolled(e.target.value);
+          (
+            onChange as TextareaHTMLAttributes<HTMLTextAreaElement>["onChange"]
+          )?.(e);
+        }}
+        className={sharedClassName}
+        {...textareaRest}
+      />
+    );
+  }
+
+  const inputRest = rest as Omit<InputHTMLAttributes<HTMLInputElement>, "size">;
+
   return (
     <input
       id={inputId}
@@ -79,25 +140,18 @@ export default function Input({
       aria-invalid={error || undefined}
       onFocus={(e: FocusEvent<HTMLInputElement>) => {
         setFocused(true);
-        onFocus?.(e);
+        (onFocus as InputHTMLAttributes<HTMLInputElement>["onFocus"])?.(e);
       }}
       onBlur={(e: FocusEvent<HTMLInputElement>) => {
         setFocused(false);
-        onBlur?.(e);
+        (onBlur as InputHTMLAttributes<HTMLInputElement>["onBlur"])?.(e);
       }}
       onChange={(e: ChangeEvent<HTMLInputElement>) => {
         if (!isControlled) setUncontrolled(e.target.value);
-        onChange?.(e);
+        (onChange as InputHTMLAttributes<HTMLInputElement>["onChange"])?.(e);
       }}
-      className={[
-        "h-[54px] w-full rounded-[var(--radius-input)] px-5 py-3 outline-none transition-[background-color,box-shadow,border-color,color] duration-150",
-        fieldStyles[state],
-        textStyles[state],
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      {...rest}
+      className={sharedClassName}
+      {...inputRest}
     />
   );
 }
