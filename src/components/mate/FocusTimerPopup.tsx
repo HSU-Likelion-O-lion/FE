@@ -331,7 +331,7 @@ export default function FocusTimerPopup({
       </div>
 
       {/* 헤더 */}
-      <header className="relative z-10 flex items-center justify-center px-5 pt-[calc(30px+env(safe-area-inset-top))]">
+      <header className="relative z-10 flex items-center justify-center px-5 pt-[30px]">
         <h1 id="focus-timer-title" className="text-center text-h3 text-white">
           오롯이 글에 집중하는 시간
         </h1>

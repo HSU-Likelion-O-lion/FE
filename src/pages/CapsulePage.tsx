@@ -37,8 +37,7 @@ export default function CapsulePage() {
         <div className="absolute inset-x-0 bottom-0 h-[550px] bg-[linear-gradient(0deg,#EFF0F9_80%,transparent_100%)]" />
       </div>
 
-      {/* 상단 헤더 — safe-area 만큼만 콘텐츠 내림 */}
-      <header className="relative z-10 flex items-center px-5 pt-[calc(24px+env(safe-area-inset-top))]">
+      <header className="relative z-10 flex items-center px-5 pt-[24px]">
         <button
           type="button"
           aria-label="뒤로가기"
