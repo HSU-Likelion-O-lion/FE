@@ -14,6 +14,8 @@ const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const FOCUS_TIMER_KEY = "olion:focus-timer";
+/** 타이머 0초 완료 시에만 목표달성/생각적기 라우트 진입 가능 */
+const FOCUS_COMPLETE_KEY = "olion:focus-complete";
 const HISTORY_STATE = { focusTimer: true } as const;
 /** 시작 시 링이 비움→채움으로 한 바퀴 도는 시간 */
 const RING_INTRO_MS = 500;
@@ -28,6 +30,10 @@ export type FocusTimerSession = {
   minutes: number;
   remainingSeconds: number;
   paused: boolean;
+};
+
+export type FocusCompleteSession = {
+  minutes: number;
 };
 
 export function loadFocusTimerSession(): FocusTimerSession | null {
@@ -56,6 +62,29 @@ function saveFocusTimerSession(session: FocusTimerSession) {
   localStorage.setItem(FOCUS_TIMER_KEY, JSON.stringify(session));
 }
 
+export function markFocusComplete(minutes: number) {
+  sessionStorage.setItem(
+    FOCUS_COMPLETE_KEY,
+    JSON.stringify({ minutes } satisfies FocusCompleteSession),
+  );
+}
+
+export function loadFocusComplete(): FocusCompleteSession | null {
+  try {
+    const raw = sessionStorage.getItem(FOCUS_COMPLETE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as FocusCompleteSession;
+    if (typeof data.minutes !== "number" || data.minutes <= 0) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function clearFocusComplete() {
+  sessionStorage.removeItem(FOCUS_COMPLETE_KEY);
+}
+
 type FocusTimerPopupProps = {
   open: boolean;
   minutes: number;
@@ -66,6 +95,8 @@ type FocusTimerPopupProps = {
   /** 새 타이머 시작마다 바꿔 인트로를 다시 재생 */
   startKey?: number;
   onClose: () => void;
+  /** 타이머가 0초가 되어 정상 완료됐을 때 */
+  onComplete?: (minutes: number) => void;
 };
 
 function pad2(n: number) {
@@ -79,6 +110,7 @@ export default function FocusTimerPopup({
   initialPaused = false,
   startKey = 0,
   onClose,
+  onComplete,
 }: FocusTimerPopupProps) {
   const totalSeconds = minutes * 60;
   const isRestore = initialRemaining != null;
@@ -95,8 +127,11 @@ export default function FocusTimerPopup({
 
   const remainingRef = useRef(remaining);
   const skipPopRef = useRef(false);
+  const completedRef = useRef(false);
   const onCloseRef = useRef(onClose);
+  const onCompleteRef = useRef(onComplete);
   onCloseRef.current = onClose;
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     remainingRef.current = remaining;
@@ -116,11 +151,13 @@ export default function FocusTimerPopup({
     if (!open) {
       setIntroDone(false);
       setRingTransition(false);
+      completedRef.current = false;
       return;
     }
 
     const nextRemaining = initialRemaining ?? minutes * 60;
     setRemaining(nextRemaining);
+    completedRef.current = false;
 
     if (isRestore) {
       setPaused(initialPaused ?? true);
@@ -151,6 +188,16 @@ export default function FocusTimerPopup({
 
     return () => window.clearTimeout(timeoutId);
   }, [open, minutes, initialRemaining, initialPaused, isRestore, startKey]);
+
+  // 0초 완료 → 목표달성으로 자동 이동 (닫기/중도와 구분)
+  useEffect(() => {
+    if (!open || !introDone || remaining !== 0 || completedRef.current) return;
+
+    completedRef.current = true;
+    clearFocusTimerSession();
+    markFocusComplete(minutes);
+    onCompleteRef.current?.(minutes);
+  }, [open, introDone, remaining, minutes]);
 
   // body scroll lock
   useEffect(() => {
@@ -213,7 +260,7 @@ export default function FocusTimerPopup({
 
   // 카운트다운 (인트로 끝난 뒤에만)
   useEffect(() => {
-    if (!open || paused || !introDone) return;
+    if (!open || paused || !introDone || remaining <= 0) return;
 
     const tickMs = 1000 / DEV_TIMER_SPEED;
     const id = window.setInterval(() => {
@@ -233,7 +280,7 @@ export default function FocusTimerPopup({
     }, tickMs);
 
     return () => window.clearInterval(id);
-  }, [open, paused, minutes, introDone]);
+  }, [open, paused, minutes, introDone, remaining]);
 
   const handleClose = () => {
     clearFocusTimerSession();
