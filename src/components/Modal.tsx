@@ -1,28 +1,52 @@
 import type { ReactNode } from "react";
+import Button from "./Button";
 import iconModalClose from "../assets/mate/icon-modal-close.svg";
+import iconAlertInfo from "../assets/common/icon-alert-info.svg";
+import iconAlertSuccess from "../assets/common/icon-alert-success.svg";
+import iconAlertWarning from "../assets/common/icon-alert-warning.svg";
+
+export type ModalStatus = "info" | "success" | "warning";
+
+export type ModalAction = {
+  label: string;
+  onClick: () => void;
+  /** primary: 채움 CTA / outline: 보조 (기본: 마지막 액션이 primary) */
+  variant?: "primary" | "outline";
+};
 
 type ModalProps = {
   open: boolean;
-  title: string;
+  title: ReactNode;
   description?: ReactNode;
   onClose: () => void;
   children?: ReactNode;
   /**
-   * default: 좌측 정렬 + X 버튼
-   * alert: 아이콘 + 가운데 정렬 안내창
+   * default: 좌측 정렬 + X (옵션 리스트 등)
+   * alert: 아이콘 + 가운데 정렬 확인/안내창 (Figma Modal 컴포넌트)
    */
   variant?: "default" | "alert";
-  /** alert에서 상단에 노출할 아이콘 경로 */
+  /** alert 상태 아이콘 — info(!) / success(✓) / warning(△) */
+  status?: ModalStatus;
+  /** status 대신 커스텀 아이콘 경로 */
   iconSrc?: string;
+  /** alert 하단 액션 버튼 (1개: full / 2개: 좌 outline·우 primary) */
+  actions?: ModalAction[];
   /** 딤 클릭으로 닫기 (기본 default만 true) */
   closeOnBackdrop?: boolean;
   /** 우상단 X 버튼 (기본 default만 true) */
   showClose?: boolean;
 };
 
+const STATUS_ICONS: Record<ModalStatus, string> = {
+  info: iconAlertInfo,
+  success: iconAlertSuccess,
+  warning: iconAlertWarning,
+};
+
 /**
  * 공통 모달 셸.
- * title / description / children 만 바꿔 여러 화면에서 재사용.
+ * - default: title / description / children (ModalOptionList 등)
+ * - alert: status 아이콘 + actions (Figma 공용 Modal variation)
  */
 export default function Modal({
   open,
@@ -31,7 +55,9 @@ export default function Modal({
   onClose,
   children,
   variant = "default",
+  status = "info",
   iconSrc,
+  actions,
   closeOnBackdrop,
   showClose,
 }: ModalProps) {
@@ -40,6 +66,8 @@ export default function Modal({
   const isAlert = variant === "alert";
   const canCloseOnBackdrop = closeOnBackdrop ?? !isAlert;
   const withClose = showClose ?? !isAlert;
+  const resolvedIcon = iconSrc ?? (isAlert ? STATUS_ICONS[status] : undefined);
+  const hasActions = actions != null && actions.length > 0;
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-5">
@@ -56,10 +84,10 @@ export default function Modal({
         aria-labelledby="app-modal-title"
         className="relative z-10 w-full max-w-[353px] rounded-[20px] bg-white p-5"
       >
-        {isAlert && iconSrc && (
+        {isAlert && resolvedIcon && (
           <div className="flex justify-center">
             <img
-              src={iconSrc}
+              src={resolvedIcon}
               alt=""
               aria-hidden
               className="size-[68px] object-contain"
@@ -80,14 +108,20 @@ export default function Modal({
             id="app-modal-title"
             className={
               isAlert
-                ? "text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-900"
+                ? "text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-[#282723]"
                 : "text-h2 text-gray-900"
             }
           >
             {title}
           </h2>
           {description != null && (
-            <div className="mt-1 text-[14px] leading-[23px] tracking-[-0.025em] text-gray-400">
+            <div
+              className={
+                isAlert
+                  ? "mt-1 text-[14px] leading-[23px] tracking-[-0.025em] text-[#8e8b7e]"
+                  : "mt-1 text-[14px] leading-[23px] tracking-[-0.025em] text-gray-400"
+              }
+            >
               {description}
             </div>
           )}
@@ -109,6 +143,30 @@ export default function Modal({
 
         {children != null && (
           <div className={isAlert ? "mt-5" : "mt-6"}>{children}</div>
+        )}
+
+        {hasActions && (
+          <div
+            className={`flex gap-3 ${children != null ? "mt-3" : "mt-5"} ${
+              actions.length === 1 ? "flex-col" : ""
+            }`}
+          >
+            {actions.map((action, index) => {
+              const isLast = index === actions.length - 1;
+              const buttonVariant =
+                action.variant ?? (isLast ? "primary" : "outline");
+
+              return (
+                <Button
+                  key={`${action.label}-${index}`}
+                  text={action.label}
+                  variant={buttonVariant}
+                  size="h-[52px] flex-1 px-5 py-3"
+                  onClick={action.onClick}
+                />
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

@@ -4,8 +4,6 @@ import timerGlow from "../../assets/mate/timer-glow.svg";
 import iconClose from "../../assets/mate/icon-close.svg";
 import iconPause from "../../assets/mate/icon-pause.svg";
 import iconPlay from "../../assets/mate/icon-play.svg";
-import iconAlertCircle from "../../assets/mate/icon-alert-circle.svg";
-import Button from "../Button";
 import Modal from "../Modal";
 import { PauseReasonOptions } from "../ModalOptionList";
 import PauseDetailForm from "./PauseDetailForm";
@@ -484,28 +482,19 @@ export default function FocusTimerPopup({
       <Modal
         open={pauseModalOpen && pauseStep === "confirm"}
         variant="alert"
-        iconSrc={iconAlertCircle}
+        status="info"
         title="읽다만 기록이 있어요"
         description="이전에 측정하던 집중 시간이 저장되어 있습니다."
         onClose={handleResumeReading}
-      >
-        <div className="flex gap-3">
-          <Button
-            text="중단하기"
-            variant="outline"
-            size="h-[52px] flex-1 px-5 py-3"
-            className="rounded-[12px]"
-            onClick={handleStopReading}
-          />
-          <Button
-            text="이어서 읽기"
-            variant="primary"
-            size="h-[52px] flex-1 px-5 py-3"
-            className="rounded-[12px]"
-            onClick={handleResumeReading}
-          />
-        </div>
-      </Modal>
+        actions={[
+          { label: "중단하기", onClick: handleStopReading, variant: "outline" },
+          {
+            label: "이어서 읽기",
+            onClick: handleResumeReading,
+            variant: "primary",
+          },
+        ]}
+      />
     </div>
   );
 }

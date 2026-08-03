@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import Button from "../components/Button";
 import capsuleBg from "../assets/mate/capsule-bg.png";
 import capsuleOwl from "../assets/mate/capsule-owl.png";
 import iconBack from "../assets/mate/icon-back.svg";
@@ -83,12 +84,11 @@ export default function CapsulePage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="mt-4 flex h-[54px] w-full shrink-0 items-center justify-center rounded-[16px] bg-primary-500 px-5 text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-white"
-        >
-          이 책 펼쳐보기
-        </button>
+        <Button
+          text="이 책 펼쳐보기"
+          variant="primary"
+          size="mt-4 h-[54px] w-full shrink-0 px-5"
+        />
       </section>
     </main>
   );

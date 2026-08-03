@@ -12,7 +12,7 @@ type ModalOptionListProps = {
   onSelect: (id: string) => void;
 };
 
-/** Modal children용 선택 리스트 (Button 스타일 + 선택 시 화살표) */
+/** Modal(variant="default") children용 선택 리스트 — 선택 시 화살표 */
 export default function ModalOptionList({
   options,
   selectedId,

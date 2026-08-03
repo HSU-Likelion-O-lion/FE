@@ -7,10 +7,15 @@ type ButtonProps = {
   className?: string;
   active?: boolean;
   disabled?: boolean;
-  /** default: 선택형 / primary: 제출 CTA / outline: 보조 액션 */
+  /**
+   * default: 선택형 버튼 1 (gray-50 ↔ primary-10)
+   * primary: 채움 CTA 버튼 2 (N=gray-100 / Y=primary-500)
+   * outline: 모달 보조 액션
+   */
   variant?: "default" | "primary" | "outline";
 };
 
+/** Figma 공용 버튼 — Button-hover (선택) / Button-hover #2 (채움 CTA) */
 export default function Button({
   text,
   size = "px-5 py-3",
@@ -26,9 +31,10 @@ export default function Button({
 
   const variantClass = (() => {
     if (variant === "primary") {
+      // Figma Button-hover(200:2536) — N / Y
       return disabled
-        ? "cursor-not-allowed bg-gray-300 font-semibold text-white"
-        : "bg-primary-500 font-semibold text-white";
+        ? "cursor-not-allowed bg-gray-100 text-gray-400"
+        : "bg-primary-500 text-white";
     }
     if (variant === "outline") {
       return "border border-solid border-gray-200 bg-transparent text-gray-400";
@@ -46,7 +52,6 @@ export default function Button({
           setInternalActive((prev) => !prev);
         }
         onClick?.();
-        // iOS 등에서 탭 후 sticky hover/focus 잔상 제거
         e.currentTarget.blur();
       }}
       className={`btn ${variantClass} ${size} ${className}`.trim()}
