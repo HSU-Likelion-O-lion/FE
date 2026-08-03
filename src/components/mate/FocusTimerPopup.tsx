@@ -8,20 +8,32 @@ import Modal from "../Modal";
 import { PauseReasonOptions } from "../ModalOptionList";
 import PauseDetailForm from "./PauseDetailForm";
 
-const RING_SIZE = 312;
+const RING_SIZE = 272;
 const RING_STROKE = 10;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const FOCUS_TIMER_KEY = "olion:focus-timer";
+/** 타이머 0초 완료 시에만 목표달성/생각적기 라우트 진입 가능 */
+const FOCUS_COMPLETE_KEY = "olion:focus-complete";
 const HISTORY_STATE = { focusTimer: true } as const;
 /** 시작 시 링이 비움→채움으로 한 바퀴 도는 시간 */
 const RING_INTRO_MS = 500;
+
+/**
+ * 개발용 타이머 배속 (1 = 실시간).
+ */
+const DEV_TIMER_SPEED = 100;
+// const DEV_TIMER_SPEED = 1;
 
 export type FocusTimerSession = {
   minutes: number;
   remainingSeconds: number;
   paused: boolean;
+};
+
+export type FocusCompleteSession = {
+  minutes: number;
 };
 
 export function loadFocusTimerSession(): FocusTimerSession | null {
@@ -50,6 +62,29 @@ function saveFocusTimerSession(session: FocusTimerSession) {
   localStorage.setItem(FOCUS_TIMER_KEY, JSON.stringify(session));
 }
 
+export function markFocusComplete(minutes: number) {
+  sessionStorage.setItem(
+    FOCUS_COMPLETE_KEY,
+    JSON.stringify({ minutes } satisfies FocusCompleteSession),
+  );
+}
+
+export function loadFocusComplete(): FocusCompleteSession | null {
+  try {
+    const raw = sessionStorage.getItem(FOCUS_COMPLETE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as FocusCompleteSession;
+    if (typeof data.minutes !== "number" || data.minutes <= 0) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function clearFocusComplete() {
+  sessionStorage.removeItem(FOCUS_COMPLETE_KEY);
+}
+
 type FocusTimerPopupProps = {
   open: boolean;
   minutes: number;
@@ -60,6 +95,8 @@ type FocusTimerPopupProps = {
   /** 새 타이머 시작마다 바꿔 인트로를 다시 재생 */
   startKey?: number;
   onClose: () => void;
+  /** 타이머가 0초가 되어 정상 완료됐을 때 */
+  onComplete?: (minutes: number) => void;
 };
 
 function pad2(n: number) {
@@ -73,6 +110,7 @@ export default function FocusTimerPopup({
   initialPaused = false,
   startKey = 0,
   onClose,
+  onComplete,
 }: FocusTimerPopupProps) {
   const totalSeconds = minutes * 60;
   const isRestore = initialRemaining != null;
@@ -89,8 +127,11 @@ export default function FocusTimerPopup({
 
   const remainingRef = useRef(remaining);
   const skipPopRef = useRef(false);
+  const completedRef = useRef(false);
   const onCloseRef = useRef(onClose);
+  const onCompleteRef = useRef(onComplete);
   onCloseRef.current = onClose;
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     remainingRef.current = remaining;
@@ -110,11 +151,13 @@ export default function FocusTimerPopup({
     if (!open) {
       setIntroDone(false);
       setRingTransition(false);
+      completedRef.current = false;
       return;
     }
 
     const nextRemaining = initialRemaining ?? minutes * 60;
     setRemaining(nextRemaining);
+    completedRef.current = false;
 
     if (isRestore) {
       setPaused(initialPaused ?? true);
@@ -145,6 +188,16 @@ export default function FocusTimerPopup({
 
     return () => window.clearTimeout(timeoutId);
   }, [open, minutes, initialRemaining, initialPaused, isRestore, startKey]);
+
+  // 0초 완료 → 목표달성으로 자동 이동 (닫기/중도와 구분)
+  useEffect(() => {
+    if (!open || !introDone || remaining !== 0 || completedRef.current) return;
+
+    completedRef.current = true;
+    clearFocusTimerSession();
+    markFocusComplete(minutes);
+    onCompleteRef.current?.(minutes);
+  }, [open, introDone, remaining, minutes]);
 
   // body scroll lock
   useEffect(() => {
@@ -207,8 +260,9 @@ export default function FocusTimerPopup({
 
   // 카운트다운 (인트로 끝난 뒤에만)
   useEffect(() => {
-    if (!open || paused || !introDone) return;
+    if (!open || paused || !introDone || remaining <= 0) return;
 
+    const tickMs = 1000 / DEV_TIMER_SPEED;
     const id = window.setInterval(() => {
       setRemaining((prev) => {
         if (prev <= 1) {
@@ -223,10 +277,10 @@ export default function FocusTimerPopup({
         });
         return next;
       });
-    }, 1000);
+    }, tickMs);
 
     return () => window.clearInterval(id);
-  }, [open, paused, minutes, introDone]);
+  }, [open, paused, minutes, introDone, remaining]);
 
   const handleClose = () => {
     clearFocusTimerSession();
@@ -311,6 +365,7 @@ export default function FocusTimerPopup({
   const progress = totalSeconds > 0 ? remaining / totalSeconds : 0;
   const dashOffset = RING_CIRCUMFERENCE * (1 - progress);
   const playIntro = !isRestore && !introDone;
+  const tickMs = 1000 / DEV_TIMER_SPEED;
 
   return (
     <div
@@ -348,13 +403,13 @@ export default function FocusTimerPopup({
       </header>
 
       {/* 타이머 */}
-      <div className="relative z-10 flex flex-1 items-center justify-center pb-[calc(40px+env(safe-area-inset-bottom))]">
-        <div className="relative mt-10 flex size-[312px] items-center justify-center">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-[calc(40px+env(safe-area-inset-bottom))]">
+        <div className="relative flex size-[272px] items-center justify-center">
           <img
             src={timerGlow}
             alt=""
             aria-hidden
-            className="pointer-events-none absolute size-[312px] object-contain"
+            className="pointer-events-none absolute size-[272px] object-contain"
           />
 
           <svg
@@ -385,7 +440,7 @@ export default function FocusTimerPopup({
               strokeDashoffset={playIntro ? RING_CIRCUMFERENCE : dashOffset}
               className={
                 !playIntro && ringTransition
-                  ? "transition-[stroke-dashoffset] duration-1000 linear"
+                  ? "transition-[stroke-dashoffset] linear"
                   : undefined
               }
               style={
@@ -393,43 +448,49 @@ export default function FocusTimerPopup({
                   ? {
                       animation: `focus-timer-ring-intro ${RING_INTRO_MS}ms linear forwards`,
                     }
-                  : undefined
+                  : ringTransition
+                    ? { transitionDuration: `${tickMs}ms` }
+                    : undefined
               }
             />
           </svg>
 
-          <div className="relative flex flex-col items-center">
+          <div className="relative flex flex-col items-center bottom-3">
             <div
-              className="flex h-[80px] items-center justify-center text-white"
+              className="flex h-[96px] items-center justify-center text-white"
               style={{ fontFamily: "'Poppins', sans-serif" }}
             >
-              <span className="inline-block w-[2ch] text-center text-[80px] font-medium leading-none [font-variant-numeric:tabular-nums]">
+              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums]">
                 {pad2(mins)}
               </span>
               <span className="inline-block w-[1ch] text-center text-[55px] font-medium leading-none">
                 :
               </span>
-              <span className="inline-block w-[2ch] text-center text-[80px] font-medium leading-none [font-variant-numeric:tabular-nums]">
+              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums]">
                 {pad2(secs)}
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleTogglePause}
-              className="mt-5 flex items-center gap-1.5"
-            >
-              <img
-                src={paused ? iconPlay : iconPause}
-                alt=""
-                className="size-4 object-contain"
-              />
-              <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-300">
-                {paused ? "일시 정지됨" : "잠시 멈추기"}
-              </span>
-            </button>
+            <p className="mt-[-4px] max-w-[202px] text-center text-body2 text-gray-300">
+              화면을 닫으면 타이머가 초기화됩니다.
+            </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleTogglePause}
+          className="flex items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5"
+        >
+          <img
+            src={paused ? iconPlay : iconPause}
+            alt=""
+            className="size-6 object-contain"
+          />
+          <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-100">
+            {paused ? "일시 정지됨" : "잠시 멈추기"}
+          </span>
+        </button>
       </div>
 
       <Modal

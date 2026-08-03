@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import arrowCircle from "../../assets/mate/arrow-circle.svg";
 import arrowChevron from "../../assets/mate/arrow-chevron.svg";
+import iconPlus from "../../assets/mate/icon-plus.svg";
 import type { MateBookItem } from "./types";
 
 type MateBookSectionProps = {
   books: MateBookItem[];
+  /** 서재에 꺼낼 수 있는 책이 있으면 pick 슬라이드 표시 */
+  canPick?: boolean;
   onStartFocus?: () => void;
+  onPickBooks?: () => void;
 };
 
 function formatLastRead(daysAgo: number) {
@@ -45,22 +49,51 @@ function ArrowButton({
   );
 }
 
+function BookShelf({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative h-[223px] w-[259px]">
+      {children}
+
+      {/* 선반 앞 유리 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[6px] top-[180px] z-10 h-7 w-[247px] rounded-t-[7px] bg-[rgba(217,217,217,0.43)] backdrop-blur-[2px]"
+      />
+
+      {/* 선반 */}
+      <div className="absolute bottom-0 left-0 z-20 h-[15px] w-full bg-white shadow-[0_0_4px_rgba(19,19,20,0.14)]">
+        <div className="absolute inset-0 shadow-[inset_0_-3px_4px_rgba(27,27,29,0.12)]" />
+      </div>
+    </div>
+  );
+}
+
 export default function MateBookSection({
   books,
+  canPick = true,
   onStartFocus,
+  onPickBooks,
 }: MateBookSectionProps) {
+  // 인덱스 0..books.length — 마지막은 pick 슬라이드 (canPick일 때)
+  const slideCount = canPick ? books.length + 1 : Math.max(books.length, 1);
   const [index, setIndex] = useState(0);
-  const book = books[index] ?? books[0];
-  const showArrows = books.length > 1;
 
-  if (!book) return null;
+  useEffect(() => {
+    setIndex((prev) => Math.min(prev, slideCount - 1));
+  }, [slideCount]);
+
+  const isPickSlide = canPick && index === books.length;
+  const book = !isPickSlide ? (books[index] ?? books[0]) : undefined;
+  const showArrows = slideCount > 1;
+
+  if (!canPick && books.length === 0) return null;
 
   const goPrev = () => {
-    setIndex((prev) => (prev - 1 + books.length) % books.length);
+    setIndex((prev) => (prev - 1 + slideCount) % slideCount);
   };
 
   const goNext = () => {
-    setIndex((prev) => (prev + 1) % books.length);
+    setIndex((prev) => (prev + 1) % slideCount);
   };
 
   return (
@@ -68,42 +101,66 @@ export default function MateBookSection({
       <div className="relative flex w-full items-start justify-center">
         {showArrows && <ArrowButton direction="prev" onClick={goPrev} />}
 
-        <div className="relative h-[223px] w-[259px]">
-          <div className="absolute left-1/2 top-0 z-0 h-[208px] w-[140px] -translate-x-1/2 overflow-hidden rounded-tl-[2px] rounded-tr-[8px] rounded-br-[8px] rounded-bl-[2px]">
-            <img
-              src={book.coverUrl}
-              alt={book.title}
-              className="size-full object-cover object-bottom"
-            />
-          </div>
-
-          {/* 선반 앞 유리 */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-[6px] top-[180px] z-10 h-7 w-[247px] rounded-t-[7px] bg-[rgba(217,217,217,0.43)] backdrop-blur-[2px]"
-          />
-
-          {/* 선반 */}
-          <div className="absolute bottom-0 left-0 z-20 h-[15px] w-full bg-white shadow-[0_0_4px_rgba(19,19,20,0.14)]">
-            <div className="absolute inset-0 shadow-[inset_0_-3px_4px_rgba(27,27,29,0.12)]" />
-          </div>
-        </div>
+        <BookShelf>
+          {isPickSlide ? (
+            <div
+              aria-hidden
+              className="absolute left-1/2 top-0 z-0 flex h-[208px] w-[140px] -translate-x-1/2 items-center justify-center rounded-tl-[2px] rounded-tr-[8px] rounded-br-[8px] rounded-bl-[2px] border-2 border-dashed border-gray-200 bg-gray-50"
+            >
+              <img src={iconPlus} alt="" className="size-6 object-contain" />
+            </div>
+          ) : (
+            book && (
+              <div className="absolute left-1/2 top-0 z-0 h-[208px] w-[140px] -translate-x-1/2 overflow-hidden rounded-tl-[2px] rounded-tr-[8px] rounded-br-[8px] rounded-bl-[2px]">
+                <img
+                  src={book.coverUrl}
+                  alt={book.title}
+                  className="size-full object-cover object-bottom"
+                />
+              </div>
+            )
+          )}
+        </BookShelf>
 
         {showArrows && <ArrowButton direction="next" onClick={goNext} />}
       </div>
 
-      <h2 className="mt-5 text-center text-h3 text-gray-800">{book.title}</h2>
-      <p className="mt-2 text-center text-body2 text-gray-400">
-        최근에 읽은 책 ㅣ 마지막 읽은 날 : {formatLastRead(book.lastReadDaysAgo)}
-      </p>
-
-      <button
-        type="button"
-        onClick={onStartFocus}
-        className="mt-6 rounded-[25px] bg-white px-5 py-3 text-center text-[16px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
-      >
-        집중시작
-      </button>
+      {isPickSlide ? (
+        <>
+          <h2 className="mt-5 text-center text-h3 text-gray-800">
+            메이트에 올려둘 책 꺼내오기
+          </h2>
+          <p className="mt-2 text-center text-body2 text-gray-400">
+            서재에서 최대 5권까지 선택할 수 있어요.
+          </p>
+          <button
+            type="button"
+            onClick={onPickBooks}
+            className="mt-6 rounded-[25px] bg-white px-5 py-3 text-center text-[16px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
+          >
+            꺼낼 책 고르기
+          </button>
+        </>
+      ) : (
+        book && (
+          <>
+            <h2 className="mt-5 text-center text-h3 text-gray-800">
+              {book.title}
+            </h2>
+            <p className="mt-2 text-center text-body2 text-gray-400">
+              최근에 읽은 책 ㅣ 마지막 읽은 날 :{" "}
+              {formatLastRead(book.lastReadDaysAgo)}
+            </p>
+            <button
+              type="button"
+              onClick={onStartFocus}
+              className="mt-6 rounded-[25px] bg-white px-5 py-3 text-center text-[16px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
+            >
+              집중시작
+            </button>
+          </>
+        )
+      )}
     </section>
   );
 }
