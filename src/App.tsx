@@ -1,7 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import CapsulePage from "./pages/CapsulePage";
+import GoalAchievedPage from "./pages/GoalAchievedPage";
 import HomePage from "./pages/HomePage";
 import MatePage from "./pages/MatePage";
+import ReflectPage from "./pages/ReflectPage";
 import BackupSyncPage from "./pages/profile/BackupSyncPage";
 import InquiryPage from "./pages/profile/InquiryPage";
 import NoticePage from "./pages/profile/NoticePage";
@@ -19,6 +21,8 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/mate" element={<MatePage />} />
         <Route path="/mate/capsule" element={<CapsulePage />} />
+        <Route path="/mate/goal" element={<GoalAchievedPage />} />
+        <Route path="/mate/reflect" element={<ReflectPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
         <Route path="/profile/push" element={<PushNotificationPage />} />
