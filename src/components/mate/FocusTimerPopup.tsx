@@ -8,7 +8,7 @@ import Modal from "../Modal";
 import { PauseReasonOptions } from "../ModalOptionList";
 import PauseDetailForm from "./PauseDetailForm";
 
-const RING_SIZE = 312;
+const RING_SIZE = 272;
 const RING_STROKE = 10;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -17,6 +17,12 @@ const FOCUS_TIMER_KEY = "olion:focus-timer";
 const HISTORY_STATE = { focusTimer: true } as const;
 /** 시작 시 링이 비움→채움으로 한 바퀴 도는 시간 */
 const RING_INTRO_MS = 500;
+
+/**
+ * 개발용 타이머 배속 (1 = 실시간).
+ */
+const DEV_TIMER_SPEED = 100;
+// const DEV_TIMER_SPEED = 1;
 
 export type FocusTimerSession = {
   minutes: number;
@@ -209,6 +215,7 @@ export default function FocusTimerPopup({
   useEffect(() => {
     if (!open || paused || !introDone) return;
 
+    const tickMs = 1000 / DEV_TIMER_SPEED;
     const id = window.setInterval(() => {
       setRemaining((prev) => {
         if (prev <= 1) {
@@ -223,7 +230,7 @@ export default function FocusTimerPopup({
         });
         return next;
       });
-    }, 1000);
+    }, tickMs);
 
     return () => window.clearInterval(id);
   }, [open, paused, minutes, introDone]);
@@ -311,6 +318,7 @@ export default function FocusTimerPopup({
   const progress = totalSeconds > 0 ? remaining / totalSeconds : 0;
   const dashOffset = RING_CIRCUMFERENCE * (1 - progress);
   const playIntro = !isRestore && !introDone;
+  const tickMs = 1000 / DEV_TIMER_SPEED;
 
   return (
     <div
@@ -348,13 +356,13 @@ export default function FocusTimerPopup({
       </header>
 
       {/* 타이머 */}
-      <div className="relative z-10 flex flex-1 items-center justify-center pb-[calc(40px+env(safe-area-inset-bottom))]">
-        <div className="relative mt-10 flex size-[312px] items-center justify-center">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-[calc(40px+env(safe-area-inset-bottom))]">
+        <div className="relative flex size-[272px] items-center justify-center">
           <img
             src={timerGlow}
             alt=""
             aria-hidden
-            className="pointer-events-none absolute size-[312px] object-contain"
+            className="pointer-events-none absolute size-[272px] object-contain"
           />
 
           <svg
@@ -385,7 +393,7 @@ export default function FocusTimerPopup({
               strokeDashoffset={playIntro ? RING_CIRCUMFERENCE : dashOffset}
               className={
                 !playIntro && ringTransition
-                  ? "transition-[stroke-dashoffset] duration-1000 linear"
+                  ? "transition-[stroke-dashoffset] linear"
                   : undefined
               }
               style={
@@ -393,43 +401,49 @@ export default function FocusTimerPopup({
                   ? {
                       animation: `focus-timer-ring-intro ${RING_INTRO_MS}ms linear forwards`,
                     }
-                  : undefined
+                  : ringTransition
+                    ? { transitionDuration: `${tickMs}ms` }
+                    : undefined
               }
             />
           </svg>
 
-          <div className="relative flex flex-col items-center">
+          <div className="relative flex flex-col items-center bottom-3">
             <div
-              className="flex h-[80px] items-center justify-center text-white"
+              className="flex h-[96px] items-center justify-center text-white"
               style={{ fontFamily: "'Poppins', sans-serif" }}
             >
-              <span className="inline-block w-[2ch] text-center text-[80px] font-medium leading-none [font-variant-numeric:tabular-nums]">
+              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums]">
                 {pad2(mins)}
               </span>
               <span className="inline-block w-[1ch] text-center text-[55px] font-medium leading-none">
                 :
               </span>
-              <span className="inline-block w-[2ch] text-center text-[80px] font-medium leading-none [font-variant-numeric:tabular-nums]">
+              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums]">
                 {pad2(secs)}
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleTogglePause}
-              className="mt-5 flex items-center gap-1.5"
-            >
-              <img
-                src={paused ? iconPlay : iconPause}
-                alt=""
-                className="size-4 object-contain"
-              />
-              <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-300">
-                {paused ? "일시 정지됨" : "잠시 멈추기"}
-              </span>
-            </button>
+            <p className="mt-[-4px] max-w-[202px] text-center text-body2 text-gray-300">
+              화면을 닫으면 타이머가 초기화됩니다.
+            </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleTogglePause}
+          className="flex items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5"
+        >
+          <img
+            src={paused ? iconPlay : iconPause}
+            alt=""
+            className="size-6 object-contain"
+          />
+          <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-100">
+            {paused ? "일시 정지됨" : "잠시 멈추기"}
+          </span>
+        </button>
       </div>
 
       <Modal
