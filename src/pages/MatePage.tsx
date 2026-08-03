@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
+import bookCover1 from "../assets/mate/book-cover-1.jpg";
+import bookCover2 from "../assets/mate/book-cover-2.png";
+import bookCover3 from "../assets/mate/book-cover-3.png";
 import bookCover from "../assets/mate/book-cover.png";
 import iconBadge from "../assets/mate/icon-badge.svg";
 import iconCapsule from "../assets/mate/icon-capsule.svg";
@@ -11,24 +14,82 @@ import FocusTimerPopup, {
   clearFocusTimerSession,
   loadFocusTimerSession,
 } from "../components/mate/FocusTimerPopup";
-import type { MateBookItem, MateBooks } from "../components/mate/types";
+import PickMateBookSheet from "../components/mate/PickMateBookSheet";
+import {
+  MATE_BOOK_LIMIT,
+  type LibraryBook,
+  type MateBookItem,
+  type MateBooks,
+} from "../components/mate/types";
 
 export type { MateBookItem, MateBooks };
 
-/** 초기 상태: [] / 여러 권이면 화살표 표시 */
-const MOCK_BOOKS: MateBooks = [
+const MOCK_LIBRARY_BOOKS: LibraryBook[] = [
   {
+    id: "lib-1",
     title: "불안을 이기는 철학",
-    coverUrl: bookCover,
-    lastReadDaysAgo: 1,
+    author: "브리지드 딜레이니",
+    genre: "장편소설",
+    publisher: "창비",
+    coverUrl: bookCover1,
+    status: "unread",
   },
   {
+    id: "lib-2",
+    title: "여름을 한 입 베어 물었더니",
+    author: "이꽃",
+    genre: "장편소설",
+    publisher: "문학동네",
+    coverUrl: bookCover2,
+    status: "reading",
+  },
+  {
+    id: "lib-3",
+    title: "일억 번째 여름",
+    author: "청예",
+    genre: "장편소설",
+    publisher: "창비",
+    coverUrl: bookCover3,
+    status: "finished",
+  },
+  {
+    id: "lib-4",
     title: "몰입의 기술",
+    author: "미하이 칙센트미하이",
+    genre: "자기계발",
+    publisher: "책읽는수요일",
     coverUrl: bookCover,
-    lastReadDaysAgo: 3,
+    status: "reading",
+  },
+  {
+    id: "lib-5",
+    title: "마음의 법칙",
+    author: "김하나",
+    genre: "에세이",
+    publisher: "위즈덤하우스",
+    coverUrl: bookCover1,
+    status: "unread",
+  },
+  {
+    id: "lib-6",
+    title: "고요할수록 밝아지는 것들",
+    author: "혜민",
+    genre: "에세이",
+    publisher: "수오서재",
+    coverUrl: bookCover2,
+    status: "finished",
   },
 ];
-// const MOCK_BOOKS: MateBooks = [];
+
+/** 메이트에 이미 꺼내둔 책 (0~N, N≤5) — 데모용으로 1권 */
+const MOCK_MATE_BOOKS: MateBooks = [
+  {
+    id: "lib-1",
+    title: "불안을 이기는 철학",
+    coverUrl: bookCover1,
+    lastReadDaysAgo: 1,
+  },
+];
 
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
@@ -50,12 +111,19 @@ const WEEK: WeekDay[] = [
 
 type MatePageProps = {
   books?: MateBooks;
+  libraryBooks?: LibraryBook[];
 };
 
-export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
+export default function MatePage({
+  books: initialBooks = MOCK_MATE_BOOKS,
+  libraryBooks: initialLibrary = MOCK_LIBRARY_BOOKS,
+}: MatePageProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<NavTab>("center");
   const [selectedDate, setSelectedDate] = useState(11);
+  const [mateBooks, setMateBooks] = useState<MateBooks>(initialBooks);
+  const [libraryBooks] = useState<LibraryBook[]>(initialLibrary);
+  const [pickSheetOpen, setPickSheetOpen] = useState(false);
   const [focusModalOpen, setFocusModalOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
   const [timerMinutes, setTimerMinutes] = useState(15);
@@ -66,7 +134,12 @@ export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
     boolean | undefined
   >();
   const [timerStartKey, setTimerStartKey] = useState(0);
-  const hasBooks = books.length > 0;
+
+  const selectedMateIds = mateBooks.map((book) => book.id);
+  /** 서재에 책이 있으면 시트에서 선택/해제 가능 */
+  const canPick = libraryBooks.length > 0;
+  const showEmpty = mateBooks.length === 0 && libraryBooks.length === 0;
+  const showCarousel = !showEmpty;
 
   // 앱 종료 후 재진입 시 세션 복구
   useEffect(() => {
@@ -83,6 +156,21 @@ export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
     setTimerOpen(false);
     setTimerInitialRemaining(undefined);
     setTimerInitialPaused(undefined);
+  }, []);
+
+  const handlePickConfirm = useCallback((selected: LibraryBook[]) => {
+    setMateBooks((prev) => {
+      const prevById = new Map(prev.map((book) => [book.id, book]));
+      return selected.slice(0, MATE_BOOK_LIMIT).map((book) => {
+        const existing = prevById.get(book.id);
+        return {
+          id: book.id,
+          title: book.title,
+          coverUrl: book.coverUrl,
+          lastReadDaysAgo: existing?.lastReadDaysAgo ?? 0,
+        };
+      });
+    });
   }, []);
 
   return (
@@ -160,14 +248,16 @@ export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
         </div>
       </section>
 
-      {hasBooks ? (
-        <MateBookSection
-          books={books}
-          onStartFocus={() => setFocusModalOpen(true)}
-        />
-      ) : (
+      {showEmpty ? (
         <MateEmptySection />
-      )}
+      ) : showCarousel ? (
+        <MateBookSection
+          books={mateBooks}
+          canPick={canPick}
+          onStartFocus={() => setFocusModalOpen(true)}
+          onPickBooks={() => setPickSheetOpen(true)}
+        />
+      ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
         <NavigationBar active={activeTab} onChange={setActiveTab} />
@@ -193,6 +283,21 @@ export default function MatePage({ books = MOCK_BOOKS }: MatePageProps) {
         initialPaused={timerInitialPaused}
         startKey={timerStartKey}
         onClose={closeTimer}
+        onComplete={() => {
+          setTimerOpen(false);
+          setTimerInitialRemaining(undefined);
+          setTimerInitialPaused(undefined);
+          // 타이머 history state가 남아 있어도 goal로 교체
+          navigate("/mate/goal", { replace: true });
+        }}
+      />
+
+      <PickMateBookSheet
+        open={pickSheetOpen}
+        books={libraryBooks}
+        selectedMateIds={selectedMateIds}
+        onClose={() => setPickSheetOpen(false)}
+        onConfirm={handlePickConfirm}
       />
     </main>
   );
