@@ -15,6 +15,7 @@ export type NavTab = "library" | "drawer" | "center" | "shelter" | "profile";
 /** 탭별 경로 — 아직 없는 페이지는 생략 */
 const TAB_PATHS: Partial<Record<NavTab, string>> = {
   center: "/mate",
+  profile: "/profile",
 };
 
 type NavigationBarProps = {
