@@ -283,6 +283,13 @@ export default function MatePage({
         initialPaused={timerInitialPaused}
         startKey={timerStartKey}
         onClose={closeTimer}
+        onComplete={() => {
+          setTimerOpen(false);
+          setTimerInitialRemaining(undefined);
+          setTimerInitialPaused(undefined);
+          // 타이머 history state가 남아 있어도 goal로 교체
+          navigate("/mate/goal", { replace: true });
+        }}
       />
 
       <PickMateBookSheet
