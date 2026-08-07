@@ -61,7 +61,7 @@ export default function StreakBadgeOverlay({
             className="size-[171px] object-contain"
           />
           <p
-            className="absolute left-1/2 top-[145px] -translate-x-1/2 whitespace-nowrap text-center text-[34px] font-black leading-[26px] text-[#d6c9ff] [-webkit-text-stroke:8px_#584BBD]"
+            className="absolute left-1/2 top-[145px] -translate-x-1/2 whitespace-nowrap text-center font-cookierun text-[34px] font-black leading-[26px] text-[#d6c9ff] [-webkit-text-stroke:8px_#584BBD]"
             style={{ paintOrder: "stroke fill" }}
           >
             +1

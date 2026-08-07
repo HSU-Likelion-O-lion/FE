@@ -1,9 +1,33 @@
 @import "tailwindcss";
 
+/* 강원교육새음체 — https://www.gwe.go.kr/main/content.do?key=m2307211207715 */
+@font-face {
+  font-family: "GangwonEduSaeeum";
+  src:
+    url("./assets/fonts/GangwonEduSaeeum.woff2") format("woff2"),
+    url("./assets/fonts/GangwonEduSaeeum.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 쿠키런 폰트 Black — https://www.cookierunfont.com/#section7 */
+@font-face {
+  font-family: "CookieRun";
+  src:
+    url("./assets/fonts/CookieRun-Black.woff2") format("woff2"),
+    url("./assets/fonts/CookieRun-Black.woff") format("woff");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --font-sans:
     "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont,
     system-ui, sans-serif;
+  --font-saeeum: "GangwonEduSaeeum", "Pretendard Variable", sans-serif;
+  --font-cookierun: "CookieRun", "Pretendard Variable", sans-serif;
 
   /* Main / Primary */
   --color-primary-10: #eff0f9;
@@ -162,6 +186,28 @@
   animation: streak-rays-spin 40s linear infinite;
 }
 
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 
 body {
   margin: 0;
@@ -170,4 +216,9 @@ body {
   background-color: var(--color-gray-0);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+html {
+  overscroll-behavior: none;
 }

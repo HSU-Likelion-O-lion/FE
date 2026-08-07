@@ -15,8 +15,7 @@ export default function MateEmptySection() {
       </h2>
       <p className="mt-2 text-center text-body2 text-gray-400">
         내 마음을 들여다보고
-        <br />
-        딱 맞는 위로의 문장을 선물 받아보세요.
+        <br />딱 맞는 위로의 문장을 선물 받아보세요.
       </p>
     </section>
   );
