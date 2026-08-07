@@ -1,6 +1,7 @@
 import type { PostItVariant } from "../components/shelter/PostIt";
 
-export type ThoughtNoteVariant = PostItVariant;
+/** 보드에 올라가는 포스트잇 (empty는 빈 화면 전용) */
+export type BoardPostItVariant = Exclude<PostItVariant, "empty">;
 
 export type ThoughtNote = {
   id: string;
@@ -14,8 +15,8 @@ export type ThoughtNote = {
   variant?: Exclude<PostItVariant, "featured" | "empty">;
 };
 
-export type PlacedThoughtNote = ThoughtNote & {
-  variant: ThoughtNoteVariant;
+export type PlacedThoughtNote = Omit<ThoughtNote, "variant"> & {
+  variant: BoardPostItVariant;
   x: number;
   y: number;
   width: number;
@@ -35,7 +36,7 @@ type HomeSlot = {
   y: number;
   width: number;
   rotate: number;
-  variant?: ThoughtNoteVariant;
+  variant?: BoardPostItVariant;
   flip?: boolean;
 };
 
@@ -162,7 +163,7 @@ function pickBoardVariant(rand: () => number) {
   return BOARD_VARIANTS[Math.floor(rand() * BOARD_VARIANTS.length)]!;
 }
 
-function estimateHeight(variant: ThoughtNoteVariant, width: number) {
+function estimateHeight(variant: BoardPostItVariant, width: number) {
   if (variant === "featured") return Math.round(width * 0.61);
   return Math.round(width * 1.08);
 }
