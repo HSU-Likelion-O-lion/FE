@@ -1,7 +1,5 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="68" height="60" viewBox="0 0 68 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="elements">
-<path id="Vector 9662" d="M40.5444 -1.43051e-06H27.4556C11.7122 -1.43051e-06 3.84048 1.36073e-06 0.939637 5.02018C-1.96121 10.0404 2.06504 16.6953 10.1175 30.0051L16.6619 40.8222C24.397 53.6074 28.2646 60 34 60C39.7354 60 43.603 53.6074 51.338 40.8223L57.8825 30.0051C65.935 16.6953 69.9612 10.0404 67.0604 5.02018C64.1595 1.36073e-06 56.2878 -1.43051e-06 40.5444 -1.43051e-06Z" fill="#E6E8F0"/>
-<path id="Vector" d="M34 40V25" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path id="Vector_2" d="M34 13.3594V13.3252" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
+<svg width="68" height="60" viewBox="0 0 68 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M40.5444 60H27.4556C11.7122 60 3.84048 60 0.939637 54.9798C-1.96121 49.9596 2.06504 43.3047 10.1175 29.9949L16.6619 19.1778C24.397 6.39258 28.2646 0 34 0C39.7354 0 43.603 6.39258 51.338 19.1777L57.8825 29.9949C65.935 43.3047 69.9612 49.9596 67.0604 54.9798C64.1595 60 56.2878 60 40.5444 60Z" fill="#E6E8F0"/>
+<path d="M34 20V35" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M34 46.6406V46.6748" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
