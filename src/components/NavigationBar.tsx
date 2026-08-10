@@ -2,18 +2,22 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import libraryActive from "../assets/nav/library-active.svg";
 import libraryInactive from "../assets/nav/library-inactive.svg";
+import libraryDark from "../assets/nav/library-dark.svg";
 import drawerActive from "../assets/nav/drawer-active.svg";
 import drawerInactive from "../assets/nav/drawer-inactive.svg";
+import drawerDark from "../assets/nav/drawer-dark.svg";
 import shelterActive from "../assets/nav/shelter-active.svg";
 import shelterInactive from "../assets/nav/shelter-inactive.svg";
+import shelterDark from "../assets/nav/shelter-dark.svg";
 import profileActive from "../assets/nav/profile-active.svg";
 import profileInactive from "../assets/nav/profile-inactive.svg";
+import profileDark from "../assets/nav/profile-dark.svg";
 import centerIcon from "../assets/nav/center-icon.svg";
 
 export type NavTab = "library" | "drawer" | "center" | "shelter" | "profile";
 
-/** 탭별 경로 — 아직 없는 페이지는 생략 */
 const TAB_PATHS: Partial<Record<NavTab, string>> = {
+  drawer: "/drawer",
   center: "/mate",
   shelter: "/shelter",
   profile: "/profile",
@@ -22,33 +26,50 @@ const TAB_PATHS: Partial<Record<NavTab, string>> = {
 type NavigationBarProps = {
   active: NavTab;
   className?: string;
+  /** light: 흰 배경 페이지 / dark: 서랍처럼 어두운 풀블리드 페이지 */
+  tone?: "light" | "dark";
   onChange?: (tab: NavTab) => void;
 };
 
-const tabs = [
+type TabDef = {
+  id: Exclude<NavTab, "center">;
+  label: string;
+  activeIcon: string;
+  inactiveIcon: string;
+  darkIcon: string;
+  /** dark 아이콘이 이미 활성(흰색) 스타일인지 — 서랍 탭 */
+  darkIconIsActive?: boolean;
+};
+
+const tabs: TabDef[] = [
   {
-    id: "drawer" as const,
+    id: "drawer",
     label: "서랍",
     activeIcon: drawerActive,
     inactiveIcon: drawerInactive,
+    darkIcon: drawerDark,
+    darkIconIsActive: true,
   },
   {
-    id: "library" as const,
+    id: "library",
     label: "서재",
     activeIcon: libraryActive,
     inactiveIcon: libraryInactive,
+    darkIcon: libraryDark,
   },
   {
-    id: "shelter" as const,
+    id: "shelter",
     label: "쉼터",
     activeIcon: shelterActive,
     inactiveIcon: shelterInactive,
+    darkIcon: shelterDark,
   },
   {
-    id: "profile" as const,
+    id: "profile",
     label: "프로필",
     activeIcon: profileActive,
     inactiveIcon: profileInactive,
+    darkIcon: profileDark,
   },
 ];
 
@@ -56,17 +77,44 @@ function NavItem({
   label,
   activeIcon,
   inactiveIcon,
+  darkIcon,
+  darkIconIsActive = false,
   highlighted,
+  tone,
   onClick,
   onHoverChange,
 }: {
   label: string;
   activeIcon: string;
   inactiveIcon: string;
+  darkIcon: string;
+  darkIconIsActive?: boolean;
   highlighted: boolean;
+  tone: "light" | "dark";
   onClick?: () => void;
   onHoverChange: (hovered: boolean) => void;
 }) {
+  const isDark = tone === "dark";
+
+  const inactiveSrc = isDark
+    ? darkIconIsActive
+      ? inactiveIcon
+      : darkIcon
+    : inactiveIcon;
+  const activeSrc = isDark ? darkIcon : activeIcon;
+
+  const inactiveClass = highlighted
+    ? "opacity-0"
+    : isDark && darkIconIsActive
+      ? "opacity-70 brightness-0 invert"
+      : "opacity-100";
+
+  const activeClass = highlighted
+    ? isDark && !darkIconIsActive
+      ? "opacity-100 brightness-0 invert"
+      : "opacity-100"
+    : "opacity-0";
+
   return (
     <button
       type="button"
@@ -77,23 +125,25 @@ function NavItem({
     >
       <span className="relative size-[26px] shrink-0">
         <img
-          src={inactiveIcon}
+          src={inactiveSrc}
           alt=""
-          className={`absolute inset-0 size-full object-contain transition-opacity ${
-            highlighted ? "opacity-0" : "opacity-100"
-          }`}
+          className={`absolute inset-0 size-full object-contain transition-opacity ${inactiveClass}`}
         />
         <img
-          src={activeIcon}
+          src={activeSrc}
           alt=""
-          className={`absolute inset-0 size-full object-contain transition-opacity ${
-            highlighted ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 size-full object-contain transition-opacity ${activeClass}`}
         />
       </span>
       <span
         className={`flex h-4.5 items-center justify-center whitespace-nowrap text-caption ${
-          highlighted ? "text-primary-500" : "text-gray-900"
+          isDark
+            ? highlighted
+              ? "text-white"
+              : "text-primary-400"
+            : highlighted
+              ? "text-primary-500"
+              : "text-gray-900"
         }`}
       >
         {label}
@@ -105,6 +155,7 @@ function NavItem({
 export default function NavigationBar({
   active,
   className = "",
+  tone = "light",
   onChange,
 }: NavigationBarProps) {
   const navigate = useNavigate();
@@ -114,6 +165,7 @@ export default function NavigationBar({
   const rightTabs = tabs.slice(2);
 
   const isOn = (tab: NavTab) => active === tab || hovered === tab;
+  const isDark = tone === "dark";
 
   const handleTabClick = (tab: NavTab) => {
     onChange?.(tab);
@@ -123,7 +175,9 @@ export default function NavigationBar({
 
   return (
     <nav
-      className={`relative mx-auto grid w-full max-w-[430px] grid-cols-5 items-center bg-white ${className}`}
+      className={`relative mx-auto grid w-full max-w-[430px] grid-cols-5 items-center ${
+        isDark ? "bg-transparent" : "bg-white"
+      } ${className}`}
       aria-label="하단 내비게이션"
     >
       {leftTabs.map((tab) => (
@@ -132,7 +186,10 @@ export default function NavigationBar({
           label={tab.label}
           activeIcon={tab.activeIcon}
           inactiveIcon={tab.inactiveIcon}
+          darkIcon={tab.darkIcon}
+          darkIconIsActive={tab.darkIconIsActive}
           highlighted={isOn(tab.id)}
+          tone={tone}
           onClick={() => handleTabClick(tab.id)}
           onHoverChange={(isHovered) => setHovered(isHovered ? tab.id : null)}
         />
@@ -161,7 +218,10 @@ export default function NavigationBar({
           label={tab.label}
           activeIcon={tab.activeIcon}
           inactiveIcon={tab.inactiveIcon}
+          darkIcon={tab.darkIcon}
+          darkIconIsActive={tab.darkIconIsActive}
           highlighted={isOn(tab.id)}
+          tone={tone}
           onClick={() => handleTabClick(tab.id)}
           onHoverChange={(isHovered) => setHovered(isHovered ? tab.id : null)}
         />

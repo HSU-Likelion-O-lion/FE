@@ -252,7 +252,7 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
       </header>
 
       {isEmpty ? (
-        <ShelterEmptySection onGoDrawer={() => setActiveTab("drawer")} />
+        <ShelterEmptySection onGoDrawer={() => navigate("/drawer")} />
       ) : (
         <>
           <section className="relative z-10 mt-6 flex flex-col items-center gap-2 px-[78px] text-center">
