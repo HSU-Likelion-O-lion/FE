@@ -119,7 +119,7 @@ export default function TestPage() {
       <div className="mx-auto flex max-w-5xl flex-col gap-16">
         <header className="flex flex-col gap-2">
           <p className="text-caption text-primary-500">Design System</p>
-          <h1 className="text-display">O-lion Test Page</h1>
+          <h1 className="text-display">쓰담 Test Page</h1>
           <p className="text-body1 text-gray-500">
             Figma Typography · Main Colors · Gray Colors · Button · Modal 적용
             확인

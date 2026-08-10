@@ -13,7 +13,7 @@ const NOTICES: NoticeItem[] = [
   {
     id: "1",
     tag: "업데이트",
-    title: "Readmate 1.2 업데이트 안내",
+    title: "쓰담 1.2 업데이트 안내",
     date: "2026.07.28",
   },
   {

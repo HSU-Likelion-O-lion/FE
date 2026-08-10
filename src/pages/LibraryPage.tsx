@@ -231,7 +231,7 @@ function ReasonsSection({
 
       <div className="mt-6 flex items-center justify-between">
         <p className="text-[16px] text-[#42403a]">
-          전체 진단 기록{" "}
+          전체 사유 기록{" "}
           <span className="font-semibold text-primary-400">
             {reasons.length}
           </span>

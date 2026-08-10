@@ -130,7 +130,7 @@ export const RECOMMEND_BOOKS: readonly RecommendBook[] = [
   },
 ];
 
-const HISTORY_KEY = "o-lion-drawer-history";
+const HISTORY_KEY = "sseudam-drawer-history";
 
 export const SEED_HISTORY: DiagnosisRecord[] = [
   {

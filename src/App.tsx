@@ -12,6 +12,10 @@ import LibraryPdfCompletePage from "./pages/LibraryPdfCompletePage";
 import LibraryReasonSelectPage from "./pages/LibraryReasonSelectPage";
 import LibraryReasonsPage from "./pages/LibraryReasonsPage";
 import MatePage from "./pages/MatePage";
+import OnboardingGuidePage from "./pages/OnboardingGuidePage";
+import LoginEmailPage from "./pages/LoginEmailPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import ReflectPage from "./pages/ReflectPage";
 import ShelterPage from "./pages/ShelterPage";
 import ShelterThoughtDetailPage from "./pages/ShelterThoughtDetailPage";
@@ -31,6 +35,10 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/onboarding" element={<OnboardingGuidePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login/email" element={<LoginEmailPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="/drawer" element={<DrawerPage />} />
         <Route path="/drawer/diagnosis" element={<DrawerDiagnosisPage />} />
         <Route path="/drawer/recommend" element={<DrawerRecommendPage />} />
