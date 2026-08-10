@@ -8,7 +8,6 @@ import {
   REASON_GOAL,
   type LibraryReason,
 } from "../data/libraryMock";
-import iconChevron from "../assets/library/icon-chevron.svg";
 import glowEllipse from "../assets/library/glow-ellipse.svg";
 import progressBook from "../assets/library/progress-book.png";
 import progressLooper from "../assets/library/progress-looper.svg";
