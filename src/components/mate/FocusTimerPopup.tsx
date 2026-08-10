@@ -13,9 +13,9 @@ const RING_STROKE = 10;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-const FOCUS_TIMER_KEY = "olion:focus-timer";
+const FOCUS_TIMER_KEY = "sseudam:focus-timer";
 /** 타이머 0초 완료 시에만 목표달성/생각적기 라우트 진입 가능 */
-const FOCUS_COMPLETE_KEY = "olion:focus-complete";
+const FOCUS_COMPLETE_KEY = "sseudam:focus-complete";
 const HISTORY_STATE = { focusTimer: true } as const;
 /** 시작 시 링이 비움→채움으로 한 바퀴 도는 시간 */
 const RING_INTRO_MS = 500;

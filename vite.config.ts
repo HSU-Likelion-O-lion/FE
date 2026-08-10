@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'O-lion',
-        short_name: 'O-lion',
-        description: '한성대 멋쟁이사자처럼 O-lion PWA',
+        name: '쓰담',
+        short_name: '쓰담',
+        description: '마음을 채우는 책 읽기 — sseudam',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',

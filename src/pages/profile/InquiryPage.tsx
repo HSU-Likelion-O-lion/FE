@@ -86,7 +86,7 @@ export default function InquiryPage() {
         </div>
 
         <p className="text-caption leading-[18px] text-gray-400">
-          ReadMate를 사용하시며 불편했던 점이나
+          쓰담을 사용하시며 불편했던 점이나
           <br />
           추가되었으면 하는 기능을 편하게 알려주세요.
         </p>

@@ -51,7 +51,7 @@ export default function LibraryReasonsPage() {
             className="size-6 object-contain brightness-0 invert"
           />
         </button>
-        <h1 className="text-h3 text-[#fdfdff]">모든 진단 기록</h1>
+        <h1 className="text-h3 text-[#fdfdff]">모든 사유 기록</h1>
       </header>
 
       <div className="relative z-10 min-h-0 flex-1 overflow-y-auto px-5 pb-[calc(110px+env(safe-area-inset-bottom))] pt-4">

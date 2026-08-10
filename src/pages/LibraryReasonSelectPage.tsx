@@ -19,8 +19,7 @@ export default function LibraryReasonSelectPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const selectedCount = selectedIds.size;
-  const allSelected =
-    reasons.length > 0 && selectedCount === reasons.length;
+  const allSelected = reasons.length > 0 && selectedCount === reasons.length;
   const canProceed = selectedCount >= REASON_GOAL;
   const selectedLabel = `${selectedCount}/${reasons.length}`;
 
