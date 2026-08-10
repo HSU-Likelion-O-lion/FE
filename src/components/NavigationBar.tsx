@@ -17,6 +17,7 @@ import centerIcon from "../assets/nav/center-icon.svg";
 export type NavTab = "library" | "drawer" | "center" | "shelter" | "profile";
 
 const TAB_PATHS: Partial<Record<NavTab, string>> = {
+  library: "/library",
   drawer: "/drawer",
   center: "/mate",
   shelter: "/shelter",

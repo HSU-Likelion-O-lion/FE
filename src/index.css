@@ -22,12 +22,22 @@
   font-display: swap;
 }
 
+/* 에스코어 드림 Light (3) — https://s-core.co.kr/company/font2/ */
+@font-face {
+  font-family: "S-Core Dream";
+  src: url("./assets/fonts/SCDream3.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --font-sans:
     "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont,
     system-ui, sans-serif;
   --font-saeeum: "GangwonEduSaeeum", "Pretendard Variable", sans-serif;
   --font-cookierun: "CookieRun", "Pretendard Variable", sans-serif;
+  --font-score-dream: "S-Core Dream", "Pretendard Variable", sans-serif;
 
   /* Main / Primary */
   --color-primary-10: #eff0f9;
@@ -208,6 +218,68 @@
   }
 }
 
+/* Library ReasonsSection — 진행 카드 장식 */
+@keyframes library-ornament-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(138px);
+  }
+}
+
+@keyframes library-ornament-up {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-138px);
+  }
+}
+
+@keyframes library-looper-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes library-book-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+.animate-library-ornament-down {
+  animation: library-ornament-down 10s linear infinite;
+}
+
+.animate-library-ornament-up {
+  animation: library-ornament-up 10s linear infinite;
+}
+
+.animate-library-looper-spin {
+  animation: library-looper-spin 24s linear infinite;
+}
+
+.animate-library-book-float {
+  animation: library-book-float 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-library-ornament-down,
+  .animate-library-ornament-up,
+  .animate-library-looper-spin,
+  .animate-library-book-float {
+    animation: none;
+  }
+}
 
 body {
   margin: 0;
