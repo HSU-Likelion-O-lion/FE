@@ -1,5 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import CapsulePage from "./pages/CapsulePage";
+import DrawerDiagnosisPage from "./pages/DrawerDiagnosisPage";
+import DrawerPage from "./pages/DrawerPage";
+import DrawerRecommendPage from "./pages/DrawerRecommendPage";
 import GoalAchievedPage from "./pages/GoalAchievedPage";
 import HomePage from "./pages/HomePage";
 import MatePage from "./pages/MatePage";
@@ -23,6 +26,9 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/drawer" element={<DrawerPage />} />
+        <Route path="/drawer/diagnosis" element={<DrawerDiagnosisPage />} />
+        <Route path="/drawer/recommend" element={<DrawerRecommendPage />} />
         <Route path="/mate" element={<MatePage />} />
         <Route path="/mate/capsule" element={<CapsulePage />} />
         <Route path="/mate/goal" element={<GoalAchievedPage />} />
