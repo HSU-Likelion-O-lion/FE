@@ -40,12 +40,6 @@ export default function LibraryPage() {
       <header className="relative z-20 shrink-0 bg-[#fdfdff] pt-[calc(24px+env(safe-area-inset-top))]">
         <div className="flex h-[34px] items-center px-5">
           <h1 className="text-h2 text-gray-900">나만의 서재</h1>
-          <img
-            src={iconChevron}
-            alt=""
-            aria-hidden
-            className="ml-1 size-6 object-contain opacity-70"
-          />
         </div>
 
         <div className="relative mt-2 flex h-12 items-end justify-between border-b-2 border-gray-100 px-5 shadow-[0_4px_8.1px_rgba(38,39,43,0.04)]">
@@ -203,11 +197,7 @@ function ReasonsSection({
           className="pointer-events-none absolute left-[7%] top-[4%] h-[91%] w-[85%] animate-library-looper-spin object-contain opacity-90"
         />
         <div className="pointer-events-none absolute left-1/2 top-[12%] h-[68%] w-[62%] -translate-x-1/2 animate-library-book-float">
-          <img
-            src={progressBook}
-            alt=""
-            className="size-full object-contain"
-          />
+          <img src={progressBook} alt="" className="size-full object-contain" />
         </div>
         <p className="absolute left-[30px] top-[30px] text-body1 text-white/80">
           출판까지 {remaining}개
