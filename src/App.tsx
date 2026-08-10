@@ -5,6 +5,12 @@ import DrawerPage from "./pages/DrawerPage";
 import DrawerRecommendPage from "./pages/DrawerRecommendPage";
 import GoalAchievedPage from "./pages/GoalAchievedPage";
 import HomePage from "./pages/HomePage";
+import LibraryBookshelfPage from "./pages/LibraryBookshelfPage";
+import LibraryEssayDraftPage from "./pages/LibraryEssayDraftPage";
+import LibraryPage from "./pages/LibraryPage";
+import LibraryPdfCompletePage from "./pages/LibraryPdfCompletePage";
+import LibraryReasonSelectPage from "./pages/LibraryReasonSelectPage";
+import LibraryReasonsPage from "./pages/LibraryReasonsPage";
 import MatePage from "./pages/MatePage";
 import ReflectPage from "./pages/ReflectPage";
 import ShelterPage from "./pages/ShelterPage";
@@ -19,7 +25,6 @@ import ProfileEditPage from "./pages/profile/ProfileEditPage";
 import ProfilePage from "./pages/profile/ProfilePage";
 import PushNotificationPage from "./pages/profile/PushNotificationPage";
 import TermsPage from "./pages/profile/TermsPage";
-import TestPage from "./pages/TestPage";
 
 function App() {
   return (
@@ -29,6 +34,18 @@ function App() {
         <Route path="/drawer" element={<DrawerPage />} />
         <Route path="/drawer/diagnosis" element={<DrawerDiagnosisPage />} />
         <Route path="/drawer/recommend" element={<DrawerRecommendPage />} />
+        <Route path="/library" element={<LibraryPage />} />
+        <Route path="/library/bookshelf" element={<LibraryBookshelfPage />} />
+        <Route path="/library/reasons" element={<LibraryReasonsPage />} />
+        <Route
+          path="/library/reasons/select"
+          element={<LibraryReasonSelectPage />}
+        />
+        <Route path="/library/essay" element={<LibraryEssayDraftPage />} />
+        <Route
+          path="/library/essay/complete"
+          element={<LibraryPdfCompletePage />}
+        />
         <Route path="/mate" element={<MatePage />} />
         <Route path="/mate/capsule" element={<CapsulePage />} />
         <Route path="/mate/goal" element={<GoalAchievedPage />} />
@@ -51,7 +68,6 @@ function App() {
         <Route path="/profile/inquiry" element={<InquiryPage />} />
         <Route path="/profile/terms" element={<TermsPage />} />
         <Route path="/profile/privacy" element={<PrivacyPage />} />
-        <Route path="/test" element={<TestPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
