@@ -83,9 +83,9 @@ export default function PostIt({
           <span
             className={`pointer-events-none absolute inset-0 flex items-center justify-center text-center font-saeeum tracking-[-0.025em] ${
               isFeatured
-                ? "px-8 pb-4 pt-2 leading-7 text-gray-900"
-                : "px-3 pt-2 leading-5 text-gray-700"
-            } ${textClassName || (isFeatured ? "text-[24px]" : "text-[20px]")}`}
+                ? "px-8 pb-4 pt-2 text-[24px] leading-7 text-gray-900"
+                : "px-3 pt-2 text-[20px] leading-5 text-gray-700"
+            } ${textClassName}`}
           >
             <span className="block whitespace-pre-line">{lines.join("\n")}</span>
           </span>

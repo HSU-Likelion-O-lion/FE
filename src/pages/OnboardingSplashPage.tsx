@@ -3,7 +3,7 @@ import splashBg from "../assets/onboarding/splash-bg.png";
 import splashLogo from "../assets/onboarding/splash-logo.svg";
 import { isOnboardingDone } from "../lib/onboarding";
 
-/** 앱 첫 화면 (Figma 176:2503) */
+/** 앱 첫 화면 (Figma 176:2503) — ≥431px 에서는 full-bleed */
 export default function OnboardingSplashPage() {
   const navigate = useNavigate();
 
@@ -12,7 +12,7 @@ export default function OnboardingSplashPage() {
   }
 
   return (
-    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden">
+    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden min-[431px]:max-w-none">
       <img
         src={splashBg}
         alt=""
@@ -28,14 +28,14 @@ export default function OnboardingSplashPage() {
         <img
           src={splashLogo}
           alt="쓰담"
-          className="h-[80px] w-[117px] object-contain"
+          className="h-[80px] w-[117px] object-contain min-[431px]:h-[110px] min-[431px]:w-[160px]"
         />
-        <p className="mt-5 text-center text-[18px] tracking-[-0.025em] text-primary-100">
+        <p className="mt-5 text-center text-[18px] tracking-[-0.025em] text-primary-100 min-[431px]:mt-6 min-[431px]:text-[22px]">
           마음을 채우는 책 읽기
         </p>
       </div>
 
-      <div className="relative z-10 shrink-0 px-10 pb-[calc(48px+env(safe-area-inset-bottom))]">
+      <div className="relative z-10 mx-auto w-full shrink-0 px-10 pb-[calc(48px+env(safe-area-inset-bottom))] min-[431px]:max-w-[400px] min-[431px]:px-0 min-[431px]:pb-16">
         <button
           type="button"
           onClick={() => navigate("/onboarding")}

@@ -78,21 +78,23 @@ export default function LibraryReasonSelectPage() {
         />
       </div>
 
-      <header className="relative z-20 flex h-11 shrink-0 items-center justify-center px-5 pt-[calc(12px+env(safe-area-inset-top))]">
-        <button
-          type="button"
-          aria-label="뒤로가기"
-          disabled={isLoading}
-          onClick={() => navigate("/library")}
-          className="absolute left-5 top-[calc(12px+env(safe-area-inset-top))] flex size-6 items-center justify-center disabled:opacity-40"
-        >
-          <img
-            src={iconBack}
-            alt=""
-            className="size-6 object-contain brightness-0 invert"
-          />
-        </button>
-        <h1 className="text-h3 text-[#fdfdff]">모든 사유 기록</h1>
+      <header className="relative z-20 shrink-0 px-5 pt-[calc(20px+env(safe-area-inset-top))]">
+        <div className="relative flex h-11 w-full items-center justify-center">
+          <button
+            type="button"
+            aria-label="뒤로가기"
+            disabled={isLoading}
+            onClick={() => navigate("/library")}
+            className="absolute left-0 flex size-6 items-center justify-center disabled:opacity-40"
+          >
+            <img
+              src={iconBack}
+              alt=""
+              className="size-6 object-contain brightness-0 invert"
+            />
+          </button>
+          <h1 className="text-h3 text-[#fdfdff]">모든 사유 기록</h1>
+        </div>
       </header>
 
       <div className="relative z-10 shrink-0 px-5 pt-4">

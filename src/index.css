@@ -172,10 +172,10 @@
   }
 }
 
-/* FocusTimerPopup 시작 인트로 — RING_CIRCUMFERENCE = 2π * 151 */
+/* FocusTimerPopup 시작 인트로 — dashoffset은 인라인 --ring-c 사용 */
 @keyframes focus-timer-ring-intro {
   from {
-    stroke-dashoffset: 948.176;
+    stroke-dashoffset: var(--ring-c);
   }
   to {
     stroke-dashoffset: 0;
@@ -272,12 +272,64 @@
   animation: library-book-float 3.2s ease-in-out infinite;
 }
 
+/* Shelter 카드 스택 — 앞 카드 위로 페이드아웃 */
+@keyframes shelter-card-dissolve-up {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate(-50%, 0) scale(1);
+    -webkit-mask-image: linear-gradient(to top, #000 0%, #000 100%);
+    mask-image: linear-gradient(to top, #000 0%, #000 100%);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translate(-50%, -40px) scale(0.97);
+    -webkit-mask-image: linear-gradient(
+      to top,
+      transparent 0%,
+      transparent 50%,
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      to top,
+      transparent 0%,
+      transparent 50%,
+      #000 100%
+    );
+  }
+}
+
+.shelter-card-dissolve-up {
+  animation: shelter-card-dissolve-up 480ms cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+  pointer-events: none;
+}
+
+.shelter-card-layer {
+  transition:
+    top 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 480ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: top, width, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-library-ornament-down,
   .animate-library-ornament-up,
   .animate-library-looper-spin,
   .animate-library-book-float {
     animation: none;
+  }
+
+  .shelter-card-dissolve-up {
+    animation: none;
+  }
+
+  .shelter-card-layer {
+    transition: none;
   }
 }
 

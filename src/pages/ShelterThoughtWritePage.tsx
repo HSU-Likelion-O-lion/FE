@@ -7,7 +7,7 @@ import {
   splitBadWordParts,
 } from "../utils/badWords";
 import bgGrid from "../assets/shelter/thoughts/bg-grid.png";
-import bgGlow from "../assets/shelter/thoughts/bg-glow.png";
+import bgGlow from "../assets/shelter/thoughts/bg-glow.svg";
 import iconBack from "../assets/shelter/thoughts/icon-back.svg";
 import iconPencil from "../assets/shelter/thoughts/write-icon-pencil.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
@@ -21,8 +21,8 @@ const KEYBOARD_THRESHOLD = 100;
 
 /** 기본(키보드 없음) / 입력중(키보드) — Figma 320:7996 / 320:6633 */
 const LAYOUT = {
-  idle: { tapeTop: 175, cardTop: 213 },
-  typing: { tapeTop: 56, cardTop: 94 },
+  idle: { tapeTop: 195, cardTop: 233 },
+  typing: { tapeTop: 76, cardTop: 114 },
 } as const;
 
 type WriteLocationState = {
@@ -169,15 +169,11 @@ export default function ShelterThoughtWritePage() {
           }}
         />
 
+        {/* Ellipse 2467 — 상단 글로우는 ellipse만 */}
         <img
           src={bgGlow}
           alt=""
-          className="pointer-events-none absolute left-[-20px] top-[-230px] z-0 h-auto w-[calc(100%+40px)] max-w-none"
-        />
-
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[280px] bg-[linear-gradient(180deg,#5d6bc4_0%,rgba(93,107,196,0.45)_42%,rgba(93,107,196,0)_100%)]"
+          className="pointer-events-none absolute left-1/2 top-[-230px] z-0 h-[644px] w-[433px] max-w-none -translate-x-1/2"
         />
 
         {!keyboardOpen && (
@@ -195,26 +191,28 @@ export default function ShelterThoughtWritePage() {
           </>
         )}
 
-        <header className="absolute inset-x-0 top-0 z-40 flex h-11 items-center justify-center px-5">
-          <button
-            type="button"
-            aria-label="뒤로가기"
-            onClick={() => navigate(-1)}
-            className="absolute left-5 flex size-6 items-center justify-center"
-          >
-            <img
-              src={iconBack}
-              alt=""
-              className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
-            />
-          </button>
-          <h1 className="w-full text-center text-h3 text-white">{bookTitle}</h1>
-          <span
-            aria-hidden
-            className="absolute right-5 flex size-6 items-center justify-center"
-          >
-            <img src={iconPencil} alt="" className="size-5 object-contain" />
-          </span>
+        <header className="absolute inset-x-0 top-0 z-40 px-5 pt-5">
+          <div className="relative flex h-11 w-full items-center justify-center">
+            <button
+              type="button"
+              aria-label="뒤로가기"
+              onClick={() => navigate(-1)}
+              className="absolute left-0 flex size-6 items-center justify-center"
+            >
+              <img
+                src={iconBack}
+                alt=""
+                className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+              />
+            </button>
+            <h1 className="w-full text-center text-h3 text-white">{bookTitle}</h1>
+            <span
+              aria-hidden
+              className="absolute right-0 flex size-6 items-center justify-center"
+            >
+              <img src={iconPencil} alt="" className="size-5 object-contain" />
+            </span>
+          </div>
         </header>
 
         <img

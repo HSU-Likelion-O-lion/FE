@@ -7,7 +7,7 @@ import {
   getThoughtById,
 } from "../data/shelterThoughtsMock";
 import bgGrid from "../assets/shelter/thoughts/bg-grid.png";
-import bgGlow from "../assets/shelter/thoughts/bg-glow.png";
+import bgGlow from "../assets/shelter/thoughts/bg-glow.svg";
 import iconBack from "../assets/shelter/thoughts/icon-back.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
 import detailTape from "../assets/shelter/thoughts/detail-like.svg";
@@ -132,15 +132,11 @@ export default function ShelterThoughtDetailPage() {
           }}
         />
 
+        {/* Ellipse 2467 — Figma 320:5122 (433×644, top -230). 상단 글로우는 ellipse만 */}
         <img
           src={bgGlow}
           alt=""
-          className="pointer-events-none absolute left-[-20px] top-[-230px] z-0 h-auto w-[calc(100%+40px)] max-w-none"
-        />
-
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[280px] bg-[linear-gradient(180deg,#5d6bc4_0%,rgba(93,107,196,0.45)_42%,rgba(93,107,196,0)_100%)]"
+          className="pointer-events-none absolute left-1/2 top-[-230px] z-0 h-[644px] w-[433px] max-w-none -translate-x-1/2"
         />
 
         {/* 연필 장식 — Figma 320:5133 / 320:5134 */}
@@ -155,76 +151,74 @@ export default function ShelterThoughtDetailPage() {
           className="pointer-events-none absolute left-[82px] top-[87px] z-[1] h-[86px] w-[177px] rotate-[4.83deg] object-contain opacity-80"
         />
 
-        <header className="absolute inset-x-0 top-0 z-40 flex h-11 items-center justify-center px-5">
-          <button
-            type="button"
-            aria-label="뒤로가기"
-            onClick={() => navigate(-1)}
-            className="absolute left-5 flex size-6 items-center justify-center"
-          >
-            <img
-              src={iconBack}
-              alt=""
-              className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
-            />
-          </button>
-          <h1 className="w-full text-center text-h3 text-white">{bookTitle}</h1>
+        <header className="absolute inset-x-0 top-0 z-40 px-5 pt-5">
+          <div className="relative flex h-11 w-full items-center justify-center">
+            <button
+              type="button"
+              aria-label="뒤로가기"
+              onClick={() => navigate(-1)}
+              className="absolute left-0 flex size-6 items-center justify-center"
+            >
+              <img
+                src={iconBack}
+                alt=""
+                className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+              />
+            </button>
+            <h1 className="w-full text-center text-h3 text-white">{bookTitle}</h1>
+          </div>
         </header>
 
-        {/* <div className="pointer-events-none absolute inset-x-0 top-[123px] z-40 flex justify-center">
-          <div className="rounded-full bg-white/70 px-3 py-1 backdrop-blur-[2px]">
-            <p className="text-center text-[12px] leading-[1.4] tracking-[-0.025em] text-gray-500">
-              좌우로 밀어 다른 사유도 읽어보세요
-              <span className="hidden md:inline"> · PC에서는 버튼으로도 가능</span>
-            </p>
+        {/* 헤더~하단 CTA 사이 — 테이프 포함 전체가 헤더를 침범하지 않음 */}
+        <div className="absolute inset-x-0 top-[64px] bottom-[120px] z-20 flex items-center justify-center overflow-hidden px-5">
+          <div className="relative flex max-h-full min-h-0 w-[353px] flex-col items-center overflow-hidden pt-[38px]">
+            {/* 테이프 — 카드 위 여백 안에만 배치 */}
+            <img
+              src={detailTape}
+              alt=""
+              className="pointer-events-none absolute left-1/2 top-0 z-30 h-[45px] w-[81px] -translate-x-1/2 object-contain"
+            />
+
+            {/* 사유 카드 — 높이 = 내용 길이 (길면 영역 안에서만 내부 스크롤) */}
+            <article
+              className="relative z-20 flex min-h-0 w-full max-h-[calc(100%-38px)] cursor-grab flex-col items-center gap-[23px] overflow-y-auto overscroll-contain px-8 py-[41px] touch-pan-y active:cursor-grabbing"
+              style={{
+                backgroundImage:
+                  "linear-gradient(-43deg, rgba(225,231,255,0.96) 2%, rgba(223,229,255,0.96) 96%)",
+              }}
+            >
+              <div
+                key={thought.id}
+                className={`flex w-full flex-col items-center gap-[23px] ${
+                  slideDirection === "next"
+                    ? "animate-[slide-in-right_220ms_ease-out]"
+                    : slideDirection === "prev"
+                      ? "animate-[slide-in-left_220ms_ease-out]"
+                      : ""
+                }`}
+                onAnimationEnd={() => setSlideDirection(null)}
+              >
+                <div className="relative flex w-full flex-col items-center">
+                  <img
+                    src={detailAvatar}
+                    alt=""
+                    className="size-[77px] rounded-full object-cover"
+                  />
+                  <p className="mt-3 text-center text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
+                    {thought.authorName}
+                  </p>
+                  <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
+                    {thought.date}
+                  </p>
+                </div>
+
+                <p className="w-full whitespace-pre-wrap text-body1 leading-[1.6] text-gray-800">
+                  {thought.body}
+                </p>
+              </div>
+            </article>
           </div>
-        </div> */}
-
-        {/* 테이프 — Figma 320:5143 */}
-        <img
-          src={detailTape}
-          alt=""
-          className="pointer-events-none absolute left-1/2 top-[175px] z-30 h-[45px] w-[81px] -translate-x-1/2 object-contain"
-        />
-
-        {/* 사유 카드 — 높이 = 내용 길이 (길면 CTA 위에서만 내부 스크롤) */}
-        <article
-          className="absolute left-1/2 top-[213px] z-20 flex h-auto max-h-[calc(100dvh-213px-100px)] w-[353px] -translate-x-1/2 cursor-grab flex-col items-center gap-[23px] overflow-y-auto overscroll-contain px-8 py-[41px] touch-pan-y active:cursor-grabbing"
-          style={{
-            backgroundImage:
-              "linear-gradient(-43deg, rgba(225,231,255,0.96) 2%, rgba(223,229,255,0.96) 96%)",
-          }}
-        >
-          <div
-            key={thought.id}
-            className={`flex w-full flex-col items-center gap-[23px] ${
-              slideDirection === "next"
-                ? "animate-[slide-in-right_220ms_ease-out]"
-                : slideDirection === "prev"
-                  ? "animate-[slide-in-left_220ms_ease-out]"
-                  : ""
-            }`}
-            onAnimationEnd={() => setSlideDirection(null)}
-          >
-            <div className="relative flex w-full flex-col items-center">
-              <img
-                src={detailAvatar}
-                alt=""
-                className="size-[77px] rounded-full object-cover"
-              />
-              <p className="mt-3 text-center text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
-                {thought.authorName}
-              </p>
-              <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
-                {thought.date}
-              </p>
-            </div>
-
-            <p className="w-full whitespace-pre-wrap text-body1 leading-[1.6] text-gray-800">
-              {thought.body}
-            </p>
-          </div>
-        </article>
+        </div>
 
         <button
           type="button"

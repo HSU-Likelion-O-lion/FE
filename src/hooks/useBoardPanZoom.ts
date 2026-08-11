@@ -131,11 +131,19 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
     return () => el.removeEventListener("wheel", onWheel);
   }, [measure, viewportRef]);
 
+  const capturePointers = useCallback((el: HTMLElement) => {
+    for (const id of pointersRef.current.keys()) {
+      if (!el.hasPointerCapture(id)) {
+        el.setPointerCapture(id);
+      }
+    }
+  }, []);
+
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
       const el = viewportRef.current;
       if (!el) return;
-      el.setPointerCapture(event.pointerId);
+      // 클릭이 자식(PostIt)에서 살아남도록, 드래그/핀치 시작 전에는 capture하지 않음
       pointersRef.current.set(event.pointerId, {
         x: event.clientX,
         y: event.clientY,
@@ -165,9 +173,11 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
           scale: t.scale,
         };
         panRef.current = null;
+        suppressClickRef.current = true;
+        capturePointers(el);
       }
     },
-    [viewportRef],
+    [capturePointers, viewportRef],
   );
 
   const onPointerMove = useCallback(
@@ -183,6 +193,7 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
       if (!el) return;
 
       if (pointersRef.current.size >= 2 && pinchRef.current) {
+        capturePointers(el);
         const pts = [...pointersRef.current.values()];
         const [a, b] = pts;
         if (!a || !b) return;
@@ -210,9 +221,13 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
       if (!pan || pan.pointerId !== event.pointerId) return;
       const dx = event.clientX - pan.startX;
       const dy = event.clientY - pan.startY;
-      if (Math.hypot(dx, dy) > 6) {
+      // 임계값 미만은 탭으로 보고 pan/capture 하지 않음 → PostIt click 유지
+      if (Math.hypot(dx, dy) <= 6) return;
+
+      if (!pan.moved) {
         pan.moved = true;
         suppressClickRef.current = true;
+        capturePointers(el);
       }
       setTransform((prev) =>
         clampTransform(
@@ -222,7 +237,7 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
         ),
       );
     },
-    [measure, viewportRef],
+    [capturePointers, measure, viewportRef],
   );
 
   const endPointer = useCallback((event: ReactPointerEvent<HTMLElement>) => {

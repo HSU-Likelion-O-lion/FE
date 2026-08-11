@@ -38,7 +38,7 @@ export default function LibraryBookshelfPage() {
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-[#fdfdff]">
-      <header className="sticky top-0 z-20 shrink-0 bg-[#fdfdff] pt-[calc(12px+env(safe-area-inset-top))]">
+      <header className="sticky top-0 z-20 shrink-0 bg-[#fdfdff] pt-[calc(20px+env(safe-area-inset-top))]">
         <div className="relative flex h-11 items-center justify-center px-5">
           <button
             type="button"

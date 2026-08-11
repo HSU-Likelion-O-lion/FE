@@ -14,10 +14,12 @@ export default function ProfileEditPage() {
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white">
-      <header className="flex h-11 shrink-0 items-center justify-center px-5 pt-4">
-        <h1 className="w-full text-center text-h3 text-gray-900">
-          프로필 수정
-        </h1>
+      <header className="flex shrink-0 flex-col px-5 pt-5">
+        <div className="flex h-11 items-center justify-center">
+          <h1 className="w-full text-center text-h3 text-gray-900">
+            프로필 수정
+          </h1>
+        </div>
       </header>
 
       <section className="mt-10 flex flex-col items-center">

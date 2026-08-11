@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type TouchEvent,
 } from "react";
@@ -106,17 +107,156 @@ const STACK_LAYERS = [
   },
 ] as const;
 
+type StackLayer = (typeof STACK_LAYERS)[number];
+
 const SWIPE_THRESHOLD = 48;
+const STACK_ANIM_MS = 480;
+
+type StackMotion = {
+  exitingBook: ShelterBook;
+};
 
 type ShelterPageProps = {
   books?: ShelterBook[];
 };
+
+type ShelterCardProps = {
+  book: ShelterBook;
+  layer: StackLayer;
+  isFront: boolean;
+  pinned?: boolean;
+  onTogglePin?: () => void;
+  className?: string;
+  style?: CSSProperties;
+  ariaHidden?: boolean;
+  /** false면 opacity를 인라인으로 넣지 않아 CSS 애니메이션이 제어 */
+  applyOpacity?: boolean;
+};
+
+function ShelterCard({
+  book,
+  layer,
+  isFront,
+  pinned = false,
+  onTogglePin,
+  className = "",
+  style,
+  ariaHidden,
+  applyOpacity = true,
+}: ShelterCardProps) {
+  return (
+    <article
+      className={`absolute left-1/2 flex -translate-x-1/2 items-start justify-between ${layer.shadow} ${className}`}
+      style={{
+        top: layer.top,
+        width: layer.width,
+        height: 300,
+        ...(applyOpacity ? { opacity: layer.opacity } : null),
+        borderRadius: layer.radius,
+        padding: `${layer.paddingY}px ${layer.paddingX}px`,
+        zIndex: isFront ? 3 : layer.opacity === 0.6 ? 2 : 1,
+        ...style,
+      }}
+      aria-hidden={ariaHidden ?? !isFront}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        style={{ borderRadius: layer.radius }}
+      >
+        {isFront && (
+          <div className="absolute inset-0 rounded-[inherit] bg-white" />
+        )}
+        <div className="absolute inset-0 overflow-hidden rounded-[inherit] opacity-70">
+          <img
+            src={book.coverUrl}
+            alt=""
+            className="absolute left-[0.2%] w-full max-w-none object-cover object-top"
+            style={{
+              top: layer.coverTop,
+              height: layer.coverHeight,
+            }}
+          />
+        </div>
+        <div
+          className="absolute inset-0 rounded-[inherit]"
+          style={{ backgroundImage: layer.gradient }}
+        />
+      </div>
+
+      <div className="relative z-10 flex min-w-0 flex-col gap-1.5">
+        <h2
+          className={`font-semibold tracking-[-0.025em] text-gray-900 ${layer.titleSize}`}
+        >
+          {book.title}
+        </h2>
+        <p className={`tracking-[-0.025em] text-gray-500 ${layer.captionSize}`}>
+          누군가 남긴 {book.thoughtCount}개의 사유 조각
+        </p>
+      </div>
+
+      {isFront && onTogglePin ? (
+        <button
+          type="button"
+          aria-label={pinned ? "핀 해제" : "책 핀 고정"}
+          aria-pressed={pinned}
+          onClick={onTogglePin}
+          className="relative z-10 mt-[10px] flex size-9 shrink-0 items-center justify-center"
+        >
+          <img
+            src={pinBg}
+            alt=""
+            className="absolute inset-0 size-full object-contain"
+          />
+          <span className="relative flex size-6 items-center justify-center overflow-hidden">
+            <img
+              src={iconPin}
+              alt=""
+              className={`size-[18.5px] object-contain transition-opacity ${
+                pinned ? "opacity-100" : "opacity-70"
+              }`}
+            />
+          </span>
+        </button>
+      ) : (
+        <div
+          aria-hidden
+          className="relative z-10 mt-[10px] shrink-0"
+          style={{
+            width: layer.pinSize,
+            height: layer.pinSize * 0.94,
+          }}
+        >
+          <img
+            src={pinBg}
+            alt=""
+            className="absolute inset-0 size-full object-contain"
+          />
+          <span
+            className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden"
+            style={{
+              width: layer.pinIcon,
+              height: layer.pinIcon,
+            }}
+          >
+            <img
+              src={iconPin}
+              alt=""
+              className="size-[70%] object-contain"
+            />
+          </span>
+        </div>
+      )}
+    </article>
+  );
+}
 
 export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<NavTab>("shelter");
   const [frontIndex, setFrontIndex] = useState(0);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
+  const [motion, setMotion] = useState<StackMotion | null>(null);
   const touchStartY = useRef<number | null>(null);
   const swipedRef = useRef(false);
   const stackRef = useRef<HTMLElement>(null);
@@ -124,6 +264,7 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
   const isEmpty = books.length === 0;
   const bookCount = books.length;
   const frontBook = books[frontIndex];
+  const isAnimating = motion !== null;
 
   // Safari 고무줄(overscroll) 방지 — 페이지 스크롤 잠금
   useEffect(() => {
@@ -163,15 +304,29 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
     return () => el.removeEventListener("touchmove", preventScroll);
   }, [isEmpty]);
 
-  const goNext = useCallback(() => {
-    if (bookCount === 0) return;
-    setFrontIndex((prev) => (prev + 1) % bookCount);
-  }, [bookCount]);
+  useEffect(() => {
+    if (!motion) return;
+    const timer = window.setTimeout(() => setMotion(null), STACK_ANIM_MS);
+    return () => window.clearTimeout(timer);
+  }, [motion]);
 
-  const goPrev = useCallback(() => {
-    if (bookCount === 0) return;
-    setFrontIndex((prev) => (prev - 1 + bookCount) % bookCount);
-  }, [bookCount]);
+  const prefersReducedMotion = useCallback(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    [],
+  );
+
+  const goNext = useCallback(() => {
+    if (bookCount < 2 || isAnimating) return;
+    const nextIndex = (frontIndex + 1) % bookCount;
+    if (prefersReducedMotion()) {
+      setFrontIndex(nextIndex);
+      return;
+    }
+    setMotion({ exitingBook: books[frontIndex] });
+    setFrontIndex(nextIndex);
+  }, [bookCount, books, frontIndex, isAnimating, prefersReducedMotion]);
 
   const togglePin = (id: string) => {
     setPinnedIds((prev) => {
@@ -191,10 +346,10 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
     if (touchStartY.current == null) return;
     const delta = e.changedTouches[0].clientY - touchStartY.current;
     touchStartY.current = null;
-    if (Math.abs(delta) < SWIPE_THRESHOLD) return;
+    // 위로 스와이프만 허용
+    if (delta > -SWIPE_THRESHOLD) return;
     swipedRef.current = true;
-    if (delta < 0) goNext();
-    else goPrev();
+    goNext();
   };
 
   const handleStackClick = (e: MouseEvent) => {
@@ -207,14 +362,33 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
   };
 
   // 뒤에서 앞으로: frontIndex+2 → frontIndex+1 → frontIndex
+  // 앞 카드는 위로 페이드아웃만 (뒤로 보내지 않음)
   const stackBooks =
     bookCount === 0
       ? []
-      : [2, 1, 0].map((offset) => {
-          const book = books[(frontIndex + offset) % bookCount];
-          const layer = STACK_LAYERS[2 - offset];
-          return { book, layer, isFront: offset === 0 };
-        });
+      : ([2, 1, 0] as const)
+          .map((offset) => {
+            const book = books[(frontIndex + offset) % bookCount];
+            const layer = STACK_LAYERS[2 - offset];
+            return { book, layer, isFront: offset === 0 };
+          })
+          .filter(({ book }) => {
+            if (!motion) return true;
+            return book.id !== motion.exitingBook.id;
+          });
+
+  const motionOverlay = motion ? (
+    <ShelterCard
+      key={`exit-${motion.exitingBook.id}`}
+      book={motion.exitingBook}
+      layer={STACK_LAYERS[2]}
+      isFront
+      applyOpacity={false}
+      className="shelter-card-dissolve-up"
+      style={{ zIndex: 5 }}
+      ariaHidden
+    />
+  ) : null;
 
   return (
     <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden overscroll-none bg-white pb-[97px]">
@@ -236,19 +410,21 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
         </div>
       )}
 
-      <header className="relative z-10 flex h-11 shrink-0 items-center px-5 pt-4">
-        <button
-          type="button"
-          aria-label="뒤로가기"
-          onClick={() => navigate(-1)}
-          className="absolute left-5 flex size-6 items-center justify-center"
-        >
-          <img
-            src={iconBack}
-            alt=""
-            className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
-          />
-        </button>
+      <header className="relative z-10 flex shrink-0 flex-col px-5 pt-5">
+        <div className="relative flex h-11 items-center">
+          <button
+            type="button"
+            aria-label="뒤로가기"
+            onClick={() => navigate(-1)}
+            className="absolute left-0 flex size-6 items-center justify-center"
+          >
+            <img
+              src={iconBack}
+              alt=""
+              className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+            />
+          </button>
+        </div>
       </header>
 
       {isEmpty ? (
@@ -274,114 +450,19 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
             onClick={handleStackClick}
           >
             {stackBooks.map(({ book, layer, isFront }) => (
-              <article
-                key={`${book.id}-${layer.width}`}
-                className={`absolute left-1/2 flex -translate-x-1/2 items-start justify-between ${layer.shadow}`}
-                style={{
-                  top: layer.top,
-                  width: layer.width,
-                  height: 300,
-                  opacity: layer.opacity,
-                  borderRadius: layer.radius,
-                  padding: `${layer.paddingY}px ${layer.paddingX}px`,
-                  zIndex: isFront ? 3 : layer.opacity === 0.6 ? 2 : 1,
-                }}
-                aria-hidden={!isFront}
-              >
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 overflow-hidden"
-                  style={{ borderRadius: layer.radius }}
-                >
-                  {isFront && (
-                    <div className="absolute inset-0 rounded-[inherit] bg-white" />
-                  )}
-                  <div className="absolute inset-0 overflow-hidden opacity-70 rounded-[inherit]">
-                    <img
-                      src={book.coverUrl}
-                      alt=""
-                      className="absolute left-[0.2%] w-full max-w-none object-cover object-top"
-                      style={{
-                        top: layer.coverTop,
-                        height: layer.coverHeight,
-                      }}
-                    />
-                  </div>
-                  <div
-                    className="absolute inset-0 rounded-[inherit]"
-                    style={{ backgroundImage: layer.gradient }}
-                  />
-                </div>
-
-                <div className="relative z-10 flex min-w-0 flex-col gap-1.5">
-                  <h2
-                    className={`font-semibold tracking-[-0.025em] text-gray-900 ${layer.titleSize}`}
-                  >
-                    {book.title}
-                  </h2>
-                  <p
-                    className={`tracking-[-0.025em] text-gray-500 ${layer.captionSize}`}
-                  >
-                    누군가 남긴 {book.thoughtCount}개의 사유 조각
-                  </p>
-                </div>
-
-                {isFront ? (
-                  <button
-                    type="button"
-                    aria-label={
-                      pinnedIds.has(book.id) ? "핀 해제" : "책 핀 고정"
-                    }
-                    aria-pressed={pinnedIds.has(book.id)}
-                    onClick={() => togglePin(book.id)}
-                    className="relative z-10 mt-[10px] flex size-9 shrink-0 items-center justify-center"
-                  >
-                    <img
-                      src={pinBg}
-                      alt=""
-                      className="absolute inset-0 size-full object-contain"
-                    />
-                    <span className="relative flex size-6 items-center justify-center overflow-hidden">
-                      <img
-                        src={iconPin}
-                        alt=""
-                        className={`size-[18.5px] object-contain transition-opacity ${
-                          pinnedIds.has(book.id) ? "opacity-100" : "opacity-70"
-                        }`}
-                      />
-                    </span>
-                  </button>
-                ) : (
-                  <div
-                    aria-hidden
-                    className="relative z-10 mt-[10px] shrink-0"
-                    style={{
-                      width: layer.pinSize,
-                      height: layer.pinSize * 0.94,
-                    }}
-                  >
-                    <img
-                      src={pinBg}
-                      alt=""
-                      className="absolute inset-0 size-full object-contain"
-                    />
-                    <span
-                      className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden"
-                      style={{
-                        width: layer.pinIcon,
-                        height: layer.pinIcon,
-                      }}
-                    >
-                      <img
-                        src={iconPin}
-                        alt=""
-                        className="size-[70%] object-contain"
-                      />
-                    </span>
-                  </div>
-                )}
-              </article>
+              <ShelterCard
+                key={book.id}
+                book={book}
+                layer={layer}
+                isFront={isFront}
+                pinned={pinnedIds.has(book.id)}
+                onTogglePin={
+                  isFront ? () => togglePin(book.id) : undefined
+                }
+                className="shelter-card-layer"
+              />
             ))}
+            {motionOverlay}
           </section>
 
           <div className="relative z-10 mt-8 flex justify-center">

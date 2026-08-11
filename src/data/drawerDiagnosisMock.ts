@@ -1,5 +1,6 @@
 /** 마음읽기 진단 카드 풀 + 추천 도서 목데이터 */
 
+import type { LibraryBook } from "../components/mate/types";
 import cover1 from "../assets/drawer/recommend/cover-1.png";
 import cover2 from "../assets/drawer/recommend/cover-2.png";
 import cover3 from "../assets/drawer/recommend/cover-3.png";
@@ -26,6 +27,8 @@ export type RecommendBook = {
   meta: string;
   coverUrl: string;
   keywords: string[];
+  /** 다미의 책 소개 본문 */
+  intro: string;
 };
 
 export type DiagnosisRecord = {
@@ -109,6 +112,8 @@ export const RECOMMEND_BOOKS: readonly RecommendBook[] = [
     meta: "RHK ㅣ 영미문학",
     coverUrl: cover2,
     keywords: ["성찰", "인문학", "삶의의미", "위로", "치유"],
+    intro:
+      "윌리엄 스토너는 농부의 아들로 태어나, 문학을 만나 삶의 방향을 바꿉니다. 화려한 사건보다 조용한 성실함이 쌓여 만들어진 그의 인생은, 겉으로 보기엔 평범해 보이지만 그 안에는 깊은 사랑이 담겨 있습니다.\n\n실패와 상처, 오해와 침묵 속에서도 그는 자신이 할 수 있는 최선을 다합니다. 빛나지 않아도 의미 있는 삶이 있다는 사실을, 담담한 문장들이 천천히 전해줍니다.\n\n지금 당장 특별해지지 않아도 괜찮습니다. 오늘을 성실히 살아내는 당신의 하루를 이 책이 가만히 지켜봐 줄 거예요.",
   },
   {
     id: "book-contradiction",
@@ -118,17 +123,39 @@ export const RECOMMEND_BOOKS: readonly RecommendBook[] = [
     meta: "쓰다 ㅣ 한국문학",
     coverUrl: cover3,
     keywords: ["에세이", "위로", "성찰", "잔잔한위로", "힐링"],
+    intro:
+      "삶은 언제나 한쪽으로만 기울지 않습니다. 기쁨과 슬픔, 용기와 두려움, 사랑과 상처가 한 사람 안에 함께 머무릅니다. 양귀자는 그 모순을 억지로 정리하려 하지 않고, 있는 그대로 바라보게 합니다.\n\n완벽하지 않은 선택들, 설명하기 어려운 감정들. 그 사이를 지나온 인물들의 이야기는 우리의 하루와 닮아 있습니다.\n\n모순을 없애야만 앞으로 갈 수 있는 것은 아닙니다. 받아들이는 순간, 마음은 조금 더 자유로워질 수 있어요.",
   },
   {
     id: "book-vegetarian",
     title: "채식주의자",
     author: "한강",
-    blurb: "타인의 기준에 맞춰 자신을 잃지 말고, 마음이 보내는 신호를 외면하지 마세요.",
+    blurb:
+      "타인의 기준에 맞춰 자신을 잃지 말고, 마음이 보내는 신호를 외면하지 마세요.",
     meta: "창비 ㅣ 한국문학",
     coverUrl: cover1,
     keywords: ["자존감", "철학", "관계정리", "고독", "성찰"],
+    intro:
+      "어느 날, 영혜는 더 이상 고기를 먹지 않겠다고 선언합니다. 모두는 그것을 단순한 식습관의 변화로 여기지만, 그녀의 선택은 가족과 일상에 조금씩 균열을 만들기 시작합니다. 억눌려 있던 감정과 말하지 못했던 마음은 점차 드러나고, 그녀는 타인이 정해 놓은 삶에서 벗어나려 합니다.\n\n그녀가 거부한 것은 단순한 음식이었을까요, 아니면 자신을 억압해 온 세상이었을까요?\n\n타인의 시선 속에서 잃어버린 자신의 목소리를 마주해 보세요!",
   },
 ];
+
+export function getRecommendBookById(id: string): RecommendBook | undefined {
+  return RECOMMEND_BOOKS.find((book) => book.id === id);
+}
+
+export function recommendBookToLibrary(book: RecommendBook): LibraryBook {
+  const [publisher = "", genre = ""] = book.meta.split("ㅣ").map((s) => s.trim());
+  return {
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    genre: genre || "문학",
+    publisher: publisher || "미상",
+    coverUrl: book.coverUrl,
+    status: "unread",
+  };
+}
 
 const HISTORY_KEY = "sseudam-drawer-history";
 

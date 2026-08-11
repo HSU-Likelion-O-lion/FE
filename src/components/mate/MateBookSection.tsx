@@ -29,19 +29,19 @@ function ArrowButton({
       type="button"
       aria-label={direction === "prev" ? "이전 책" : "다음 책"}
       onClick={onClick}
-      className={`absolute top-[88px] z-30 flex size-8 items-center justify-center ${
+      className={`absolute top-[88px] z-30 flex size-8 items-center justify-center min-[431px]:top-[112px] min-[431px]:size-[42px] ${
         direction === "prev" ? "left-0" : "right-0"
       }`}
     >
       <img
         src={arrowCircle}
         alt=""
-        className="absolute inset-[-4px] size-10 max-w-none"
+        className="absolute inset-[-4px] size-10 max-w-none min-[431px]:inset-[-5px] min-[431px]:size-[52.5px]"
       />
       <img
         src={arrowChevron}
         alt=""
-        className={`relative h-[13.5px] w-[7.5px] object-contain ${
+        className={`relative h-[13.5px] w-[7.5px] object-contain min-[431px]:h-[18px] min-[431px]:w-[10px] ${
           direction === "prev" ? "rotate-180" : ""
         }`}
       />
@@ -98,7 +98,11 @@ export default function MateBookSection({
 
   return (
     <section className="relative mt-[65px] flex w-full flex-col items-center px-5">
-      <div className="relative flex w-full items-start justify-center">
+      {/*
+        모바일: 섹션 폭 기준 left/right.
+        웹: Figma 656:6473 — 책+화살표 프레임 458px (화살표가 뷰포트 끝으로 밀리지 않도록).
+      */}
+      <div className="relative flex w-full items-start justify-center min-[431px]:mx-auto min-[431px]:w-[458px]">
         {showArrows && <ArrowButton direction="prev" onClick={goPrev} />}
 
         <BookShelf>
@@ -128,7 +132,7 @@ export default function MateBookSection({
       {isPickSlide ? (
         <>
           <h2 className="mt-5 text-center text-h3 text-gray-800">
-            메이트에 올려둘 책 꺼내오기
+            메이트에 올려둘 책 고르기
           </h2>
           <p className="mt-2 text-center text-body2 text-gray-400">
             서재에서 최대 5권까지 선택할 수 있어요.

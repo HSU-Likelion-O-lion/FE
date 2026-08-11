@@ -1,17 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import timerBg from "../../assets/mate/timer-bg.png";
 import timerGlow from "../../assets/mate/timer-glow.svg";
 import iconClose from "../../assets/mate/icon-close.svg";
 import iconPause from "../../assets/mate/icon-pause.svg";
 import iconPlay from "../../assets/mate/icon-play.svg";
+import { useIsDesktop } from "../../hooks/useIsDesktop";
 import Modal from "../Modal";
+import WebGnb from "../WebGnb";
 import { PauseReasonOptions } from "../ModalOptionList";
 import PauseDetailForm from "./PauseDetailForm";
 
-const RING_SIZE = 272;
-const RING_STROKE = 10;
-const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const RING_MOBILE = { size: 272, stroke: 10 } as const;
+const RING_WEB = { size: 350, stroke: 10 } as const;
+
+function ringMetrics(size: number, stroke: number) {
+  const radius = (size - stroke) / 2;
+  return {
+    size,
+    stroke,
+    radius,
+    circumference: 2 * Math.PI * radius,
+  };
+}
 
 const FOCUS_TIMER_KEY = "sseudam:focus-timer";
 /** 타이머 0초 완료 시에만 목표달성/생각적기 라우트 진입 가능 */
@@ -112,6 +122,11 @@ export default function FocusTimerPopup({
   onClose,
   onComplete,
 }: FocusTimerPopupProps) {
+  const isDesktop = useIsDesktop();
+  const ring = ringMetrics(
+    isDesktop ? RING_WEB.size : RING_MOBILE.size,
+    isDesktop ? RING_WEB.stroke : RING_MOBILE.stroke,
+  );
   const totalSeconds = minutes * 60;
   const isRestore = initialRemaining != null;
 
@@ -363,7 +378,7 @@ export default function FocusTimerPopup({
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
   const progress = totalSeconds > 0 ? remaining / totalSeconds : 0;
-  const dashOffset = RING_CIRCUMFERENCE * (1 - progress);
+  const dashOffset = ring.circumference * (1 - progress);
   const playIntro = !isRestore && !introDone;
   const tickMs = 1000 / DEV_TIMER_SPEED;
 
@@ -372,7 +387,7 @@ export default function FocusTimerPopup({
       role="dialog"
       aria-modal="true"
       aria-labelledby="focus-timer-title"
-      className="fixed inset-0 z-[110] mx-auto flex w-full max-w-[430px] flex-col overflow-hidden bg-[#4451a0]"
+      className="fixed inset-0 z-[110] mx-auto flex w-full max-w-[430px] flex-col overflow-hidden bg-[#4451a0] min-[431px]:max-w-none"
     >
       {/* 배경 */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -381,13 +396,25 @@ export default function FocusTimerPopup({
           alt=""
           className="absolute inset-0 size-full object-cover"
         />
+        <div className="absolute inset-0 hidden bg-[rgba(70,83,162,0.43)] min-[431px]:block" />
       </div>
 
-      {/* 헤더 */}
-      <header className="relative z-10 flex items-center justify-center px-5 pt-[30px]">
-        <h1 id="focus-timer-title" className="text-center text-h3 text-white">
+      {/* 웹 GNB */}
+      <div className="relative z-10">
+        <WebGnb
+          active="center"
+          tone="dark"
+          onChange={(tab) => {
+            if (tab !== "center") handleClose();
+          }}
+        />
+      </div>
+
+      {/* 모바일 헤더 */}
+      <header className="relative z-10 flex items-center justify-center px-5 pt-[30px] min-[431px]:hidden">
+        <p className="text-center text-h3 text-white" aria-hidden>
           오롯이 글에 집중하는 시간
-        </h1>
+        </p>
         <button
           type="button"
           aria-label="닫기"
@@ -401,43 +428,55 @@ export default function FocusTimerPopup({
           />
         </button>
       </header>
+      <h1 id="focus-timer-title" className="sr-only">
+        오롯이 글에 집중하는 시간
+      </h1>
 
       {/* 타이머 */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-[calc(40px+env(safe-area-inset-bottom))]">
-        <div className="relative flex size-[272px] items-center justify-center">
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-[calc(40px+env(safe-area-inset-bottom))] min-[431px]:gap-[35px] min-[431px]:pb-16">
+        <div
+          className="relative flex items-center justify-center"
+          style={{ width: ring.size, height: ring.size }}
+        >
           <img
             src={timerGlow}
             alt=""
             aria-hidden
-            className="pointer-events-none absolute size-[272px] object-contain"
+            className="pointer-events-none absolute object-contain"
+            style={{ width: ring.size, height: ring.size }}
           />
 
           <svg
-            width={RING_SIZE}
-            height={RING_SIZE}
-            viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+            width={ring.size}
+            height={ring.size}
+            viewBox={`0 0 ${ring.size} ${ring.size}`}
             className="pointer-events-none absolute inset-0 -rotate-90"
             aria-hidden
+            style={
+              {
+                "--ring-c": ring.circumference,
+              } as CSSProperties
+            }
           >
             <circle
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              r={RING_RADIUS}
+              cx={ring.size / 2}
+              cy={ring.size / 2}
+              r={ring.radius}
               fill="none"
               stroke="rgba(239,240,249,0.18)"
-              strokeWidth={RING_STROKE}
+              strokeWidth={ring.stroke}
             />
             <circle
-              key={playIntro ? `intro-${startKey}` : `run-${startKey}`}
-              cx={RING_SIZE / 2}
-              cy={RING_SIZE / 2}
-              r={RING_RADIUS}
+              key={playIntro ? `intro-${startKey}-${ring.size}` : `run-${startKey}-${ring.size}`}
+              cx={ring.size / 2}
+              cy={ring.size / 2}
+              r={ring.radius}
               fill="none"
               stroke="rgba(239,240,249,0.86)"
-              strokeWidth={RING_STROKE}
+              strokeWidth={ring.stroke}
               strokeLinecap="butt"
-              strokeDasharray={RING_CIRCUMFERENCE}
-              strokeDashoffset={playIntro ? RING_CIRCUMFERENCE : dashOffset}
+              strokeDasharray={ring.circumference}
+              strokeDashoffset={playIntro ? ring.circumference : dashOffset}
               className={
                 !playIntro && ringTransition
                   ? "transition-[stroke-dashoffset] linear"
@@ -445,9 +484,10 @@ export default function FocusTimerPopup({
               }
               style={
                 playIntro
-                  ? {
+                  ? ({
+                      "--ring-c": ring.circumference,
                       animation: `focus-timer-ring-intro ${RING_INTRO_MS}ms linear forwards`,
-                    }
+                    } as CSSProperties)
                   : ringTransition
                     ? { transitionDuration: `${tickMs}ms` }
                     : undefined
@@ -455,23 +495,23 @@ export default function FocusTimerPopup({
             />
           </svg>
 
-          <div className="relative flex flex-col items-center bottom-3">
+          <div className="relative bottom-3 flex flex-col items-center min-[431px]:bottom-0">
             <div
-              className="flex h-[96px] items-center justify-center text-white"
+              className="flex h-[96px] items-center justify-center text-white min-[431px]:h-[120px]"
               style={{ fontFamily: "'Poppins', sans-serif" }}
             >
-              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums]">
+              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums] min-[431px]:text-[88px]">
                 {pad2(mins)}
               </span>
-              <span className="inline-block w-[1ch] text-center text-[55px] font-medium leading-none">
+              <span className="inline-block w-[1ch] text-center text-[55px] font-medium leading-none min-[431px]:text-[66px]">
                 :
               </span>
-              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums]">
+              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums] min-[431px]:text-[88px]">
                 {pad2(secs)}
               </span>
             </div>
 
-            <p className="mt-[-4px] max-w-[202px] text-center text-body2 text-gray-300">
+            <p className="mt-[-4px] max-w-[202px] text-center text-body2 text-gray-300 min-[431px]:mt-2 min-[431px]:max-w-[280px] min-[431px]:text-[16.8px]">
               화면을 닫으면 타이머가 초기화됩니다.
             </p>
           </div>
@@ -480,14 +520,14 @@ export default function FocusTimerPopup({
         <button
           type="button"
           onClick={handleTogglePause}
-          className="flex items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5"
+          className="flex items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5 min-[431px]:h-[55px] min-[431px]:rounded-[28.8px] min-[431px]:px-6 min-[431px]:py-3"
         >
           <img
             src={paused ? iconPlay : iconPause}
             alt=""
-            className="size-6 object-contain"
+            className="size-6 object-contain min-[431px]:size-[28.8px]"
           />
-          <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-100">
+          <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-100 min-[431px]:text-[19.2px]">
             {paused ? "일시 정지됨" : "잠시 멈추기"}
           </span>
         </button>

@@ -3,6 +3,8 @@ import CapsulePage from "./pages/CapsulePage";
 import DrawerDiagnosisPage from "./pages/DrawerDiagnosisPage";
 import DrawerPage from "./pages/DrawerPage";
 import DrawerRecommendPage from "./pages/DrawerRecommendPage";
+import DrawerBookIntroPage from "./pages/DrawerBookIntroPage";
+import DrawerMateSetPage from "./pages/DrawerMateSetPage";
 import GoalAchievedPage from "./pages/GoalAchievedPage";
 import HomePage from "./pages/HomePage";
 import LibraryBookshelfPage from "./pages/LibraryBookshelfPage";
@@ -42,6 +44,11 @@ function App() {
         <Route path="/drawer" element={<DrawerPage />} />
         <Route path="/drawer/diagnosis" element={<DrawerDiagnosisPage />} />
         <Route path="/drawer/recommend" element={<DrawerRecommendPage />} />
+        <Route
+          path="/drawer/recommend/:bookId"
+          element={<DrawerBookIntroPage />}
+        />
+        <Route path="/drawer/mate-set" element={<DrawerMateSetPage />} />
         <Route path="/library" element={<LibraryPage />} />
         <Route path="/library/bookshelf" element={<LibraryBookshelfPage />} />
         <Route path="/library/reasons" element={<LibraryReasonsPage />} />

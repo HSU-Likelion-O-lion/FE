@@ -81,10 +81,12 @@ export default function ProfilePage() {
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px]">
-      <header className="flex h-11 items-center justify-center px-5 pt-[16px]">
-        <h1 className="w-full text-center text-h3 text-gray-900">
-          {MOCK_USER.name}님의 프로필
-        </h1>
+      <header className="flex shrink-0 flex-col px-5 pt-5">
+        <div className="flex h-11 items-center justify-center">
+          <h1 className="w-full text-center text-h3 text-gray-900">
+            {MOCK_USER.name}님의 프로필
+          </h1>
+        </div>
       </header>
 
       <section className="mt-5 border-b border-gray-100">

@@ -20,7 +20,7 @@ const SLIDES = [
   },
 ] as const;
 
-/** 앱 사용안내 1~3 (Figma 588:5420, 588:5472, 588:5595) */
+/** 앱 사용안내 1~3 (Figma 588:5420, 588:5472, 588:5595) — ≥431px full-bleed */
 export default function OnboardingGuidePage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
@@ -46,23 +46,23 @@ export default function OnboardingGuidePage() {
   const isLast = step === SLIDES.length - 1;
 
   return (
-    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff]">
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center pt-[calc(136px+env(safe-area-inset-top))]">
-        <div className="relative flex h-[254px] w-[284px] items-center justify-center">
+    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff] min-[431px]:max-w-none">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[430px] flex-1 flex-col items-center pt-[calc(136px+env(safe-area-inset-top))] min-[431px]:max-w-[520px] min-[431px]:pt-[calc(120px+env(safe-area-inset-top))]">
+        <div className="relative flex h-[254px] w-[284px] items-center justify-center min-[431px]:h-[320px] min-[431px]:w-[360px]">
           {step === 0 ? <SlideFocusVisual /> : null}
           {step === 1 ? <SlideDamiVisual /> : null}
           {step === 2 ? <SlidePublishVisual /> : null}
         </div>
 
-        <div className="mt-7 w-full px-8 text-center">
-          <h1 className="text-h2 text-gray-900">
+        <div className="mt-7 w-full px-8 text-center min-[431px]:mt-10">
+          <h1 className="text-h2 text-gray-900 min-[431px]:text-[28px] min-[431px]:leading-9">
             {slide.title.map((line) => (
               <span key={line} className="block">
                 {line}
               </span>
             ))}
           </h1>
-          <p className="mt-2 text-body1 text-gray-500">
+          <p className="mt-2 text-body1 text-gray-500 min-[431px]:mt-3 min-[431px]:text-[18px]">
             {Array.isArray(slide.body)
               ? slide.body.map((line) => (
                   <span key={line} className="block">
@@ -75,7 +75,7 @@ export default function OnboardingGuidePage() {
       </div>
 
       {isLast ? (
-        <div className="relative z-10 shrink-0 px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
+        <div className="relative z-10 mx-auto w-full max-w-[430px] shrink-0 px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3 min-[431px]:max-w-[400px] min-[431px]:px-0 min-[431px]:pb-16">
           <button
             type="button"
             onClick={finish}
@@ -85,11 +85,11 @@ export default function OnboardingGuidePage() {
           </button>
         </div>
       ) : (
-        <div className="relative z-10 flex shrink-0 items-center justify-between px-10 pb-[calc(40px+env(safe-area-inset-bottom))] pt-3">
+        <div className="relative z-10 mx-auto flex w-full max-w-[430px] shrink-0 items-center justify-between px-10 pb-[calc(40px+env(safe-area-inset-bottom))] pt-3 min-[431px]:max-w-[520px] min-[431px]:px-0 min-[431px]:pb-16">
           <button
             type="button"
             onClick={finish}
-            className="text-[14px] font-medium tracking-[-0.025em] text-primary-500"
+            className="text-[14px] font-medium tracking-[-0.025em] text-primary-500 min-[431px]:text-base"
           >
             건너뛰기
           </button>
@@ -106,7 +106,7 @@ export default function OnboardingGuidePage() {
           <button
             type="button"
             onClick={goNext}
-            className="text-[14px] font-medium tracking-[-0.025em] text-primary-500"
+            className="text-[14px] font-medium tracking-[-0.025em] text-primary-500 min-[431px]:text-base"
           >
             다음
           </button>

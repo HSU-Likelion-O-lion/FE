@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
+import iconModalClose from "../../assets/mate/icon-modal-close.svg";
 import Button from "../Button";
 import BookStatusBadge from "./BookStatusBadge";
 import { MATE_BOOK_LIMIT, type LibraryBook } from "./types";
@@ -82,7 +83,7 @@ export default function PickMateBookSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center min-[431px]:items-center min-[431px]:px-5">
       <button
         type="button"
         aria-label="모달 닫기"
@@ -94,14 +95,15 @@ export default function PickMateBookSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="pick-mate-book-sheet-title"
-        className="relative z-10 flex max-h-[min(607px,85dvh)] w-full max-w-[430px] flex-col rounded-t-[24px] bg-white pb-[env(safe-area-inset-bottom)] will-change-transform"
+        className="relative z-10 flex max-h-[min(607px,85dvh)] w-full max-w-[430px] flex-col rounded-t-[24px] bg-white pb-[env(safe-area-inset-bottom)] will-change-transform min-[431px]:h-[min(720px,90dvh)] min-[431px]:max-h-[min(720px,90dvh)] min-[431px]:w-[533px] min-[431px]:max-w-[533px] min-[431px]:rounded-[24px] min-[431px]:pb-8 min-[431px]:pt-8"
         style={{
           transform: `translateY(${dragY}px)`,
           transition: dragging ? "none" : "transform 200ms ease-out",
         }}
       >
+        {/* 모바일: 드래그 핸들 / 웹: 숨김 */}
         <div
-          className="touch-none shrink-0"
+          className="touch-none shrink-0 min-[431px]:hidden"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -109,26 +111,43 @@ export default function PickMateBookSheet({
           <div className="flex cursor-grab justify-center pt-[14px] pb-[11px] active:cursor-grabbing">
             <span className="h-2 w-[50px] rounded-full bg-gray-200" />
           </div>
-
-          <div className="flex flex-col items-start px-5">
-            <h2
-              id="pick-mate-book-sheet-title"
-              className="text-h2 text-left text-gray-900"
-            >
-              메이트에 올려둘 책
-            </h2>
-            <p className="mt-1 text-left text-body1 text-gray-400">
-              서재에서 최대 5권까지 선택할 수 있어요
-            </p>
-            <p className="mt-3 text-left text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-primary-400">
-              현재선택 : {selectedIds.length} / {MATE_BOOK_LIMIT}권
-            </p>
-          </div>
         </div>
 
-        <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
+        <div className="relative flex shrink-0 flex-col items-start px-5 min-[431px]:px-8">
+          <div className="flex w-full items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h2
+                id="pick-mate-book-sheet-title"
+                className="text-h2 text-left text-gray-900 min-[431px]:text-[28px] min-[431px]:leading-9"
+              >
+                메이트에 올려둘 책
+              </h2>
+              <p className="mt-1 text-left text-body1 text-gray-400">
+                서재에서 최대 5권까지 선택할 수 있어요
+              </p>
+            </div>
+            {/* 웹: 우상단 X */}
+            <button
+              type="button"
+              aria-label="닫기"
+              onClick={onClose}
+              className="hidden size-[26px] shrink-0 items-center justify-center min-[431px]:flex"
+            >
+              <img
+                src={iconModalClose}
+                alt=""
+                className="size-full object-contain"
+              />
+            </button>
+          </div>
+          <p className="mt-3 text-left text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-primary-400 min-[431px]:mt-4">
+            현재선택 : {selectedIds.length} / {MATE_BOOK_LIMIT}권
+          </p>
+        </div>
+
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto min-[431px]:mt-5">
           {books.length === 0 ? (
-            <p className="px-5 py-8 text-center text-body2 text-gray-400">
+            <p className="px-5 py-8 text-center text-body2 text-gray-400 min-[431px]:px-8">
               꺼낼 수 있는 책이 없어요.
             </p>
           ) : (
@@ -145,7 +164,7 @@ export default function PickMateBookSheet({
                       disabled={atLimit}
                       onClick={() => toggleBook(book.id)}
                       aria-pressed={selected}
-                      className={`flex w-full items-center gap-2.5 px-5 py-3 text-left transition-colors ${
+                      className={`flex w-full items-center gap-2.5 px-5 py-3 text-left transition-colors min-[431px]:gap-6 min-[431px]:px-8 ${
                         selected ? "bg-primary-10" : "bg-white"
                       } ${atLimit ? "opacity-50" : ""}`}
                     >
@@ -179,11 +198,11 @@ export default function PickMateBookSheet({
           )}
         </div>
 
-        <div className="shrink-0 bg-gradient-to-t from-white via-white to-transparent px-5 pb-5 pt-3">
+        <div className="flex shrink-0 justify-center bg-linear-to-t from-white via-white to-transparent px-5 pb-5 pt-3 min-[431px]:px-8 min-[431px]:pb-0 min-[431px]:pt-4">
           <Button
-            text="선택 완료"
+            text="선택완료"
             variant="primary"
-            size="h-[54px] w-full px-5 py-3"
+            size="h-[54px] w-full px-5 py-3 min-[431px]:w-[399px]"
             onClick={handleConfirm}
           />
         </div>

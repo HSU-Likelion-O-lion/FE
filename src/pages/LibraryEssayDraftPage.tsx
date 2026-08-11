@@ -39,20 +39,22 @@ export default function LibraryEssayDraftPage() {
             className="absolute inset-0 bg-[rgba(36,41,110,0.26)]"
           />
 
-          <header className="relative z-20 flex h-11 items-center justify-center px-5 pt-[calc(12px+env(safe-area-inset-top))]">
-            <button
-              type="button"
-              aria-label="뒤로가기"
-              onClick={() => navigate("/library/reasons/select")}
-              className="absolute left-5 top-[calc(12px+env(safe-area-inset-top))] flex size-6 items-center justify-center"
-            >
-              <img
-                src={iconBack}
-                alt=""
-                className="size-6 object-contain brightness-0 invert"
-              />
-            </button>
-            <h1 className="text-h3 text-[#fdfdff]">에세이 초안 미리보기</h1>
+          <header className="relative z-20 px-5 pt-[calc(20px+env(safe-area-inset-top))]">
+            <div className="relative flex h-11 w-full items-center justify-center">
+              <button
+                type="button"
+                aria-label="뒤로가기"
+                onClick={() => navigate("/library/reasons/select")}
+                className="absolute left-0 flex size-6 items-center justify-center"
+              >
+                <img
+                  src={iconBack}
+                  alt=""
+                  className="size-6 object-contain brightness-0 invert"
+                />
+              </button>
+              <h1 className="text-h3 text-[#fdfdff]">에세이 초안 미리보기</h1>
+            </div>
           </header>
 
           <div className="relative z-10 flex items-start justify-between px-9 pt-6">

@@ -3,9 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   filterBooksByKeywords,
   getHeadlineForKeywords,
-  saveDiagnosisRecord,
-  type RecommendBook,
 } from "../data/drawerDiagnosisMock";
+import { startRecommendSession, loadRecommendSession } from "../data/bookShelfStore";
 import iconInfo from "../assets/drawer/recommend/icon-info.svg";
 
 type LocationState = {
@@ -18,14 +17,8 @@ export default function DrawerRecommendPage() {
   const location = useLocation();
   const keywords = (location.state as LocationState | null)?.keywords ?? [];
 
-  const books = useMemo(
-    () => filterBooksByKeywords(keywords, 3),
-    [keywords],
-  );
-  const headline = useMemo(
-    () => getHeadlineForKeywords(keywords),
-    [keywords],
-  );
+  const books = useMemo(() => filterBooksByKeywords(keywords, 3), [keywords]);
+  const headline = useMemo(() => getHeadlineForKeywords(keywords), [keywords]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -33,19 +26,24 @@ export default function DrawerRecommendPage() {
     if (books[0]) setSelectedId(books[0].id);
   }, [books]);
 
+  useEffect(() => {
+    const ids = books.map((book) => book.id);
+    const existing = loadRecommendSession();
+    const sameSet =
+      existing != null &&
+      existing.bookIds.length === ids.length &&
+      existing.bookIds.every((id, index) => id === ids[index]);
+    if (sameSet) return;
+    startRecommendSession(keywords, ids);
+  }, [books, keywords]);
+
   const selected = books.find((b) => b.id === selectedId) ?? books[0];
 
-  const handleSave = () => {
+  const handleReadIntro = () => {
     if (!selected) return;
-    saveDiagnosisRecord({
-      id: `rec-${Date.now()}`,
-      bookTitle: selected.title,
-      quote: selected.blurb,
-      thumbUrl: selected.coverUrl,
-      dateLabel: formatTodayLabel(),
-      keywords,
+    navigate(`/drawer/recommend/${selected.id}`, {
+      state: { keywords },
     });
-    navigate("/drawer", { replace: true });
   };
 
   return (
@@ -79,11 +77,11 @@ export default function DrawerRecommendPage() {
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-[430px] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2">
         <button
           type="button"
-          onClick={handleSave}
+          onClick={handleReadIntro}
           disabled={!selected}
           className="flex h-[54px] w-full items-center justify-center rounded-2xl bg-primary-500 text-button1 font-semibold text-white disabled:opacity-50"
         >
-          기록에 남기기
+          책 소개 읽기
         </button>
       </div>
     </main>
@@ -95,7 +93,14 @@ function BookCard({
   selected,
   onSelect,
 }: {
-  book: RecommendBook;
+  book: {
+    id: string;
+    title: string;
+    author: string;
+    blurb: string;
+    meta: string;
+    coverUrl: string;
+  };
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -109,11 +114,7 @@ function BookCard({
         }`}
       >
         <div className="absolute top-[-17px] left-5 h-[159px] w-[107px] overflow-hidden rounded border-2 border-[#e9ecf8]">
-          <img
-            src={book.coverUrl}
-            alt=""
-            className="size-full object-cover"
-          />
+          <img src={book.coverUrl} alt="" className="size-full object-cover" />
         </div>
         <div>
           <div className="flex flex-wrap items-baseline gap-x-2">
@@ -126,12 +127,4 @@ function BookCard({
       </button>
     </li>
   );
-}
-
-function formatTodayLabel() {
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(2);
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return `${yy}.${mm}.${dd} 진단`;
 }

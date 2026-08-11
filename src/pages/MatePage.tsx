@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
+import WebGnb from "../components/WebGnb";
 import bookCover1 from "../assets/mate/book-cover-1.jpg";
 import bookCover2 from "../assets/mate/book-cover-2.png";
 import bookCover3 from "../assets/mate/book-cover-3.png";
@@ -21,6 +22,11 @@ import {
   type MateBookItem,
   type MateBooks,
 } from "../components/mate/types";
+import {
+  loadLibraryBooks,
+  loadMateBooks,
+  saveMateBooks,
+} from "../data/bookShelfStore";
 
 export type { MateBookItem, MateBooks };
 
@@ -63,7 +69,7 @@ const MOCK_LIBRARY_BOOKS: LibraryBook[] = [
   },
   {
     id: "lib-5",
-    title: "마음의 법칙",
+    title: "마음의 직원",
     author: "김하나",
     genre: "에세이",
     publisher: "위즈덤하우스",
@@ -109,20 +115,61 @@ const WEEK: WeekDay[] = [
   { day: "토", date: 15, status: "future" },
 ];
 
+/** 웹 가로 캘린더용 — 전후 요일을 더 보여 줌 */
+const WEEK_WEB: WeekDay[] = [
+  { day: "토", date: 8, status: "past" },
+  { day: "일", date: 9, status: "past" },
+  { day: "월", date: 10, status: "past" },
+  { day: "화", date: 11, status: "today" },
+  { day: "수", date: 12, status: "future" },
+  { day: "목", date: 13, status: "future" },
+  { day: "금", date: 14, status: "future" },
+  { day: "토", date: 15, status: "future" },
+  { day: "일", date: 16, status: "future" },
+  { day: "월", date: 17, status: "future" },
+  { day: "화", date: 18, status: "future" },
+];
+
+type MateLocationState = {
+  openFocusTime?: boolean;
+  mateBookId?: string;
+};
+
 type MatePageProps = {
   books?: MateBooks;
   libraryBooks?: LibraryBook[];
 };
+
+function mergeLibrary(
+  defaults: LibraryBook[],
+  stored: LibraryBook[],
+): LibraryBook[] {
+  const storedIds = new Set(stored.map((b) => b.id));
+  return [...stored, ...defaults.filter((book) => !storedIds.has(book.id))];
+}
+
+function resolveMateBooks(
+  defaults: MateBooks,
+  stored: MateBookItem[],
+): MateBooks {
+  if (stored.length > 0) return stored;
+  return defaults;
+}
 
 export default function MatePage({
   books: initialBooks = MOCK_MATE_BOOKS,
   libraryBooks: initialLibrary = MOCK_LIBRARY_BOOKS,
 }: MatePageProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<NavTab>("center");
   const [selectedDate, setSelectedDate] = useState(11);
-  const [mateBooks, setMateBooks] = useState<MateBooks>(initialBooks);
-  const [libraryBooks] = useState<LibraryBook[]>(initialLibrary);
+  const [mateBooks, setMateBooks] = useState<MateBooks>(() =>
+    resolveMateBooks(initialBooks, loadMateBooks()),
+  );
+  const [libraryBooks, setLibraryBooks] = useState<LibraryBook[]>(() =>
+    mergeLibrary(initialLibrary, loadLibraryBooks()),
+  );
   const [pickSheetOpen, setPickSheetOpen] = useState(false);
   const [focusModalOpen, setFocusModalOpen] = useState(false);
   const [timerOpen, setTimerOpen] = useState(false);
@@ -136,12 +183,19 @@ export default function MatePage({
   const [timerStartKey, setTimerStartKey] = useState(0);
 
   const selectedMateIds = mateBooks.map((book) => book.id);
-  /** 서재에 책이 있으면 시트에서 선택/해제 가능 */
   const canPick = libraryBooks.length > 0;
   const showEmpty = mateBooks.length === 0 && libraryBooks.length === 0;
   const showCarousel = !showEmpty;
 
-  // 앱 종료 후 재진입 시 세션 복구
+  useEffect(() => {
+    const state = (location.state as MateLocationState | null) ?? null;
+    if (!state?.openFocusTime) return;
+    setMateBooks(resolveMateBooks(initialBooks, loadMateBooks()));
+    setLibraryBooks(mergeLibrary(initialLibrary, loadLibraryBooks()));
+    setFocusModalOpen(true);
+    navigate(".", { replace: true, state: {} });
+  }, [initialBooks, initialLibrary, location.state, navigate]);
+
   useEffect(() => {
     const session = loadFocusTimerSession();
     if (!session) return;
@@ -161,7 +215,7 @@ export default function MatePage({
   const handlePickConfirm = useCallback((selected: LibraryBook[]) => {
     setMateBooks((prev) => {
       const prevById = new Map(prev.map((book) => [book.id, book]));
-      return selected.slice(0, MATE_BOOK_LIMIT).map((book) => {
+      const next = selected.slice(0, MATE_BOOK_LIMIT).map((book) => {
         const existing = prevById.get(book.id);
         return {
           id: book.id,
@@ -170,12 +224,28 @@ export default function MatePage({
           lastReadDaysAgo: existing?.lastReadDaysAgo ?? 0,
         };
       });
+      saveMateBooks(next);
+      return next;
     });
+    setPickSheetOpen(false);
   }, []);
 
+  const handleEmptyCta = () => {
+    if (canPick) {
+      setPickSheetOpen(true);
+      return;
+    }
+    navigate("/drawer");
+  };
+
+  const badgeCount = 3;
+
   return (
-    <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px]">
-      <header className="flex items-center gap-3 px-5 pt-[23px]">
+    <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px] min-[431px]:max-w-none min-[431px]:bg-[#fdfdff] min-[431px]:pb-0">
+      <WebGnb active={activeTab} onChange={setActiveTab} />
+
+      {/* —— 모바일 헤더 —— */}
+      <header className="flex items-center gap-3 px-5 pt-5 min-[431px]:hidden">
         <h1 className="min-w-0 flex-1 text-h2 text-gray-900">
           이번 주 독서 기록
         </h1>
@@ -198,7 +268,33 @@ export default function MatePage({
         </div>
       </header>
 
-      <section className="mt-5 flex flex-col px-5" aria-label="주간 날짜">
+      {/* —— 웹 헤더 —— */}
+      <header className="mx-auto hidden w-full max-w-[1440px] items-center justify-between px-10 pt-[30px] min-[431px]:flex min-[1024px]:px-40">
+        <h1 className="text-[40px] font-semibold leading-10 tracking-[-0.025em] text-gray-900">
+          이번 주 독서 기록
+        </h1>
+        <div className="flex shrink-0 items-center gap-3">
+          <button
+            type="button"
+            className="flex h-[38px] items-center justify-center rounded-[18.7px] bg-primary-10 px-4 text-[15.4px] tracking-[-0.025em] text-primary-500"
+          >
+            누적배지 ㅣ {badgeCount}개
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/mate/capsule")}
+            className="flex h-[38px] items-center justify-center rounded-[18.7px] bg-primary-10 px-4 text-[15.4px] tracking-[-0.025em] text-primary-500"
+          >
+            영감캡슐
+          </button>
+        </div>
+      </header>
+
+      {/* —— 모바일 주간 캘린더 —— */}
+      <section
+        className="mt-5 flex flex-col px-5 min-[431px]:hidden"
+        aria-label="주간 날짜"
+      >
         <div className="flex items-center justify-center rounded-t-[11px] bg-white px-2 pt-2">
           {WEEK.map((item) => (
             <div
@@ -248,8 +344,76 @@ export default function MatePage({
         </div>
       </section>
 
+      {/* —— 웹 주간 캘린더 —— */}
+      <section
+        className="relative mx-auto mt-8 hidden w-full max-w-[1440px] overflow-hidden min-[431px]:block"
+        aria-label="주간 날짜"
+      >
+        <div className="flex items-start justify-center gap-[54px] px-10 min-[1024px]:px-40">
+          {WEEK_WEB.map((item) => {
+            const selected = selectedDate === item.date;
+            const disabled = item.status === "future";
+            const faded = item.status === "past";
+
+            return (
+              <button
+                key={`${item.day}-${item.date}`}
+                type="button"
+                disabled={disabled}
+                onClick={() => {
+                  if (!disabled) setSelectedDate(item.date);
+                }}
+                className={`flex flex-col items-center gap-3 ${
+                  faded ? "opacity-75" : ""
+                } ${disabled ? "cursor-default" : "cursor-pointer"}`}
+                aria-pressed={selected}
+              >
+                <span
+                  className={`flex size-[52px] items-center justify-center rounded-full text-[20px] tracking-[-0.025em] ${
+                    selected
+                      ? "bg-primary-50 font-semibold text-primary-500"
+                      : "font-normal text-gray-400"
+                  }`}
+                >
+                  {item.date}
+                </span>
+                <span
+                  className={`text-base tracking-[-0.025em] ${
+                    selected
+                      ? "font-medium text-gray-900"
+                      : "font-normal text-gray-400"
+                  }`}
+                >
+                  {item.day === "일"
+                    ? "일요일"
+                    : item.day === "월"
+                      ? "월요일"
+                      : item.day === "화"
+                        ? "화요일"
+                        : item.day === "수"
+                          ? "수요일"
+                          : item.day === "목"
+                            ? "목요일"
+                            : item.day === "금"
+                              ? "금요일"
+                              : "토요일"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-0 w-[170px] bg-linear-to-r from-[#fdfdff] to-transparent"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-[170px] bg-linear-to-l from-[#fdfdff] to-transparent"
+        />
+      </section>
+
       {showEmpty ? (
-        <MateEmptySection />
+        <MateEmptySection onCta={handleEmptyCta} />
       ) : showCarousel ? (
         <MateBookSection
           books={mateBooks}
@@ -259,7 +423,7 @@ export default function MatePage({
         />
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
+      <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)] min-[431px]:hidden">
         <NavigationBar active={activeTab} onChange={setActiveTab} />
       </div>
 
@@ -287,7 +451,6 @@ export default function MatePage({
           setTimerOpen(false);
           setTimerInitialRemaining(undefined);
           setTimerInitialPaused(undefined);
-          // 타이머 history state가 남아 있어도 goal로 교체
           navigate("/mate/goal", { replace: true });
         }}
       />
