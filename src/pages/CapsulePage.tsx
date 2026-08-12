@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import WebGnb from "../components/WebGnb";
-import webBg from "../assets/common/background.png";
+import webBg from "../assets/common/web-bg.png";
 import capsuleBg from "../assets/mate/capsule-bg.png";
 import capsuleEllipse from "../assets/mate/capsule-ellipse.svg";
 import capsuleOwl from "../assets/mate/capsule-owl.png";
@@ -33,7 +33,7 @@ export default function CapsulePage() {
         <div className="absolute inset-x-0 top-0 h-[212px] bg-linear-to-b from-[rgba(71,84,163,0.75)] from-[12%] to-transparent min-[431px]:hidden" />
         <div className="absolute inset-x-0 bottom-0 h-[550px] bg-[linear-gradient(0deg,#EFF0F9_80%,transparent_100%)] min-[431px]:hidden" />
 
-        {/* 웹 — common/background.png */}
+        {/* 웹 — common/web-bg.png */}
         <img
           src={webBg}
           alt=""

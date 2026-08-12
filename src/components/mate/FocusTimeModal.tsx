@@ -15,6 +15,7 @@ type FocusTimeModalProps = {
   onSelect?: (minutes: number) => void;
 };
 
+/** 집중 시간 선택 — 모바일 바텀시트 / 웹 센터 모달 (Figma 660:6862) */
 export default function FocusTimeModal({
   open,
   onClose,
@@ -61,9 +62,14 @@ export default function FocusTimeModal({
     setDragY(0);
   };
 
+  const pick = (minutes: number) => {
+    setSelected(minutes);
+    onSelect?.(minutes);
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center">
-      {/* 배경 딤 */}
+    <div className="fixed inset-0 z-[100] flex items-end justify-center min-[431px]:items-center min-[431px]:px-5">
       <button
         type="button"
         aria-label="모달 닫기"
@@ -71,53 +77,48 @@ export default function FocusTimeModal({
         onClick={onClose}
       />
 
-      {/* 바텀 시트 */}
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="focus-time-modal-title"
-        className="relative z-10 w-full max-w-[430px] rounded-t-[24px] bg-white pb-[env(safe-area-inset-bottom)] will-change-transform"
+        className="relative z-10 w-full max-w-[430px] rounded-t-[24px] bg-[#fdfdff] pb-[env(safe-area-inset-bottom)] will-change-transform min-[431px]:w-[565px] min-[431px]:max-w-[565px] min-[431px]:rounded-[24px] min-[431px]:p-8"
         style={{
           transform: `translateY(${dragY}px)`,
           transition: dragging ? "none" : "transform 200ms ease-out",
         }}
       >
+        {/* 모바일: 드래그 핸들 */}
         <div
-          className="touch-none"
+          className="touch-none min-[431px]:hidden"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* 드래그 핸들 */}
           <div className="flex cursor-grab justify-center pt-[14px] pb-[11px] active:cursor-grabbing">
             <span className="h-2 w-[50px] rounded-full bg-gray-200" />
           </div>
-
-          <div className="flex flex-col items-start px-5 pt-[18px]">
-            <h2
-              id="focus-time-modal-title"
-              className="text-h2 text-left text-gray-900"
-            >
-              오늘 얼마나 읽을까요?
-            </h2>
-            <p className="mt-1 text-left text-body1 text-gray-400">
-              마음을 가라앉히기 좋은 시간이에요.
-            </p>
-          </div>
         </div>
 
-        <div className="flex w-full flex-col gap-4 px-5 py-5">
+        <div className="flex flex-col items-start px-5 pt-[18px] min-[431px]:px-0 min-[431px]:pt-0">
+          <h2
+            id="focus-time-modal-title"
+            className="text-h2 text-left text-gray-900 min-[431px]:text-[24px] min-[431px]:leading-[1.5]"
+          >
+            오늘 얼마나 읽을까요?
+          </h2>
+          <p className="mt-1 text-left text-body1 text-gray-400 min-[431px]:hidden">
+            마음을 가라앉히기 좋은 시간이에요.
+          </p>
+        </div>
+
+        <div className="flex w-full flex-col gap-4 px-5 py-5 min-[431px]:mt-7 min-[431px]:gap-5 min-[431px]:p-0">
           {TIME_OPTIONS.map((option) => (
             <Button
               key={option.minutes}
               text={option.label}
               size="h-[54px] w-full px-5 py-3"
               active={selected === option.minutes}
-              onClick={() => {
-                setSelected(option.minutes);
-                onSelect?.(option.minutes);
-                onClose();
-              }}
+              onClick={() => pick(option.minutes)}
             />
           ))}
         </div>

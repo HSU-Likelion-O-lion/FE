@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import logoLight from "../assets/web/gnb-logo.svg";
-import logoDark from "../assets/onboarding/splash-logo.svg";
+import logoDark from "../assets/common/logo-dark.svg";
+import logoWhite from "../assets/common/logo-white.svg";
 import iconUser from "../assets/web/gnb-user.svg";
 import type { NavTab } from "./NavigationBar";
 
@@ -60,7 +60,7 @@ export default function WebGnb({
         className="flex h-[34px] w-[50px] shrink-0 items-center"
       >
         <img
-          src={isDark ? logoDark : logoLight}
+          src={isDark ? logoWhite : logoDark}
           alt="쓰담"
           className="h-full w-full object-contain object-left"
         />

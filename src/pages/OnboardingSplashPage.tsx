@@ -1,7 +1,7 @@
 import { Navigate, useNavigate } from "react-router-dom";
 import splashBg from "../assets/onboarding/splash-bg.png";
-import splashBgWeb from "../assets/onboarding/splash-bg-web.png";
-import splashLogo from "../assets/onboarding/splash-logo.svg";
+import webBg from "../assets/common/web-bg.png";
+import logoWhite from "../assets/common/logo-white.svg";
 import { isOnboardingDone } from "../lib/onboarding";
 
 const startButtonClassName =
@@ -20,7 +20,7 @@ export default function OnboardingSplashPage() {
   return (
     <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden min-[431px]:max-w-none">
       <picture>
-        <source media="(min-width: 431px)" srcSet={splashBgWeb} />
+        <source media="(min-width: 431px)" srcSet={webBg} />
         <img
           src={splashBg}
           alt=""
@@ -32,7 +32,7 @@ export default function OnboardingSplashPage() {
       {/* 모바일 */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-5 min-[431px]:hidden">
         <img
-          src={splashLogo}
+          src={logoWhite}
           alt="쓰담"
           className="h-[80px] w-[117px] object-contain"
         />
@@ -55,7 +55,7 @@ export default function OnboardingSplashPage() {
       <div className="absolute inset-0 z-10 hidden items-center justify-center min-[431px]:flex">
         <div className="flex w-[313px] flex-col items-center">
           <img
-            src={splashLogo}
+            src={logoWhite}
             alt="쓰담"
             className="h-[110px] w-[160px] object-contain"
           />

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../components/Input";
-import loginLogo from "../assets/auth/login-logo.svg";
-import webBg from "../assets/common/background.png";
-import logoWeb from "../assets/onboarding/logo-web.svg";
+import webBg from "../assets/common/web-bg.png";
+import logoDark from "../assets/common/logo-dark.svg";
+import logoWhite from "../assets/common/logo-white.svg";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -83,7 +83,7 @@ export default function SignupPage() {
       {/* —— 모바일 —— */}
       <div className="flex min-h-0 flex-1 flex-col px-5 pt-[calc(68px+env(safe-area-inset-top))] min-[431px]:hidden">
         <img
-          src={loginLogo}
+          src={logoDark}
           alt="쓰담"
           className="mx-auto h-[61px] w-[89px] object-contain"
         />
@@ -154,7 +154,7 @@ export default function SignupPage() {
       {/* —— 웹 (Figma 645:4900) — 높이 부족 시 스크롤 —— */}
       <div className="relative z-10 mx-auto hidden min-h-dvh w-full max-w-[353px] flex-col items-center px-5 py-16 min-[431px]:flex">
         <img
-          src={logoWeb}
+          src={logoWhite}
           alt="쓰담"
           className="h-[95px] w-[140px] shrink-0 object-contain"
         />

@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import iconApple from "../assets/auth/icon-apple.svg";
 import iconKakao from "../assets/auth/icon-kakao.svg";
-import loginLogo from "../assets/auth/login-logo.svg";
 import loginMascot from "../assets/auth/login-mascot.png";
-import webBg from "../assets/common/background.png";
-import logoWeb from "../assets/onboarding/logo-web.svg";
+import webBg from "../assets/common/web-bg.png";
+import logoDark from "../assets/common/logo-dark.svg";
+import logoWhite from "../assets/common/logo-white.svg";
 
 /** Figma 603:4503 — 웹 로그인 흰 라디얼 오버레이 (1440×1024) */
 const WEB_LOGIN_GRADIENT =
@@ -35,7 +35,7 @@ export default function LoginPage() {
       {/* 모바일 */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center px-5 pt-[calc(68px+env(safe-area-inset-top))] min-[431px]:hidden">
         <img
-          src={loginLogo}
+          src={logoDark}
           alt="쓰담"
           className="h-[61px] w-[89px] object-contain"
         />
@@ -92,62 +92,64 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* 웹 — 한 컬럼으로 묶어 높이 부족 시 스크롤 */}
-      <div className="relative z-10 mx-auto hidden min-h-dvh w-full max-w-[352px] flex-col items-center justify-center px-5 py-16 min-[431px]:flex">
-        <img
-          src={logoWeb}
-          alt="쓰담"
-          className="h-[95px] w-[140px] object-contain"
-        />
-        <img
-          src={loginMascot}
-          alt=""
-          className="mt-11 h-[124px] w-[167px] object-contain object-bottom"
-        />
+      {/* 웹 — 여유 있으면 세로 중앙, 부족하면 스크롤 */}
+      <div className="relative z-10 mx-auto hidden min-h-dvh w-full max-w-[352px] flex-col px-5 py-16 min-[431px]:flex">
+        <div className="my-auto flex w-full flex-col items-center">
+          <img
+            src={logoWhite}
+            alt="쓰담"
+            className="h-[95px] w-[140px] object-contain"
+          />
+          <img
+            src={loginMascot}
+            alt=""
+            className="mt-11 h-[124px] w-[167px] object-contain object-bottom"
+          />
 
-        <p className="mt-11 text-center text-h2 text-gray-900">
-          오늘 하루도 고생 많았어요.
-          <br />
-          <span className="text-primary-500">오롯이 나를 위한 시간</span>을
-          가져보세요.
-        </p>
+          <p className="mt-11 text-center text-h2 text-gray-900">
+            오늘 하루도 고생 많았어요.
+            <br />
+            <span className="text-primary-500">오롯이 나를 위한 시간</span>을
+            가져보세요.
+          </p>
 
-        <div className="mt-5 flex w-full flex-col gap-3">
-          <button
-            type="button"
-            onClick={() => navigate("/mate", { replace: true })}
-            className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800"
-          >
-            <img src={iconKakao} alt="" className="size-6 object-contain" />
-            카카오로 시작하기
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/mate", { replace: true })}
-            className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-gray-800 text-button1 font-medium text-white"
-          >
-            <img src={iconApple} alt="" className="size-6 object-contain" />
-            Apple로 시작하기
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/login/email")}
-            className="flex h-[54px] w-full items-center justify-center rounded-2xl bg-primary-50 text-button1 font-medium text-primary-500"
-          >
-            이메일로 로그인
-          </button>
+          <div className="mt-5 flex w-full flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/mate", { replace: true })}
+              className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800"
+            >
+              <img src={iconKakao} alt="" className="size-6 object-contain" />
+              카카오로 시작하기
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/mate", { replace: true })}
+              className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-gray-800 text-button1 font-medium text-white"
+            >
+              <img src={iconApple} alt="" className="size-6 object-contain" />
+              Apple로 시작하기
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/login/email")}
+              className="flex h-[54px] w-full items-center justify-center rounded-2xl bg-primary-50 text-button1 font-medium text-primary-500"
+            >
+              이메일로 로그인
+            </button>
+          </div>
+
+          <p className="mt-8 text-center text-body2 text-gray-500">
+            회원이 아니신가요?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/signup")}
+              className="underline underline-offset-2"
+            >
+              회원가입
+            </button>
+          </p>
         </div>
-
-        <p className="mt-8 text-center text-body2 text-gray-500">
-          회원이 아니신가요?{" "}
-          <button
-            type="button"
-            onClick={() => navigate("/signup")}
-            className="underline underline-offset-2"
-          >
-            회원가입
-          </button>
-        </p>
       </div>
     </main>
   );
