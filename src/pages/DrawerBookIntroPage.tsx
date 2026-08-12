@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Modal from "../components/Modal";
+import WebGnb from "../components/WebGnb";
 import {
   getRecommendBookById,
   recommendBookToLibrary,
@@ -16,6 +17,7 @@ import {
   shouldGoDrawerAfterIntros,
 } from "../data/bookShelfStore";
 import iconBack from "../assets/library/icon-back.svg";
+import iconBackDark from "../assets/drawer/recommend/icon-back-dark.svg";
 
 type IntroLocationState = {
   keywords?: string[];
@@ -55,7 +57,7 @@ function leaveIntro(
   navigate(-1);
 }
 
-/** 책 소개 미리보기 — Figma 479:3243 */
+/** 책 소개 미리보기 — 모바일 479:3243 / 웹 723:8192 */
 export default function DrawerBookIntroPage() {
   const navigate = useNavigate();
   const { bookId = "" } = useParams();
@@ -111,106 +113,198 @@ export default function DrawerBookIntroPage() {
     });
   };
 
-  return (
-    <main className="relative mx-auto flex h-dvh min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff]">
-      {/* 블러 커버 배경 */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[360px] overflow-hidden"
-      >
-        <img
-          src={book.coverUrl}
-          alt=""
-          className="absolute inset-0 size-full scale-110 object-cover blur-[7px]"
-        />
-        <div className="absolute inset-0 bg-[rgba(43,65,106,0.74)]" />
-      </div>
+  const handleBack = () => leaveIntro(navigate, keywords);
 
-      <header className="relative z-20 shrink-0 px-5 pt-5">
-        <div className="relative flex h-11 w-full items-center">
+  const libraryModal = (
+    <Modal
+      open={librarySavedOpen}
+      variant="alert"
+      status="success"
+      title="서재에 담아두었어요."
+      description="언제든 서재에서 다시 꺼내볼 수 있어요."
+      onClose={() => {
+        setLibrarySavedOpen(false);
+        leaveIntro(navigate, keywords);
+      }}
+      actions={[
+        {
+          label: "확인",
+          onClick: () => {
+            setLibrarySavedOpen(false);
+            leaveIntro(navigate, keywords);
+          },
+        },
+      ]}
+    />
+  );
+
+  return (
+    <>
+      {/* —— Mobile —— */}
+      <main className="relative mx-auto flex h-dvh min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff] min-[431px]:hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[360px] overflow-hidden"
+        >
+          <img
+            src={book.coverUrl}
+            alt=""
+            className="absolute inset-0 size-full scale-110 object-cover blur-[7px]"
+          />
+          <div className="absolute inset-0 bg-[rgba(43,65,106,0.74)]" />
+        </div>
+
+        <header className="relative z-20 shrink-0 px-5 pt-5">
+          <div className="relative flex h-11 w-full items-center">
+            <button
+              type="button"
+              aria-label="뒤로가기"
+              onClick={handleBack}
+              className="flex size-6 items-center justify-center"
+            >
+              <img
+                src={iconBack}
+                alt=""
+                className="size-6 object-contain brightness-0 invert"
+              />
+            </button>
+          </div>
+        </header>
+
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+          <section className="relative shrink-0 px-9 pb-[120px] pt-2">
+            <h1 className="text-[28px] font-bold leading-[1.5] tracking-[-0.025em] text-[#fdfdff]">
+              {book.title}
+            </h1>
+            <p className="mt-1 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-200">
+              {book.author}
+            </p>
+            <p className="mt-10 text-body2 text-gray-300">{book.meta}</p>
+
+            <div className="absolute right-5 top-[52px] h-[215px] w-[146px] overflow-hidden rounded-[6px] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+              <img
+                src={book.coverUrl}
+                alt=""
+                className="size-full object-cover"
+              />
+            </div>
+          </section>
+
+          <section className="relative z-10 -mt-[88px] flex min-h-0 flex-1 flex-col rounded-t-[24px] bg-white px-5 pb-[calc(100px+env(safe-area-inset-bottom))] pt-6">
+            <span className="inline-flex w-fit items-center rounded-[15px] bg-primary-10 px-[13px] py-1.5 text-caption text-primary-500">
+              다미의 책 소개
+            </span>
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <p className="whitespace-pre-wrap text-body1 leading-[1.6] text-gray-700">
+                {book.intro}
+              </p>
+            </div>
+          </section>
+        </div>
+
+        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-[430px] gap-2.5 bg-[#fdfdff] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
           <button
             type="button"
-            aria-label="뒤로가기"
-            onClick={() => leaveIntro(navigate, keywords)}
-            className="flex size-6 items-center justify-center"
+            onClick={handleSaveLibrary}
+            className="flex h-[54px] flex-1 items-center justify-center rounded-[15px] bg-primary-500 text-button1 font-semibold text-white"
           >
-            <img
-              src={iconBack}
-              alt=""
-              className="size-6 object-contain brightness-0 invert"
-            />
+            서재에 담아두기
+          </button>
+          <button
+            type="button"
+            onClick={handleSetMate}
+            className="flex h-[54px] flex-1 items-center justify-center rounded-[15px] bg-gray-100 text-button1 font-semibold text-gray-800"
+          >
+            메이트로 지정하기
           </button>
         </div>
-      </header>
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <section className="relative shrink-0 px-9 pb-[120px] pt-2">
-          <h1 className="text-[28px] font-bold leading-[1.5] tracking-[-0.025em] text-[#fdfdff]">
-            {book.title}
-          </h1>
-          <p className="mt-1 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-200">
-            {book.author}
-          </p>
-          <p className="mt-10 text-body2 text-gray-300">{book.meta}</p>
+        {libraryModal}
+      </main>
 
-          <div className="absolute right-5 top-[52px] h-[215px] w-[146px] overflow-hidden rounded-[6px] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
-            <img
-              src={book.coverUrl}
-              alt=""
-              className="size-full object-cover"
-            />
-          </div>
-        </section>
+      {/* —— Web (Figma 723:8192) —— */}
+      <main className="relative hidden h-dvh w-full flex-col overflow-hidden bg-[#fdfdff] min-[431px]:flex">
+        <WebGnb active="drawer" className="relative z-20 shrink-0" />
 
-        <section className="relative z-10 -mt-[88px] flex min-h-0 flex-1 flex-col rounded-t-[24px] bg-white px-5 pb-[calc(100px+env(safe-area-inset-bottom))] pt-6">
-          <span className="inline-flex w-fit items-center rounded-[15px] bg-primary-10 px-[13px] py-1.5 text-caption text-primary-500">
-            다미의 책 소개
-          </span>
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <p className="whitespace-pre-wrap text-body1 leading-[1.6] text-gray-700">
-              {book.intro}
-            </p>
-          </div>
-        </section>
-      </div>
+        <div className="flex min-h-0 flex-1 items-stretch min-[1100px]:gap-[120px]">
+          <aside className="relative h-full w-[min(42%,666px)] min-w-[300px] shrink-0 overflow-hidden rounded-tr-[40px] rounded-br-[40px] min-[1100px]:w-[666px] min-[1100px]:rounded-tr-[60px] min-[1100px]:rounded-br-[60px]">
+            <div aria-hidden className="absolute inset-0">
+              <img
+                src={book.coverUrl}
+                alt=""
+                className="absolute inset-0 size-full scale-110 object-cover blur-[18px]"
+              />
+              <div className="absolute inset-0 bg-[rgba(36,62,93,0.72)]" />
+            </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-[430px] gap-2.5 bg-[#fdfdff] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
-        <button
-          type="button"
-          onClick={handleSaveLibrary}
-          className="flex h-[54px] flex-1 items-center justify-center rounded-[15px] bg-primary-500 text-button1 font-semibold text-white"
-        >
-          서재에 담아두기
-        </button>
-        <button
-          type="button"
-          onClick={handleSetMate}
-          className="flex h-[54px] flex-1 items-center justify-center rounded-[15px] bg-gray-100 text-button1 font-semibold text-gray-800"
-        >
-          메이트로 지정하기
-        </button>
-      </div>
+            <div className="relative z-10 flex h-full flex-col items-center justify-center px-10 pb-16 pt-10">
+              <div className="h-[min(40vh,387px)] w-[min(100%,263px)] overflow-hidden rounded-[14px] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+                <img
+                  src={book.coverUrl}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              </div>
+              <h1 className="mt-10 text-center text-[28px] font-bold leading-[1.5] tracking-[-0.025em] text-[#fdfdff] min-[1100px]:text-[33px]">
+                {book.title}
+              </h1>
+              <p className="mt-2 text-center text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-300 min-[1100px]:text-[21px]">
+                {book.author}
+              </p>
+              <p className="mt-1 text-center text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-300 min-[1100px]:text-[21px]">
+                {book.meta}
+              </p>
+            </div>
+          </aside>
 
-      <Modal
-        open={librarySavedOpen}
-        variant="alert"
-        status="success"
-        title="서재에 담아두었어요."
-        description="언제든 서재에서 다시 꺼내볼 수 있어요."
-        onClose={() => {
-          setLibrarySavedOpen(false);
-          leaveIntro(navigate, keywords);
-        }}
-        actions={[
-          {
-            label: "확인",
-            onClick: () => {
-              setLibrarySavedOpen(false);
-              leaveIntro(navigate, keywords);
-            },
-          },
-        ]}
-      />
-    </main>
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col py-10 pr-8 pl-6 min-[1024px]:py-[78px] min-[1024px]:pr-40 min-[1024px]:pl-0">
+            <div className="flex h-full w-full max-w-[494px] flex-col">
+              <header className="relative flex h-[58px] shrink-0 items-center px-8">
+                <button
+                  type="button"
+                  aria-label="뒤로가기"
+                  onClick={handleBack}
+                  className="relative z-10 flex size-8 items-center justify-center"
+                >
+                  <img
+                    src={iconBackDark}
+                    alt=""
+                    className="size-8 object-contain"
+                  />
+                </button>
+                <h2 className="pointer-events-none absolute inset-x-0 text-center text-[24px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
+                  다미의 책 소개
+                </h2>
+              </header>
+
+              <div className="mt-[59px] min-h-0 flex-1 overflow-y-auto px-8">
+                <p className="whitespace-pre-wrap text-[20px] leading-[1.6] tracking-[-0.025em] text-gray-700">
+                  {book.intro}
+                </p>
+              </div>
+
+              <div className="mt-auto flex w-full shrink-0 gap-[31px] pt-10">
+                <button
+                  type="button"
+                  onClick={handleSaveLibrary}
+                  className="flex h-[71px] min-w-0 flex-1 items-center justify-center rounded-[16px] bg-primary-500 px-4 text-[21px] font-semibold leading-[1.6] tracking-[-0.025em] text-[#fdfdff]"
+                >
+                  서재에 담아두기
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSetMate}
+                  className="flex h-[71px] min-w-0 flex-1 items-center justify-center rounded-[16px] bg-gray-100 px-4 text-[21px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-600"
+                >
+                  메이트로 지정하기
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {libraryModal}
+      </main>
+    </>
   );
 }

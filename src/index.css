@@ -299,6 +299,22 @@
   animation: library-book-float 3.2s ease-in-out infinite;
 }
 
+/* 서랍 웹 진단 — 새 포스트잇 왼쪽 슬롯 페이드인 */
+@keyframes diag-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-diag-fade-in {
+  animation: diag-fade-in 520ms ease-out forwards;
+}
+
 /* Shelter 카드 스택 — 앞 카드 위로 페이드아웃 */
 @keyframes shelter-card-dissolve-up {
   0% {
