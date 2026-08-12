@@ -2,10 +2,16 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "../components/Input";
 import loginLogo from "../assets/auth/login-logo.svg";
+import webBg from "../assets/common/background.png";
+import logoWeb from "../assets/onboarding/logo-web.svg";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** 이메일 로그인 (Figma 181:4089 / 입력중 182:4188) */
+/** 웹 인증 화면 공통 그라데이션 (회원가입과 동일) */
+const WEB_AUTH_GRADIENT =
+  "url(\"data:image/svg+xml;utf8,<svg viewBox='0 0 1440 1024' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect width='100%' height='100%' fill='url(%23g)'/><defs><radialGradient id='g' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(1.35 73.6 -103.5 1.8984 706.5 13)'><stop stop-color='rgba(253,253,255,0)' offset='0'/><stop stop-color='rgba(253,253,255,1)' offset='1'/></radialGradient></defs></svg>\")";
+
+/** 이메일 로그인 (Figma 181:4089) — 웹 ≥431px 회원가입과 동일 배경·input */
 export default function LoginEmailPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -14,9 +20,31 @@ export default function LoginEmailPage() {
   const emailInvalid = email.length > 0 && !EMAIL_RE.test(email);
   const canSubmit = EMAIL_RE.test(email.trim()) && password.length > 0;
 
+  const submit = () => {
+    if (!canSubmit) return;
+    navigate("/mate", { replace: true });
+  };
+
   return (
-    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff]">
-      <div className="flex min-h-0 flex-1 flex-col px-5 pt-[calc(68px+env(safe-area-inset-top))]">
+    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff] min-[431px]:max-w-none min-[431px]:overflow-y-auto min-[431px]:bg-transparent">
+      {/* 웹 배경 + 그라데이션 */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden min-[431px]:fixed min-[431px]:block"
+      >
+        <img
+          src={webBg}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+        />
+        <div
+          className="absolute inset-0"
+          style={{ backgroundImage: WEB_AUTH_GRADIENT }}
+        />
+      </div>
+
+      {/* —— 모바일 —— */}
+      <div className="flex min-h-0 flex-1 flex-col px-5 pt-[calc(68px+env(safe-area-inset-top))] min-[431px]:hidden">
         <img
           src={loginLogo}
           alt="쓰담"
@@ -52,11 +80,11 @@ export default function LoginEmailPage() {
         </div>
       </div>
 
-      <div className="shrink-0 px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
+      <div className="shrink-0 px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3 min-[431px]:hidden">
         <button
           type="button"
           disabled={!canSubmit}
-          onClick={() => navigate("/mate", { replace: true })}
+          onClick={submit}
           className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 font-semibold ${
             canSubmit
               ? "bg-primary-500 text-white"
@@ -75,6 +103,76 @@ export default function LoginEmailPage() {
             회원가입
           </button>
         </p>
+      </div>
+
+      {/* —— 웹 — 회원가입과 동일 배경·glass input —— */}
+      <div className="relative z-10 mx-auto hidden min-h-dvh w-full max-w-[353px] flex-col items-center px-5 py-16 min-[431px]:flex">
+        <img
+          src={logoWeb}
+          alt="쓰담"
+          className="h-[95px] w-[140px] shrink-0 object-contain"
+        />
+
+        <div className="mt-[70px] flex w-full flex-col gap-4">
+          <Input
+            variant="glass"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="이메일을 입력해주세요."
+            autoComplete="email"
+          />
+          <Input
+            variant="glass"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="비밀번호를 입력해주세요."
+            autoComplete="current-password"
+          />
+        </div>
+
+        {emailInvalid ? (
+          <div
+            role="alert"
+            className="mt-[31px] flex h-[54px] w-full shrink-0 items-center gap-3 rounded-2xl bg-[rgba(241,201,210,0.71)] px-5"
+          >
+            <span
+              aria-hidden
+              className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#da4263] text-[13px] font-bold leading-none text-white"
+            >
+              !
+            </span>
+            <p className="text-body1 text-[#da4263]">
+              올바른 이메일 형식을 입력해주세요.
+            </p>
+          </div>
+        ) : null}
+
+        <div className="mt-auto w-full pt-16">
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={submit}
+            className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 font-semibold ${
+              canSubmit
+                ? "bg-primary-500 text-white"
+                : "bg-gray-100 text-gray-400"
+            }`}
+          >
+            로그인
+          </button>
+          <p className="mt-3 text-center text-body2 text-gray-500">
+            회원이 아니신가요?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/signup")}
+              className="underline underline-offset-2"
+            >
+              회원가입
+            </button>
+          </p>
+        </div>
       </div>
     </main>
   );

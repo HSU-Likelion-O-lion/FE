@@ -8,13 +8,25 @@ import {
 } from "react";
 
 type FieldState = "default" | "focus" | "filled" | "error";
+type FieldVariant = "default" | "glass";
 
-const fieldStyles: Record<FieldState, string> = {
-  default: "border border-solid border-gray-100 bg-transparent",
-  focus:
-    "border border-transparent bg-white shadow-[var(--shadow-input-focus)]",
-  filled: "border border-transparent bg-gray-50",
-  error: "border border-solid border-error bg-error-bg",
+const fieldStyles: Record<FieldVariant, Record<FieldState, string>> = {
+  default: {
+    default: "border border-solid border-gray-100 bg-transparent",
+    focus:
+      "border border-transparent bg-white shadow-[var(--shadow-input-focus)]",
+    filled: "border border-transparent bg-gray-50",
+    error: "border border-solid border-error bg-error-bg",
+  },
+  /** 웹 인증 화면 — Figma rgba(253,253,255,0.47) */
+  glass: {
+    default: "border border-transparent bg-[rgba(253,253,255,0.47)]",
+    focus:
+      "border border-transparent bg-[rgba(253,253,255,0.65)] shadow-[var(--shadow-input-focus)]",
+    filled: "border border-transparent bg-[rgba(253,253,255,0.47)]",
+    error:
+      "border border-solid border-error bg-[rgba(241,201,210,0.71)]",
+  },
 };
 
 const textStyles: Record<FieldState, string> = {
@@ -47,6 +59,8 @@ type CommonProps = {
   error?: boolean;
   className?: string;
   multiline?: boolean;
+  /** 웹 인증 화면용 반투명 입력 */
+  variant?: FieldVariant;
 };
 
 type SingleLineProps = CommonProps &
@@ -73,6 +87,7 @@ export default function Input(props: InputProps) {
     onChange,
     id,
     multiline = false,
+    variant = "default",
     ...rest
   } = props;
 
@@ -89,7 +104,7 @@ export default function Input(props: InputProps) {
   const sharedClassName = [
     "w-full rounded-[var(--radius-input)] px-5 py-3 outline-none transition-[background-color,box-shadow,border-color,color] duration-150",
     multiline ? "h-[139px] resize-none" : "h-[54px]",
-    fieldStyles[state],
+    fieldStyles[variant][state],
     textStyles[state],
     className,
   ]
