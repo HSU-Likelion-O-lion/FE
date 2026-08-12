@@ -14,20 +14,23 @@ const SECTIONS = [
 
 export default function TermsPage() {
   return (
-    <ProfileSubLayout title="서비스 이용약관" contentClassName="px-5 pt-5 pb-8">
-      <div className="flex flex-col gap-8">
+    <ProfileSubLayout
+      title="서비스 이용약관"
+      contentClassName="px-5 pt-5 pb-8 min-[431px]:px-8 min-[431px]:pt-6"
+    >
+      <div className="mx-auto flex w-full max-w-[641px] flex-col gap-8 min-[431px]:gap-[38px]">
         {SECTIONS.map((section) => (
           <section key={section.title}>
-            <h2 className="text-body1 font-medium text-gray-800">
+            <h2 className="text-body1 font-medium text-gray-800 min-[431px]:text-[20px] min-[431px]:leading-[1.6] min-[431px]:tracking-[-0.025em]">
               {section.title}
             </h2>
-            <p className="mt-2 whitespace-pre-line text-body2 leading-[23px] text-gray-500">
+            <p className="mt-2 whitespace-pre-line text-body2 leading-[23px] text-gray-500 min-[431px]:mt-2.5 min-[431px]:text-[17px] min-[431px]:leading-[1.6]">
               {section.body}
             </p>
           </section>
         ))}
 
-        <p className="text-caption leading-[18px] text-gray-300">
+        <p className="text-caption leading-[18px] text-gray-300 min-[431px]:text-[15px] min-[431px]:leading-[21.6px]">
           이용약관과 관련하여 궁금하신 사항은 고객센터로 문의하거나
           <br />
           1:1 문의하기를 이용해 주시기 바랍니다.

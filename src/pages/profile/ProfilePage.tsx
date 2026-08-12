@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import NavigationBar from "../../components/NavigationBar";
-import avatar from "../../assets/profile/avatar.png";
+import ProfileWebShell, {
+  PROFILE_MOCK_USER,
+} from "../../components/profile/ProfileWebShell";
+import ProfileEditPanel from "../../components/profile/ProfileEditPanel";
 import iconNotification from "../../assets/profile/icon-notification.svg";
 import iconCloudSync from "../../assets/profile/icon-cloud-sync.svg";
 import iconAnnouncement from "../../assets/profile/icon-announcement.svg";
@@ -11,12 +14,6 @@ import iconAppInfo from "../../assets/profile/icon-app-info.svg";
 import iconArrowRight from "../../assets/mate/icon-arrow-right.svg";
 
 const APP_VERSION = "1.0.0";
-
-const MOCK_USER = {
-  name: "지훈",
-  email: "test@naver.com",
-  avatarUrl: avatar,
-};
 
 type MenuItem = {
   id: string;
@@ -80,92 +77,104 @@ export default function ProfilePage() {
   const navigate = useNavigate();
 
   return (
-    <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px]">
-      <header className="flex shrink-0 flex-col px-5 pt-5">
-        <div className="flex h-11 items-center justify-center">
-          <h1 className="w-full text-center text-h3 text-gray-900">
-            {MOCK_USER.name}님의 프로필
-          </h1>
-        </div>
-      </header>
-
-      <section className="mt-5 border-b border-gray-100">
-        <button
-          type="button"
-          onClick={() => navigate("/profile/edit")}
-          className="relative mb-[34px] flex w-full items-center gap-3.5 px-5 pb-5 pt-[19px] text-left"
-          aria-label="프로필 수정"
-        >
-          <img
-            src={MOCK_USER.avatarUrl}
-            alt=""
-            className="size-[60px] shrink-0 rounded-full object-cover"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-h3 text-gray-900">{MOCK_USER.name}님</p>
-            <p className="mt-0.5 truncate text-body1 text-gray-500">
-              {MOCK_USER.email}
-            </p>
+    <>
+      {/* —— 모바일 —— */}
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px] min-[431px]:hidden">
+        <header className="flex shrink-0 flex-col px-5 pt-5">
+          <div className="flex h-11 items-center justify-center">
+            <h1 className="w-full text-center text-h3 text-gray-900">
+              {PROFILE_MOCK_USER.name}님의 프로필
+            </h1>
           </div>
-          <span className="flex size-6 shrink-0 items-center justify-center">
-            <img
-              src={iconArrowRight}
-              alt=""
-              className="h-[13.5px] w-[7.5px] object-contain"
-            />
-          </span>
-        </button>
-      </section>
+        </header>
 
-      <section
-        className="flex flex-col border-b border-gray-50"
-        aria-label="설정 메뉴"
-      >
-        {MENU_ITEMS.map((item) => (
+        <section className="mt-5 border-b border-gray-100">
           <button
-            key={item.id}
             type="button"
-            onClick={() => {
-              if (item.path) navigate(item.path);
-            }}
-            className="flex h-14 w-full items-center justify-between border-t border-gray-50 px-5"
+            onClick={() => navigate("/profile/edit")}
+            className="relative mb-[34px] flex w-full items-center gap-3.5 px-5 pb-5 pt-[19px] text-left"
+            aria-label="프로필 수정"
           >
-            <span className="flex items-center gap-3">
-              <span
-                className={`flex shrink-0 items-center justify-center overflow-hidden ${
-                  item.iconSize === 20 ? "size-5" : "size-6"
-                }`}
-              >
-                <img
-                  src={item.icon}
-                  alt=""
-                  className="size-full object-contain"
-                />
-              </span>
-              <span className="relative text-body2 text-gray-900">
-                {item.label}
-                {item.badge && (
-                  <span
-                    aria-hidden
-                    className="absolute -right-2.5 top-0 size-1.5 rounded-full bg-primary-400"
-                  />
-                )}
-              </span>
+            <img
+              src={PROFILE_MOCK_USER.avatarUrl}
+              alt=""
+              className="size-[60px] shrink-0 rounded-full object-cover"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-h3 text-gray-900">
+                {PROFILE_MOCK_USER.name}님
+              </p>
+              <p className="mt-0.5 truncate text-body1 text-gray-500">
+                {PROFILE_MOCK_USER.email}
+              </p>
+            </div>
+            <span className="flex size-6 shrink-0 items-center justify-center">
+              <img
+                src={iconArrowRight}
+                alt=""
+                className="h-[13.5px] w-[7.5px] object-contain"
+              />
             </span>
-            {item.trailing && (
-              <span className="text-body2 text-gray-400">{item.trailing}</span>
-            )}
           </button>
-        ))}
-      </section>
+        </section>
 
-      <p className="mt-auto pt-8 pb-4 text-center text-caption leading-[18px] text-gray-400">
-        앱 버전 {APP_VERSION} (최신버전)
-      </p>
+        <section
+          className="flex flex-col border-b border-gray-50"
+          aria-label="설정 메뉴"
+        >
+          {MENU_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                if (item.path) navigate(item.path);
+              }}
+              className="flex h-14 w-full items-center justify-between border-t border-gray-50 px-5"
+            >
+              <span className="flex items-center gap-3">
+                <span
+                  className={`flex shrink-0 items-center justify-center overflow-hidden ${
+                    item.iconSize === 20 ? "size-5" : "size-6"
+                  }`}
+                >
+                  <img
+                    src={item.icon}
+                    alt=""
+                    className="size-full object-contain"
+                  />
+                </span>
+                <span className="relative text-body2 text-gray-900">
+                  {item.label}
+                  {item.badge && (
+                    <span
+                      aria-hidden
+                      className="absolute -right-2.5 top-0 size-1.5 rounded-full bg-primary-400"
+                    />
+                  )}
+                </span>
+              </span>
+              {item.trailing && (
+                <span className="text-body2 text-gray-400">
+                  {item.trailing}
+                </span>
+              )}
+            </button>
+          ))}
+        </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
-        <NavigationBar active="profile" />
-      </div>
-    </main>
+        <p className="mt-auto pt-8 pb-4 text-center text-caption leading-[18px] text-gray-400">
+          앱 버전 {APP_VERSION} (최신버전)
+        </p>
+
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
+          <NavigationBar active="profile" />
+        </div>
+      </main>
+
+      {/* —— 웹: Figma 714:4815 —— */}
+      <ProfileWebShell>
+        <ProfileEditPanel />
+      </ProfileWebShell>
+    </>
   );
 }

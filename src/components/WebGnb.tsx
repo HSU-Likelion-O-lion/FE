@@ -113,19 +113,23 @@ export default function WebGnb({
           onClick={() => handleTab("profile")}
           className={tabClass}
         >
-          <img
-            src={iconUser}
-            alt=""
-            className={`size-6 object-contain min-[768px]:size-7 ${
-              isDark ? "brightness-0 invert" : ""
+          <span
+            className={`flex items-center justify-center ${
+              active === "profile" && !isDark
+                ? "size-10 rounded-full bg-primary-50"
+                : ""
             }`}
-          />
-          {active === "profile" ? (
-            <span
-              className={`absolute bottom-0 left-1/2 h-[3px] w-[min(100%,72px)] -translate-x-1/2 rounded-t-[3px] min-[1024px]:w-[100px] ${
-                isDark ? "bg-white" : "bg-primary-500"
+          >
+            <img
+              src={iconUser}
+              alt=""
+              className={`size-6 object-contain min-[768px]:size-7 ${
+                isDark ? "brightness-0 invert" : ""
               }`}
             />
+          </span>
+          {active === "profile" && isDark ? (
+            <span className="absolute bottom-0 left-1/2 h-[3px] w-[min(100%,72px)] -translate-x-1/2 rounded-t-[3px] bg-white min-[1024px]:w-[100px]" />
           ) : null}
         </button>
       </nav>

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
+import { useIsDesktop } from "../../hooks/useIsDesktop";
 import avatarEdit from "../../assets/profile/avatar-edit.png";
 import iconCameraEdit from "../../assets/profile/icon-camera-edit.svg";
 import iconKakao from "../../assets/profile/icon-kakao.svg";
@@ -10,7 +11,13 @@ const INITIAL_NICKNAME = "지훈";
 
 export default function ProfileEditPage() {
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
   const [nickname, setNickname] = useState(INITIAL_NICKNAME);
+
+  // 웹에서는 프로필 홈 우측 패널이 수정 화면
+  if (isDesktop) {
+    return <Navigate to="/profile" replace />;
+  }
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white">
