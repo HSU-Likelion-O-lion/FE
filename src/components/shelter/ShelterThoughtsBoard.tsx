@@ -6,9 +6,9 @@ import {
 } from "../../data/shelterThoughtsMock";
 import { useBoardPanZoom } from "../../hooks/useBoardPanZoom";
 import bgGrid from "../../assets/shelter/thoughts/bg-grid.png";
-import bgGlow from "../../assets/shelter/thoughts/bg-glow.svg";
 import iconBack from "../../assets/shelter/thoughts/icon-back.svg";
 import owlMascot from "../../assets/shelter/thoughts/owl-mascot.png";
+import ShelterTopGlow from "./ShelterTopGlow";
 
 const WORLD_W = BOARD.world.maxX - BOARD.world.minX;
 const WORLD_H = BOARD.world.maxY - BOARD.world.minY;
@@ -101,12 +101,8 @@ export default function ShelterThoughtsBoard({
           </div>
         </section>
 
-        {/* Ellipse 2467 — Figma: 433×644, top -230 */}
-        <img
-          src={bgGlow}
-          alt=""
-          className="pointer-events-none absolute left-1/2 top-[-230px] z-30 h-[644px] w-[433px] max-w-none -translate-x-1/2"
-        />
+        {/* Ellipse 2467 — 상단 글로우 */}
+        <ShelterTopGlow className="z-30" />
 
         <header className="pointer-events-none absolute inset-x-0 top-0 z-40 px-5 pt-5">
           <div className="relative flex h-11 w-full items-center justify-center">

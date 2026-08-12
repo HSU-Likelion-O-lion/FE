@@ -1,9 +1,9 @@
-import bgGlow from "../../assets/shelter/thoughts/bg-glow.svg";
 import bgGrid from "../../assets/shelter/thoughts/bg-grid.png";
 import iconBack from "../../assets/shelter/thoughts/icon-back.svg";
 import emptyOwlPeek from "../../assets/shelter/thoughts/empty-owl-peek.png";
 import emptyPencil1 from "../../assets/shelter/thoughts/empty-pencil-1.svg";
 import emptyPencil2 from "../../assets/shelter/thoughts/empty-pencil-2.svg";
+import ShelterTopGlow from "./ShelterTopGlow";
 import PostIt from "./PostIt";
 
 type ShelterThoughtsEmptyProps = {
@@ -41,12 +41,8 @@ export default function ShelterThoughtsEmpty({
           className="pointer-events-none absolute left-[138px] top-[246px] h-[86px] w-[177px] object-contain opacity-80"
         />
 
-        {/* Ellipse 2467 — Figma: 433×644, top -230 */}
-        <img
-          src={bgGlow}
-          alt=""
-          className="pointer-events-none absolute left-1/2 top-[-230px] z-20 h-[644px] w-[433px] max-w-none -translate-x-1/2"
-        />
+        {/* Ellipse 2467 — 상단 글로우 */}
+        <ShelterTopGlow className="z-20" />
 
         <header className="pointer-events-none absolute inset-x-0 top-0 z-40 px-5 pt-5">
           <div className="relative flex h-11 w-full items-center justify-center">

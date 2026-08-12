@@ -1,5 +1,6 @@
 import { Navigate, useNavigate } from "react-router-dom";
 import splashBg from "../assets/onboarding/splash-bg.png";
+import splashBgWeb from "../assets/onboarding/splash-bg-web.png";
 import splashLogo from "../assets/onboarding/splash-logo.svg";
 import { isOnboardingDone } from "../lib/onboarding";
 
@@ -13,16 +14,15 @@ export default function OnboardingSplashPage() {
 
   return (
     <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden min-[431px]:max-w-none">
-      <img
-        src={splashBg}
-        alt=""
-        aria-hidden
-        className="absolute inset-0 size-full object-cover"
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-[rgba(74,86,157,0.63)]"
-      />
+      <picture>
+        <source media="(min-width: 431px)" srcSet={splashBgWeb} />
+        <img
+          src={splashBg}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 size-full object-cover"
+        />
+      </picture>
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-5">
         <img

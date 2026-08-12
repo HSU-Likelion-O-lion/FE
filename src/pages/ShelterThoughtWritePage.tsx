@@ -7,13 +7,13 @@ import {
   splitBadWordParts,
 } from "../utils/badWords";
 import bgGrid from "../assets/shelter/thoughts/bg-grid.png";
-import bgGlow from "../assets/shelter/thoughts/bg-glow.svg";
 import iconBack from "../assets/shelter/thoughts/icon-back.svg";
 import iconPencil from "../assets/shelter/thoughts/write-icon-pencil.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
 import detailTape from "../assets/shelter/thoughts/detail-like.svg";
 import detailPencil1 from "../assets/shelter/thoughts/detail-pencil-1.svg";
 import detailPencil2 from "../assets/shelter/thoughts/detail-pencil-2.svg";
+import ShelterTopGlow from "../components/shelter/ShelterTopGlow";
 
 const MAX_LENGTH = 200;
 const PLACEHOLDER = "책을 덮고 난 뒤, 여운을 편안하게 적어주세요!";
@@ -169,12 +169,8 @@ export default function ShelterThoughtWritePage() {
           }}
         />
 
-        {/* Ellipse 2467 — 상단 글로우는 ellipse만 */}
-        <img
-          src={bgGlow}
-          alt=""
-          className="pointer-events-none absolute left-1/2 top-[-230px] z-0 h-[644px] w-[433px] max-w-none -translate-x-1/2"
-        />
+        {/* Ellipse 2467 — 상단 글로우 */}
+        <ShelterTopGlow />
 
         {!keyboardOpen && (
           <>
