@@ -240,7 +240,7 @@ export const MOCK_SHELF_BOOKS: LibraryShelfBook[] = [
     publisher: "창비",
     coverUrl: cover1,
     status: "finished",
-    finishedAt: "2024. 10. 03...",
+    finishedAt: "2024.10.03.",
   },
   {
     id: "lib-2",
@@ -250,7 +250,7 @@ export const MOCK_SHELF_BOOKS: LibraryShelfBook[] = [
     publisher: "민음사",
     coverUrl: cover2,
     status: "finished",
-    finishedAt: "2026. 12. 18...",
+    finishedAt: "2026.12.18.",
   },
   {
     id: "lib-3",
@@ -260,7 +260,7 @@ export const MOCK_SHELF_BOOKS: LibraryShelfBook[] = [
     publisher: "티라미수",
     coverUrl: cover3,
     status: "finished",
-    finishedAt: "2026. 12. 18...",
+    finishedAt: "2026.12.18.",
   },
   {
     id: "lib-4",
@@ -307,7 +307,7 @@ export const MOCK_SHELF_BOOKS: LibraryShelfBook[] = [
     publisher: "수오서재",
     coverUrl: bookCover2,
     status: "finished",
-    finishedAt: "2025. 03. 12...",
+    finishedAt: "2025.03.12.",
   },
   {
     id: "lib-9",
@@ -333,10 +333,13 @@ export type EssayDraft = {
   title: string;
   author: string;
   chapters: EssayChapter[];
+  /** 1장 미리보기 헤딩 (Figma 749:7320) */
+  previewHeading: string;
+  /** 1장만 미리보기 본문 */
   body: string[];
 };
 
-/** 에세이 초안 미리보기 mock (Figma 559:4837) */
+/** 에세이 초안 미리보기 mock (모바일 본문보기 749:7320 / 웹 718:7353) */
 export const MOCK_ESSAY_DRAFT: EssayDraft = {
   title: "무너져도 괜찮은 밤",
   author: "전지훈",
@@ -345,10 +348,12 @@ export const MOCK_ESSAY_DRAFT: EssayDraft = {
     { chapter: 2, title: "온전한 나를 마주하며", pages: 12 },
     { chapter: 3, title: "다시 내일을 향해", pages: 24 },
   ],
+  previewHeading: "제1장. 불안의 밤",
   body: [
-    "불안은 늘 예상보다 먼저 문을 두드린다. 그럴 때마다 나는 책을 펼쳤고, 문장 사이로 숨을 골랐다.",
-    "완벽하지 않아도 괜찮다는 말보다, 흔들려도 나를 놓지 않겠다는 다짐이 더 자주 필요했다.",
-    "흩어져 있던 사유들이 한 줄로 이어질 때, 비로소 밤은 견딜 만한 것이 되었다.",
+    "밤이 되면 낮 동안 애써 외면했던 생각들이 떠오른다.\n괜찮다고 넘겼던 말과 표정, 이미 지나간 실수까지 다시 꺼내 보게 된다.",
+    "‘나는 잘하고 있는 걸까.’\n‘이대로 괜찮은 걸까.’",
+    "답을 찾으려고 할수록 마음은 오히려 더 복잡해진다. 우리는 불안을 없애야만 앞으로 나아갈 수 있다고 생각하지만, 어쩌면 불안은 사라져야 하는 감정이 아닐지도 모른다. 지금의 내가 무엇을 두려워하고 있는지, 무엇을 소중하게 여기고 있는지를 알려주는 마음의 신호일 수도 있다.",
+    "그러니 오늘만큼은 애써 괜찮아지려고 하지 않아도 된다.\n조금 흔들려도, 잠시 멈춰 있어도 괜찮다.\n하루를 잘 버텨낸 것만으로도 충분한 밤이 있으니까.",
   ],
 };
 

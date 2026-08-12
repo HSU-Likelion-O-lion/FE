@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import BookStatusBadge from "../components/mate/BookStatusBadge";
 import type { BookStatus } from "../components/mate/types";
+import { useIsDesktop } from "../hooks/useIsDesktop";
 import {
   MOCK_SHELF_BOOKS,
   SHELF_FILTERS,
@@ -14,9 +15,10 @@ import iconBack from "../assets/library/icon-back.svg";
 import iconCalendar from "../assets/library/icon-calendar.svg";
 import promoBook from "../assets/library/promo-book.png";
 
-/** 내 책장 목록 (Figma 547:3820, 552:4266) */
+/** 내 책장 목록 (Figma 547:3820, 552:4266) — 웹은 서재 성장탭에 임베드 */
 export default function LibraryBookshelfPage() {
   const navigate = useNavigate();
+  const isDesktop = useIsDesktop();
   const [books, setBooks] = useState(MOCK_SHELF_BOOKS);
   const [filter, setFilter] = useState<ShelfFilter>("finished");
   const [statusTarget, setStatusTarget] = useState<LibraryShelfBook | null>(
@@ -35,6 +37,10 @@ export default function LibraryBookshelfPage() {
     );
     setStatusTarget(null);
   };
+
+  if (isDesktop) {
+    return <Navigate to="/library?section=growth" replace />;
+  }
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-[#fdfdff]">
@@ -130,13 +136,13 @@ export default function LibraryBookshelfPage() {
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <BookStatusBadge status={book.status} />
                     {book.finishedAt ? (
-                      <span className="inline-flex h-6 max-w-[97px] items-center gap-1 overflow-hidden rounded-[6px] bg-[rgba(205,204,243,0.26)] px-1 py-0.5">
+                      <span className="inline-flex h-6 items-center gap-1 rounded-[6px] bg-[rgba(205,204,243,0.26)] px-1 py-0.5">
                         <img
                           src={iconCalendar}
                           alt=""
                           className="size-[13px] shrink-0 object-contain"
                         />
-                        <span className="truncate text-caption text-[rgba(56,64,118,0.54)]">
+                        <span className="whitespace-nowrap text-caption text-[rgba(56,64,118,0.54)]">
                           {book.finishedAt}
                         </span>
                       </span>

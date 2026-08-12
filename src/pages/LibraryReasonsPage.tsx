@@ -78,23 +78,30 @@ export default function LibraryReasonsPage() {
 
         <ul className="mt-4 flex flex-col gap-4 pb-6">
           {reasons.map((reason) => (
-            <li
-              key={reason.id}
-              className="rounded-xl bg-[#fdfdff] px-5 py-3 shadow-[0_0_2px_rgba(29,29,32,0.11)]"
-            >
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <p className="text-[15px] font-medium tracking-[-0.025em] text-gray-900">
-                  {reason.bookTitle}
+            <li key={reason.id}>
+              <button
+                type="button"
+                onClick={() =>
+                  navigate("/shelter/thoughts", {
+                    state: { title: reason.bookTitle, bookId: reason.id },
+                  })
+                }
+                className="w-full rounded-xl bg-[#fdfdff] px-5 py-3 text-left shadow-[0_0_2px_rgba(29,29,32,0.11)]"
+              >
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <p className="text-[15px] font-medium tracking-[-0.025em] text-gray-900">
+                    {reason.bookTitle}
+                  </p>
+                  <span
+                    aria-hidden
+                    className="size-1 shrink-0 rounded-full bg-gray-300"
+                  />
+                  <p className="text-caption text-gray-300">{reason.dateLabel}</p>
+                </div>
+                <p className="mt-1.5 text-[13px] leading-[23px] tracking-[-0.025em] text-gray-500">
+                  {reason.excerpt}
                 </p>
-                <span
-                  aria-hidden
-                  className="size-1 shrink-0 rounded-full bg-gray-300"
-                />
-                <p className="text-caption text-gray-300">{reason.dateLabel}</p>
-              </div>
-              <p className="mt-1.5 text-[13px] leading-[23px] tracking-[-0.025em] text-gray-500">
-                {reason.excerpt}
-              </p>
+              </button>
             </li>
           ))}
         </ul>

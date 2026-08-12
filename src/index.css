@@ -128,6 +128,32 @@
   --shadow-input-focus: 0 0 3px var(--color-primary-500);
 }
 
+@layer base {
+  /* 클릭 가능한 컨트롤 — Tailwind preflight(button: cursor:default) 보정 */
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  label[for],
+  summary,
+  select:not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="reset"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  button[aria-disabled="true"],
+  [role="button"][aria-disabled="true"],
+  select:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
+}
+
 @layer components {
   .btn {
     display: inline-flex;
@@ -139,6 +165,7 @@
     letter-spacing: var(--text-button1--letter-spacing);
     font-weight: var(--text-button1--font-weight);
     text-align: center;
+    cursor: pointer;
     transition:
       background-color 150ms ease,
       color 150ms ease,
