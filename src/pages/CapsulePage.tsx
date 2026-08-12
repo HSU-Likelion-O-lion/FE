@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import WebGnb from "../components/WebGnb";
-import webBg from "../assets/common/web-bg.png";
+import webBg from "../assets/mate/capsule-bg-web.png";
 import capsuleBg from "../assets/mate/capsule-bg.png";
 import capsuleEllipse from "../assets/mate/capsule-ellipse.svg";
 import capsuleOwl from "../assets/mate/capsule-owl.png";
@@ -20,9 +20,12 @@ export default function CapsulePage() {
   const navigate = useNavigate();
 
   return (
-    <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden min-[431px]:h-dvh min-[431px]:max-w-none min-[431px]:overflow-x-hidden min-[431px]:overflow-y-auto">
+    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden min-[431px]:max-w-none">
       {/* 배경 */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 min-[431px]:fixed">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 min-[431px]:fixed"
+      >
         {/* 모바일 */}
         <img
           src={capsuleBg}
@@ -33,7 +36,7 @@ export default function CapsulePage() {
         <div className="absolute inset-x-0 top-0 h-[212px] bg-linear-to-b from-[rgba(71,84,163,0.75)] from-[12%] to-transparent min-[431px]:hidden" />
         <div className="absolute inset-x-0 bottom-0 h-[550px] bg-[linear-gradient(0deg,#EFF0F9_80%,transparent_100%)] min-[431px]:hidden" />
 
-        {/* 웹 — common/web-bg.png */}
+        {/* 웹 */}
         <img
           src={webBg}
           alt=""
@@ -41,8 +44,8 @@ export default function CapsulePage() {
         />
       </div>
 
-      {/* —— 웹 GNB —— */}
-      <div className="relative z-20 shrink-0 min-[431px]:sticky min-[431px]:top-0">
+      {/* —— 웹 GNB (고정) —— */}
+      <div className="relative z-20 shrink-0">
         <WebGnb active="center" tone="dark" />
       </div>
 
@@ -100,51 +103,51 @@ export default function CapsulePage() {
         />
       </section>
 
-      {/* —— 웹: 배경이 보이도록 위 여백(줄어들면 축소) —— */}
-      <div
-        aria-hidden
-        className="hidden min-h-10 flex-1 min-[431px]:block"
-      />
+      {/* —— 웹: GNB 아래 영역, 흰 카드 내부만 스크롤 (Figma 695:9643) —— */}
+      <div className="relative z-10 mx-auto hidden min-h-0 w-full max-w-[1120px] flex-1 flex-col px-5 min-[431px]:flex min-[1024px]:px-10">
+        {/* 상단 배경이 살짝 보이도록 */}
+        <div aria-hidden className="min-h-29 shrink-0" />
+        {/* 바깥: 라운드 클립 / 안쪽: 스크롤바는 라운드 아래부터 */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[24px] bg-[linear-gradient(180deg,#FDFDFF_0%,#EFF0F9_100%)]">
+          <div aria-hidden className="h-6 shrink-0" />
+          <section className="min-h-0 flex-1 overflow-y-auto px-[52px] pb-5 pt-[52px]">
+            <h1 className="text-center text-[32px] leading-10 tracking-[-0.025em]">
+              <span className="font-bold text-primary-900">
+                오늘 당신을 위한 한줄,{" "}
+              </span>
+              <span className="font-semibold text-gray-400">
+                {MOCK_CAPSULE.speech}
+              </span>
+            </h1>
 
-      {/* —— 웹: 하단 카드 — 콘텐츠 자연 높이, 페이지 스크롤 —— */}
-      <section className="relative z-10 mx-auto hidden w-full max-w-[1120px] shrink-0 min-[431px]:block">
-        <div className="rounded-t-[24px] bg-[linear-gradient(180deg,#FDFDFF_0%,#EFF0F9_100%)] px-[52px] pb-[92px] pt-[76px]">
-          <h1 className="text-center text-[32px] leading-10 tracking-[-0.025em]">
-            <span className="font-bold text-primary-900">
-              오늘 당신을 위한 한줄,{" "}
-            </span>
-            <span className="font-semibold text-gray-400">
-              {MOCK_CAPSULE.speech}
-            </span>
-          </h1>
+            {/* Figma 695:9678 — 올빼미 + 가로로 긴 타원 그라데이션 */}
+            <div className="relative mx-auto mt-10 h-[308px] w-full max-w-[807px]">
+              <img
+                src={capsuleEllipse}
+                alt=""
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-[161px] h-[147px] w-full"
+              />
+              <img
+                src={capsuleOwl}
+                alt=""
+                className="absolute left-1/2 top-0 z-10 h-[197px] w-[184px] -translate-x-1/2 object-contain object-bottom"
+              />
+            </div>
 
-          {/* Figma 695:9678 — 올빼미 + 가로로 긴 타원 그라데이션 */}
-          <div className="relative mx-auto mt-10 h-[308px] w-full max-w-[807px]">
-            <img
-              src={capsuleEllipse}
-              alt=""
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-[161px] h-[147px] w-full"
-            />
-            <img
-              src={capsuleOwl}
-              alt=""
-              className="absolute left-1/2 top-0 z-10 h-[197px] w-[184px] -translate-x-1/2 object-contain object-bottom"
-            />
-          </div>
+            <p className="mt-6 text-left text-[28px] font-semibold leading-[1.5] tracking-[-0.025em] text-primary-500">
+              {MOCK_CAPSULE.quote}
+            </p>
 
-          <p className="mt-6 text-left text-[28px] font-semibold leading-[1.5] tracking-[-0.025em] text-primary-500">
-            {MOCK_CAPSULE.quote}
-          </p>
-
-          <p className="mt-8 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-600">
-            {MOCK_CAPSULE.source}
-          </p>
-          <p className="mt-4 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-600">
-            {MOCK_CAPSULE.body}
-          </p>
+            <p className="mt-8 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-600">
+              {MOCK_CAPSULE.source}
+            </p>
+            <p className="mt-4 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-600">
+              {MOCK_CAPSULE.body}
+            </p>
+          </section>
         </div>
-      </section>
+      </div>
     </main>
   );
 }

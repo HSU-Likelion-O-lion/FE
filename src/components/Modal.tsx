@@ -69,6 +69,10 @@ export default function Modal({
   const resolvedIcon = iconSrc ?? (isAlert ? STATUS_ICONS[status] : undefined);
   const hasActions = actions != null && actions.length > 0;
 
+  const shellClass = isAlert
+    ? "relative z-10 w-full max-w-[353px] rounded-[20px] bg-white p-5 min-[431px]:w-[565px] min-[431px]:max-w-[565px] min-[431px]:px-[38px] min-[431px]:py-8"
+    : "relative z-10 w-full max-w-[353px] rounded-[20px] bg-white p-5 min-[431px]:w-[565px] min-[431px]:max-w-[565px] min-[431px]:rounded-[24px] min-[431px]:p-8";
+
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-5">
       <button
@@ -82,7 +86,7 @@ export default function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="app-modal-title"
-        className="relative z-10 w-full max-w-[353px] rounded-[20px] bg-white p-5"
+        className={shellClass}
       >
         {isAlert && resolvedIcon && (
           <div className="flex justify-center">
@@ -90,7 +94,7 @@ export default function Modal({
               src={resolvedIcon}
               alt=""
               aria-hidden
-              className="size-[68px] object-contain"
+              className="size-[68px] object-contain min-[431px]:size-[118px]"
             />
           </div>
         )}
@@ -98,8 +102,8 @@ export default function Modal({
         <div
           className={[
             "relative",
-            isAlert ? "mt-4 text-center" : "",
-            withClose ? "pr-8" : "",
+            isAlert ? "mt-4 text-center min-[431px]:mt-1.5" : "",
+            withClose ? "pr-8 min-[431px]:pr-10" : "",
           ]
             .filter(Boolean)
             .join(" ")}
@@ -108,8 +112,8 @@ export default function Modal({
             id="app-modal-title"
             className={
               isAlert
-                ? "text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-[#282723]"
-                : "text-h2 text-gray-900"
+                ? "text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-[#282723] min-[431px]:text-[24px]"
+                : "text-h2 text-gray-900 min-[431px]:text-[24px] min-[431px]:leading-[1.5]"
             }
           >
             {title}
@@ -118,8 +122,8 @@ export default function Modal({
             <div
               className={
                 isAlert
-                  ? "mt-1 text-[14px] leading-[23px] tracking-[-0.025em] text-[#8e8b7e]"
-                  : "mt-1 text-[14px] leading-[23px] tracking-[-0.025em] text-gray-400"
+                  ? "mt-1 text-[14px] leading-[23px] tracking-[-0.025em] text-[#8e8b7e] min-[431px]:mt-2 min-[431px]:text-[18px] min-[431px]:leading-[1.6]"
+                  : "mt-1 text-[14px] leading-[23px] tracking-[-0.025em] text-gray-400 min-[431px]:text-body1"
               }
             >
               {description}
@@ -130,26 +134,32 @@ export default function Modal({
               type="button"
               aria-label="닫기"
               onClick={onClose}
-              className="absolute top-0.5 right-0 flex size-6 items-center justify-center"
+              className="absolute top-0.5 right-0 flex size-6 items-center justify-center min-[431px]:size-[26px]"
             >
               <img
                 src={iconModalClose}
                 alt=""
-                className="size-[13.5px] object-contain"
+                className="size-[13.5px] object-contain min-[431px]:size-[14px]"
               />
             </button>
           )}
         </div>
 
         {children != null && (
-          <div className={isAlert ? "mt-5" : "mt-6"}>{children}</div>
+          <div className={isAlert ? "mt-5" : "mt-6 min-[431px]:mt-7"}>
+            {children}
+          </div>
         )}
 
         {hasActions && (
           <div
-            className={`flex gap-3 ${children != null ? "mt-3" : "mt-5"} ${
-              actions.length === 1 ? "flex-col" : ""
-            }`}
+            className={`flex gap-3 ${
+              children != null
+                ? "mt-3"
+                : isAlert
+                  ? "mt-5 min-[431px]:mt-[26px]"
+                  : "mt-5"
+            } ${actions.length === 1 ? "flex-col" : ""}`}
           >
             {actions.map((action, index) => {
               const isLast = index === actions.length - 1;

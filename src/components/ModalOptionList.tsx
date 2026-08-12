@@ -19,7 +19,7 @@ export default function ModalOptionList({
   onSelect,
 }: ModalOptionListProps) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 min-[431px]:gap-[22px]">
       {options.map((option) => {
         const selected = selectedId === option.id;
         return (
@@ -27,7 +27,7 @@ export default function ModalOptionList({
             key={option.id}
             type="button"
             onClick={() => onSelect(option.id)}
-            className={`btn h-[56px] w-full gap-2 px-5 py-3 text-left ${
+            className={`btn h-[56px] w-full gap-2 px-5 py-3 text-left min-[431px]:h-[54px] ${
               selected
                 ? "btn-active justify-between"
                 : "btn-default justify-start"

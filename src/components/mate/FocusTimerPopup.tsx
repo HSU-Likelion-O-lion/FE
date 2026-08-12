@@ -10,8 +10,10 @@ import WebGnb from "../WebGnb";
 import { PauseReasonOptions } from "../ModalOptionList";
 import PauseDetailForm from "./PauseDetailForm";
 
-const RING_MOBILE = { size: 272, stroke: 10 } as const;
-const RING_WEB = { size: 350, stroke: 10 } as const;
+const RING_MOBILE = { size: 272, stroke: 10, minSize: 180 } as const;
+const RING_WEB = { size: 350, stroke: 10, minSize: 200 } as const;
+/** 모바일 타이틀 헤더 최소 높이 */
+const HEADER_MOBILE = 74;
 
 function ringMetrics(size: number, stroke: number) {
   const radius = (size - stroke) / 2;
@@ -21,6 +23,16 @@ function ringMetrics(size: number, stroke: number) {
     radius,
     circumference: 2 * Math.PI * radius,
   };
+}
+
+function clampRingSize(available: number, isDesktop: boolean) {
+  const spec = isDesktop ? RING_WEB : RING_MOBILE;
+  const gap = isDesktop ? 35 : 32;
+  const button = isDesktop ? 55 : 44;
+  /** contentRef clientHeight에 포함된 하단 패딩 */
+  const bottomPad = isDesktop ? 64 : 40;
+  const forRing = available - gap - button - bottomPad;
+  return Math.round(Math.min(spec.size, Math.max(spec.minSize, forRing)));
 }
 
 const FOCUS_TIMER_KEY = "sseudam:focus-timer";
@@ -123,10 +135,6 @@ export default function FocusTimerPopup({
   onComplete,
 }: FocusTimerPopupProps) {
   const isDesktop = useIsDesktop();
-  const ring = ringMetrics(
-    isDesktop ? RING_WEB.size : RING_MOBILE.size,
-    isDesktop ? RING_WEB.stroke : RING_MOBILE.stroke,
-  );
   const totalSeconds = minutes * 60;
   const isRestore = initialRemaining != null;
 
@@ -139,8 +147,24 @@ export default function FocusTimerPopup({
     "reason",
   );
   const [pauseReasonId, setPauseReasonId] = useState<string>();
+  const [ringSize, setRingSize] = useState<number>(
+    isDesktop ? RING_WEB.size : RING_MOBILE.size,
+  );
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const ring = ringMetrics(
+    ringSize,
+    isDesktop ? RING_WEB.stroke : RING_MOBILE.stroke,
+  );
+  const timeFontPx = Math.round(
+    ring.size * (isDesktop ? 88 / RING_WEB.size : 55 / RING_MOBILE.size),
+  );
+  const colonFontPx = Math.round(
+    ring.size * (isDesktop ? 66 / RING_WEB.size : 55 / RING_MOBILE.size),
+  );
 
   const remainingRef = useRef(remaining);
+  const pausedRef = useRef(paused);
   const skipPopRef = useRef(false);
   const completedRef = useRef(false);
   const onCloseRef = useRef(onClose);
@@ -149,8 +173,33 @@ export default function FocusTimerPopup({
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
+    if (!open) return;
+    const el = contentRef.current;
+    if (!el) return;
+
+    const update = () => {
+      setRingSize(clampRingSize(el.clientHeight, isDesktop));
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, isDesktop]);
+
+  useEffect(() => {
     remainingRef.current = remaining;
   }, [remaining]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  const openPauseReasonModal = () => {
+    setPauseStep("reason");
+    setPauseReasonId(undefined);
+    setPauseModalOpen(true);
+  };
 
   // 팝업 닫히면 사유 모달도 닫기
   useEffect(() => {
@@ -175,14 +224,20 @@ export default function FocusTimerPopup({
     completedRef.current = false;
 
     if (isRestore) {
-      setPaused(initialPaused ?? true);
+      const nextPaused = initialPaused ?? true;
+      setPaused(nextPaused);
+      pausedRef.current = nextPaused;
       setIntroDone(true);
       setRingTransition(true);
       saveFocusTimerSession({
         minutes,
         remainingSeconds: nextRemaining,
-        paused: initialPaused ?? true,
+        paused: nextPaused,
       });
+      // 나갔다 들어와 멈춘 상태로 복구되면 사유 모달 표시
+      if (nextPaused) {
+        openPauseReasonModal();
+      }
       return;
     }
 
@@ -252,19 +307,25 @@ export default function FocusTimerPopup({
     };
   }, [open]);
 
-  // 화면 이탈 → 일시정지 + 저장
+  // 화면 이탈 → 일시정지 + 저장 / 복귀 시 멈춘 상태면 사유 모달
   useEffect(() => {
     if (!open) return;
 
     const onVisibilityChange = () => {
-      if (document.visibilityState !== "hidden") return;
+      if (document.visibilityState === "hidden") {
+        setPaused(true);
+        pausedRef.current = true;
+        saveFocusTimerSession({
+          minutes,
+          remainingSeconds: remainingRef.current,
+          paused: true,
+        });
+        return;
+      }
 
-      setPaused(true);
-      saveFocusTimerSession({
-        minutes,
-        remainingSeconds: remainingRef.current,
-        paused: true,
-      });
+      if (document.visibilityState === "visible" && pausedRef.current) {
+        openPauseReasonModal();
+      }
     };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -314,10 +375,9 @@ export default function FocusTimerPopup({
   const handleTogglePause = () => {
     setPaused((prev) => {
       const next = !prev;
+      pausedRef.current = next;
       if (next) {
-        setPauseStep("reason");
-        setPauseReasonId(undefined);
-        setPauseModalOpen(true);
+        openPauseReasonModal();
       } else {
         setPauseModalOpen(false);
         setPauseStep("reason");
@@ -366,6 +426,7 @@ export default function FocusTimerPopup({
   const handleResumeReading = () => {
     resetPauseModal();
     setPaused(false);
+    pausedRef.current = false;
     saveFocusTimerSession({
       minutes,
       remainingSeconds: remainingRef.current,
@@ -400,7 +461,7 @@ export default function FocusTimerPopup({
       </div>
 
       {/* 웹 GNB */}
-      <div className="relative z-10">
+      <div className="relative z-20 shrink-0">
         <WebGnb
           active="center"
           tone="dark"
@@ -411,7 +472,10 @@ export default function FocusTimerPopup({
       </div>
 
       {/* 모바일 헤더 */}
-      <header className="relative z-10 flex items-center justify-center px-5 pt-[30px] min-[431px]:hidden">
+      <header
+        className="relative z-20 flex shrink-0 items-center justify-center px-5 pt-[30px] min-[431px]:hidden"
+        style={{ minHeight: HEADER_MOBILE }}
+      >
         <p className="text-center text-h3 text-white" aria-hidden>
           오롯이 글에 집중하는 시간
         </p>
@@ -432,10 +496,13 @@ export default function FocusTimerPopup({
         오롯이 글에 집중하는 시간
       </h1>
 
-      {/* 타이머 */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-[calc(40px+env(safe-area-inset-bottom))] min-[431px]:gap-[35px] min-[431px]:pb-16">
+      {/* 타이머 — 헤더 아래 영역만 사용, 높이에 맞춰 링 스케일, 스크롤 없음 */}
+      <div
+        ref={contentRef}
+        className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-8 overflow-hidden pb-[calc(40px+env(safe-area-inset-bottom))] min-[431px]:gap-[35px] min-[431px]:pb-16"
+      >
         <div
-          className="relative flex items-center justify-center"
+          className="relative flex shrink-0 items-center justify-center"
           style={{ width: ring.size, height: ring.size }}
         >
           <img
@@ -467,7 +534,11 @@ export default function FocusTimerPopup({
               strokeWidth={ring.stroke}
             />
             <circle
-              key={playIntro ? `intro-${startKey}-${ring.size}` : `run-${startKey}-${ring.size}`}
+              key={
+                playIntro
+                  ? `intro-${startKey}-${ring.size}`
+                  : `run-${startKey}-${ring.size}`
+              }
               cx={ring.size / 2}
               cy={ring.size / 2}
               r={ring.radius}
@@ -497,16 +568,28 @@ export default function FocusTimerPopup({
 
           <div className="relative bottom-3 flex flex-col items-center min-[431px]:bottom-0">
             <div
-              className="flex h-[96px] items-center justify-center text-white min-[431px]:h-[120px]"
-              style={{ fontFamily: "'Poppins', sans-serif" }}
+              className="flex items-center justify-center text-white"
+              style={{
+                fontFamily: "'Poppins', sans-serif",
+                height: Math.round(ring.size * (isDesktop ? 120 / 350 : 96 / 272)),
+              }}
             >
-              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums] min-[431px]:text-[88px]">
+              <span
+                className="inline-block w-[2ch] text-center font-medium leading-none [font-variant-numeric:tabular-nums]"
+                style={{ fontSize: timeFontPx }}
+              >
                 {pad2(mins)}
               </span>
-              <span className="inline-block w-[1ch] text-center text-[55px] font-medium leading-none min-[431px]:text-[66px]">
+              <span
+                className="inline-block w-[1ch] text-center font-medium leading-none"
+                style={{ fontSize: colonFontPx }}
+              >
                 :
               </span>
-              <span className="inline-block w-[2ch] text-center text-[55px] font-medium leading-none [font-variant-numeric:tabular-nums] min-[431px]:text-[88px]">
+              <span
+                className="inline-block w-[2ch] text-center font-medium leading-none [font-variant-numeric:tabular-nums]"
+                style={{ fontSize: timeFontPx }}
+              >
                 {pad2(secs)}
               </span>
             </div>
@@ -520,7 +603,7 @@ export default function FocusTimerPopup({
         <button
           type="button"
           onClick={handleTogglePause}
-          className="flex items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5 min-[431px]:h-[55px] min-[431px]:rounded-[28.8px] min-[431px]:px-6 min-[431px]:py-3"
+          className="flex shrink-0 items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5 min-[431px]:h-[55px] min-[431px]:rounded-[28.8px] min-[431px]:px-6 min-[431px]:py-3"
         >
           <img
             src={paused ? iconPlay : iconPause}
@@ -537,11 +620,15 @@ export default function FocusTimerPopup({
         open={pauseModalOpen && pauseStep === "reason"}
         title="잠시 멈추셨네요!"
         description={
-          <>
-            독서를 멈춘 이유를 알려주시면 더 나은 집중 환경을
-            <br />
-            만들어드릴게요.
-          </>
+          isDesktop ? (
+            "독서를 멈춘 이유를 알려주시면 더 나은 집중 환경을 만들어드릴게요."
+          ) : (
+            <>
+              독서를 멈춘 이유를 알려주시면 더 나은 집중 환경을
+              <br />
+              만들어드릴게요.
+            </>
+          )
         }
         onClose={handleClosePauseModal}
       >
@@ -553,15 +640,19 @@ export default function FocusTimerPopup({
         title={
           pauseReasonId === "other"
             ? "멈춘 이유를 자세히 알려주세요!"
-            : "어떤점이 아쉬웠나요?"
+            : "어떤 점이 아쉬웠나요?"
         }
         description={
           pauseReasonId === "other" ? (
-            <>
-              독서를 멈춘 이유를 알려주시면 더 나은 집중 환경을
-              <br />
-              만들어드릴게요.
-            </>
+            isDesktop ? (
+              "독서를 멈춘 이유를 알려주시면 더 나은 집중 환경을 만들어드릴게요."
+            ) : (
+              <>
+                독서를 멈춘 이유를 알려주시면 더 나은 집중 환경을
+                <br />
+                만들어드릴게요.
+              </>
+            )
           ) : (
             "자세히 알려주시면 다음 책 추천의 기준으로 삼을게요."
           )

@@ -158,7 +158,7 @@ export default function MateBookSection({
             <button
               type="button"
               onClick={onStartFocus}
-              className="mt-6 rounded-[25px] bg-white px-5 py-3 text-center text-[16px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
+              className="mt-6 rounded-[25px] bg-white px-5 py-3 text-center text-[16px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)] mb-5"
             >
               집중시작
             </button>

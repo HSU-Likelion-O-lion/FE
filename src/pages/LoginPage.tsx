@@ -93,8 +93,8 @@ export default function LoginPage() {
       </div>
 
       {/* 웹 — 여유 있으면 세로 중앙, 부족하면 스크롤 */}
-      <div className="relative z-10 mx-auto hidden min-h-dvh w-full max-w-[352px] flex-col px-5 py-16 min-[431px]:flex">
-        <div className="my-auto flex w-full flex-col items-center">
+      <div className="relative z-10 mx-auto hidden min-h-dvh w-full max-w-[352px] flex-col px-5 pt-16 pb-24 min-[431px]:flex">
+        <div className="my-auto flex w-full flex-col items-center pb-8">
           <img
             src={logoWhite}
             alt="쓰담"

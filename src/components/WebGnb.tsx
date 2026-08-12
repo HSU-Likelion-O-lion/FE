@@ -20,12 +20,18 @@ type WebGnbProps = {
   onChange?: (tab: NavTab) => void;
 };
 
-const TEXT_TABS: { id: Exclude<NavTab, "profile" | "center"> | "center"; label: string }[] = [
+const TEXT_TABS: {
+  id: Exclude<NavTab, "profile" | "center"> | "center";
+  label: string;
+}[] = [
   { id: "drawer", label: "서랍" },
   { id: "library", label: "서재" },
   { id: "center", label: "메이트" },
   { id: "shelter", label: "쉼터" },
 ];
+
+const tabClass =
+  "relative flex h-full min-w-0 flex-1 items-center justify-center px-1 text-[15px] tracking-[-0.025em] min-[768px]:flex-none min-[768px]:w-[100px] min-[768px]:px-0 min-[768px]:text-[16px] min-[1024px]:w-[120px] min-[1024px]:text-[17.6px]";
 
 /**
  * 웹(≥431px) 상단 GNB — Figma 739:5354
@@ -48,7 +54,7 @@ export default function WebGnb({
 
   return (
     <header
-      className={`hidden h-[76px] w-full shrink-0 items-center justify-between px-10 min-[431px]:flex min-[1024px]:px-40 ${
+      className={`hidden h-[76px] w-full shrink-0 items-center justify-between gap-3 px-4 min-[431px]:flex min-[768px]:gap-6 min-[768px]:px-8 min-[1024px]:px-40 ${
         isDark ? "bg-transparent" : "bg-white"
       } ${className}`}
       aria-label="상단 내비게이션"
@@ -57,7 +63,7 @@ export default function WebGnb({
         type="button"
         aria-label="쓰담 홈"
         onClick={() => handleTab("center")}
-        className="flex h-[34px] w-[50px] shrink-0 items-center"
+        className="flex h-[28px] w-[41px] shrink-0 items-center min-[768px]:h-[34px] min-[768px]:w-[50px]"
       >
         <img
           src={isDark ? logoWhite : logoDark}
@@ -66,7 +72,10 @@ export default function WebGnb({
         />
       </button>
 
-      <nav className="flex h-full items-stretch gap-2" aria-label="주요 메뉴">
+      <nav
+        className="flex h-full min-w-0 flex-1 items-stretch justify-end gap-0 min-[768px]:flex-none min-[768px]:gap-1 min-[1024px]:gap-2"
+        aria-label="주요 메뉴"
+      >
         {TEXT_TABS.map((tab) => {
           const isActive = active === tab.id;
           return (
@@ -75,7 +84,7 @@ export default function WebGnb({
               type="button"
               aria-current={isActive ? "page" : undefined}
               onClick={() => handleTab(tab.id)}
-              className={`relative flex h-full w-[120px] items-center justify-center text-[17.6px] tracking-[-0.025em] ${
+              className={`${tabClass} ${
                 isActive
                   ? isDark
                     ? "font-bold text-white"
@@ -88,7 +97,7 @@ export default function WebGnb({
               {tab.label}
               {isActive ? (
                 <span
-                  className={`absolute bottom-0 left-1/2 h-[3px] w-[100px] -translate-x-1/2 rounded-t-[3px] ${
+                  className={`absolute bottom-0 left-1/2 h-[3px] w-[min(100%,72px)] -translate-x-1/2 rounded-t-[3px] min-[1024px]:w-[100px] ${
                     isDark ? "bg-white" : "bg-primary-500"
                   }`}
                 />
@@ -102,16 +111,18 @@ export default function WebGnb({
           aria-label="프로필"
           aria-current={active === "profile" ? "page" : undefined}
           onClick={() => handleTab("profile")}
-          className="relative flex h-full w-[120px] items-center justify-center"
+          className={tabClass}
         >
           <img
             src={iconUser}
             alt=""
-            className={`size-7 object-contain ${isDark ? "brightness-0 invert" : ""}`}
+            className={`size-6 object-contain min-[768px]:size-7 ${
+              isDark ? "brightness-0 invert" : ""
+            }`}
           />
           {active === "profile" ? (
             <span
-              className={`absolute bottom-0 left-1/2 h-[3px] w-[100px] -translate-x-1/2 rounded-t-[3px] ${
+              className={`absolute bottom-0 left-1/2 h-[3px] w-[min(100%,72px)] -translate-x-1/2 rounded-t-[3px] min-[1024px]:w-[100px] ${
                 isDark ? "bg-white" : "bg-primary-500"
               }`}
             />

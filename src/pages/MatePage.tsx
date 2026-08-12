@@ -241,187 +241,196 @@ export default function MatePage({
   const badgeCount = 3;
 
   return (
-    <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white pb-[97px] min-[431px]:max-w-none min-[431px]:bg-[#fdfdff] min-[431px]:pb-0">
-      <WebGnb active={activeTab} onChange={setActiveTab} />
+    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white min-[431px]:max-w-none min-[431px]:bg-[#fdfdff]">
+      <div className="shrink-0">
+        <WebGnb active={activeTab} onChange={setActiveTab} />
+      </div>
 
-      {/* —— 모바일 헤더 —— */}
-      <header className="flex items-center gap-3 px-5 pt-5 min-[431px]:hidden">
-        <h1 className="min-w-0 flex-1 text-h2 text-gray-900">
-          이번 주 독서 기록
-        </h1>
-        <div className="flex shrink-0 items-center gap-3">
-          <button type="button" aria-label="배지" className="size-6">
-            <img src={iconBadge} alt="" className="size-full object-contain" />
-          </button>
-          <button
-            type="button"
-            aria-label="영감 캡슐"
-            onClick={() => navigate("/mate/capsule")}
-            className="size-6"
-          >
-            <img
-              src={iconCapsule}
-              alt=""
-              className="size-full object-contain"
-            />
-          </button>
-        </div>
-      </header>
-
-      {/* —— 웹 헤더 —— */}
-      <header className="mx-auto hidden w-full max-w-[1440px] items-center justify-between px-10 pt-[30px] min-[431px]:flex min-[1024px]:px-40">
-        <h1 className="text-[40px] font-semibold leading-10 tracking-[-0.025em] text-gray-900">
-          이번 주 독서 기록
-        </h1>
-        <div className="flex shrink-0 items-center gap-3">
-          <button
-            type="button"
-            className="flex h-[38px] items-center justify-center rounded-[18.7px] bg-primary-10 px-4 text-[15.4px] tracking-[-0.025em] text-primary-500"
-          >
-            누적배지 ㅣ {badgeCount}개
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/mate/capsule")}
-            className="flex h-[38px] items-center justify-center rounded-[18.7px] bg-primary-10 px-4 text-[15.4px] tracking-[-0.025em] text-primary-500"
-          >
-            영감캡슐
-          </button>
-        </div>
-      </header>
-
-      {/* —— 모바일 주간 캘린더 —— */}
-      <section
-        className="mt-5 flex flex-col px-5 min-[431px]:hidden"
-        aria-label="주간 날짜"
-      >
-        <div className="flex items-center justify-center rounded-t-[11px] bg-white px-2 pt-2">
-          {WEEK.map((item) => (
-            <div
-              key={item.day}
-              className="flex h-10 flex-1 items-center justify-center"
+      {/* 스크롤은 헤더 아래에서만 */}
+      <div className="min-h-0 flex-1 overflow-y-auto pb-[97px] min-[431px]:pb-0">
+        {/* —— 모바일 헤더 —— */}
+        <header className="flex items-center gap-3 px-5 pt-5 min-[431px]:hidden">
+          <h1 className="min-w-0 flex-1 text-h2 text-gray-900">
+            이번 주 독서 기록
+          </h1>
+          <div className="flex shrink-0 items-center gap-3">
+            <button type="button" aria-label="배지" className="size-6">
+              <img
+                src={iconBadge}
+                alt=""
+                className="size-full object-contain"
+              />
+            </button>
+            <button
+              type="button"
+              aria-label="영감 캡슐"
+              onClick={() => navigate("/mate/capsule")}
+              className="size-6"
             >
-              <span className="text-body2 text-gray-500">{item.day}</span>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-center rounded-b-[11px] bg-white px-2 pb-2">
-          {WEEK.map((item) => {
-            const selected = selectedDate === item.date;
-            const disabled = item.status === "future";
+              <img
+                src={iconCapsule}
+                alt=""
+                className="size-full object-contain"
+              />
+            </button>
+          </div>
+        </header>
 
-            return (
-              <button
-                key={item.date}
-                type="button"
-                disabled={disabled}
-                onClick={() => {
-                  if (!disabled) setSelectedDate(item.date);
-                }}
-                className={`relative flex h-10 flex-1 items-center justify-center ${
-                  disabled ? "cursor-default" : "cursor-pointer"
-                }`}
-                aria-pressed={selected}
-                aria-disabled={disabled}
+        {/* —— 웹 헤더 —— */}
+        <header className="mx-auto hidden w-full max-w-[1440px] items-center justify-between px-10 pt-[30px] min-[431px]:flex min-[1024px]:px-40">
+          <h1 className="text-[40px] font-semibold leading-10 tracking-[-0.025em] text-gray-900">
+            이번 주 독서 기록
+          </h1>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              className="flex h-[38px] items-center justify-center rounded-[18.7px] bg-primary-10 px-4 text-[15.4px] tracking-[-0.025em] text-primary-500"
+            >
+              누적배지 ㅣ {badgeCount}개
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/mate/capsule")}
+              className="flex h-[38px] items-center justify-center rounded-[18.7px] bg-primary-10 px-4 text-[15.4px] tracking-[-0.025em] text-primary-500"
+            >
+              영감캡슐
+            </button>
+          </div>
+        </header>
+
+        {/* —— 모바일 주간 캘린더 —— */}
+        <section
+          className="mt-5 flex flex-col px-5 min-[431px]:hidden"
+          aria-label="주간 날짜"
+        >
+          <div className="flex items-center justify-center rounded-t-[11px] bg-white px-2 pt-2">
+            {WEEK.map((item) => (
+              <div
+                key={item.day}
+                className="flex h-10 flex-1 items-center justify-center"
               >
-                <span
-                  className={`text-[18px] leading-[26px] tracking-[-0.025em] ${
-                    selected
-                      ? "font-semibold text-primary-500"
-                      : item.status === "future"
-                        ? "font-normal text-gray-300"
-                        : "font-normal text-gray-800"
-                  }`}
-                >
-                  {item.date}
-                </span>
-                {selected && !disabled && (
-                  <span className="absolute bottom-0 left-1/2 h-0.5 w-9 -translate-x-1/2 rounded-t-[3px] bg-primary-500" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+                <span className="text-body2 text-gray-500">{item.day}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-center rounded-b-[11px] bg-white px-2 pb-2">
+            {WEEK.map((item) => {
+              const selected = selectedDate === item.date;
+              const disabled = item.status === "future";
 
-      {/* —— 웹 주간 캘린더 —— */}
-      <section
-        className="relative mx-auto mt-8 hidden w-full max-w-[1440px] overflow-hidden min-[431px]:block"
-        aria-label="주간 날짜"
-      >
-        <div className="flex items-start justify-center gap-[54px] px-10 min-[1024px]:px-40">
-          {WEEK_WEB.map((item) => {
-            const selected = selectedDate === item.date;
-            const disabled = item.status === "future";
-            const faded = item.status === "past";
-
-            return (
-              <button
-                key={`${item.day}-${item.date}`}
-                type="button"
-                disabled={disabled}
-                onClick={() => {
-                  if (!disabled) setSelectedDate(item.date);
-                }}
-                className={`flex flex-col items-center gap-3 ${
-                  faded ? "opacity-75" : ""
-                } ${disabled ? "cursor-default" : "cursor-pointer"}`}
-                aria-pressed={selected}
-              >
-                <span
-                  className={`flex size-[52px] items-center justify-center rounded-full text-[20px] tracking-[-0.025em] ${
-                    selected
-                      ? "bg-primary-50 font-semibold text-primary-500"
-                      : "font-normal text-gray-400"
+              return (
+                <button
+                  key={item.date}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (!disabled) setSelectedDate(item.date);
+                  }}
+                  className={`relative flex h-10 flex-1 items-center justify-center ${
+                    disabled ? "cursor-default" : "cursor-pointer"
                   }`}
+                  aria-pressed={selected}
+                  aria-disabled={disabled}
                 >
-                  {item.date}
-                </span>
-                <span
-                  className={`text-base tracking-[-0.025em] ${
-                    selected
-                      ? "font-medium text-gray-900"
-                      : "font-normal text-gray-400"
-                  }`}
-                >
-                  {item.day === "일"
-                    ? "일요일"
-                    : item.day === "월"
-                      ? "월요일"
-                      : item.day === "화"
-                        ? "화요일"
-                        : item.day === "수"
-                          ? "수요일"
-                          : item.day === "목"
-                            ? "목요일"
-                            : item.day === "금"
-                              ? "금요일"
-                              : "토요일"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 w-[170px] bg-linear-to-r from-[#fdfdff] to-transparent"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-[170px] bg-linear-to-l from-[#fdfdff] to-transparent"
-        />
-      </section>
+                  <span
+                    className={`text-[18px] leading-[26px] tracking-[-0.025em] ${
+                      selected
+                        ? "font-semibold text-primary-500"
+                        : item.status === "future"
+                          ? "font-normal text-gray-300"
+                          : "font-normal text-gray-800"
+                    }`}
+                  >
+                    {item.date}
+                  </span>
+                  {selected && !disabled && (
+                    <span className="absolute bottom-0 left-1/2 h-0.5 w-9 -translate-x-1/2 rounded-t-[3px] bg-primary-500" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-      {showEmpty ? (
-        <MateEmptySection onCta={handleEmptyCta} />
-      ) : showCarousel ? (
-        <MateBookSection
-          books={mateBooks}
-          canPick={canPick}
-          onStartFocus={() => setFocusModalOpen(true)}
-          onPickBooks={() => setPickSheetOpen(true)}
-        />
-      ) : null}
+        {/* —— 웹 주간 캘린더 —— */}
+        <section
+          className="relative mx-auto mt-8 hidden w-full max-w-[1440px] overflow-hidden min-[431px]:block"
+          aria-label="주간 날짜"
+        >
+          <div className="flex items-start justify-center gap-[54px] px-10 min-[1024px]:px-40">
+            {WEEK_WEB.map((item) => {
+              const selected = selectedDate === item.date;
+              const disabled = item.status === "future";
+              const faded = item.status === "past";
+
+              return (
+                <button
+                  key={`${item.day}-${item.date}`}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (!disabled) setSelectedDate(item.date);
+                  }}
+                  className={`flex flex-col items-center gap-3 ${
+                    faded ? "opacity-75" : ""
+                  } ${disabled ? "cursor-default" : "cursor-pointer"}`}
+                  aria-pressed={selected}
+                >
+                  <span
+                    className={`flex size-[52px] items-center justify-center rounded-full text-[20px] tracking-[-0.025em] ${
+                      selected
+                        ? "bg-primary-50 font-semibold text-primary-500"
+                        : "font-normal text-gray-400"
+                    }`}
+                  >
+                    {item.date}
+                  </span>
+                  <span
+                    className={`text-base tracking-[-0.025em] ${
+                      selected
+                        ? "font-medium text-gray-900"
+                        : "font-normal text-gray-400"
+                    }`}
+                  >
+                    {item.day === "일"
+                      ? "일요일"
+                      : item.day === "월"
+                        ? "월요일"
+                        : item.day === "화"
+                          ? "화요일"
+                          : item.day === "수"
+                            ? "수요일"
+                            : item.day === "목"
+                              ? "목요일"
+                              : item.day === "금"
+                                ? "금요일"
+                                : "토요일"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 left-0 w-[170px] bg-linear-to-r from-[#fdfdff] to-transparent"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-0 w-[170px] bg-linear-to-l from-[#fdfdff] to-transparent"
+          />
+        </section>
+
+        {showEmpty ? (
+          <MateEmptySection onCta={handleEmptyCta} />
+        ) : showCarousel ? (
+          <MateBookSection
+            books={mateBooks}
+            canPick={canPick}
+            onStartFocus={() => setFocusModalOpen(true)}
+            onPickBooks={() => setPickSheetOpen(true)}
+          />
+        ) : null}
+      </div>
 
       <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)] min-[431px]:hidden">
         <NavigationBar active={activeTab} onChange={setActiveTab} />
