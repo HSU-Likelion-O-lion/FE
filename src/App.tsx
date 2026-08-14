@@ -23,6 +23,9 @@ import ShelterPage from "./pages/ShelterPage";
 import ShelterThoughtDetailPage from "./pages/ShelterThoughtDetailPage";
 import ShelterThoughtWritePage from "./pages/ShelterThoughtWritePage";
 import ShelterThoughtsPage from "./pages/ShelterThoughtsPage";
+import ShelterMyThoughtPage from "./pages/ShelterMyThoughtPage";
+import ShelterThoughtSharePage from "./pages/ShelterThoughtSharePage";
+import RequireDailyReading from "./components/shelter/RequireDailyReading";
 import BackupSyncPage from "./pages/profile/BackupSyncPage";
 import InquiryPage from "./pages/profile/InquiryPage";
 import NoticePage from "./pages/profile/NoticePage";
@@ -30,6 +33,7 @@ import PrivacyPage from "./pages/profile/PrivacyPage";
 import ProfileEditPage from "./pages/profile/ProfileEditPage";
 import ProfilePage from "./pages/profile/ProfilePage";
 import PushNotificationPage from "./pages/profile/PushNotificationPage";
+import MembershipPage from "./pages/profile/MembershipPage";
 import TermsPage from "./pages/profile/TermsPage";
 
 function App() {
@@ -66,17 +70,41 @@ function App() {
         <Route path="/mate/goal" element={<GoalAchievedPage />} />
         <Route path="/mate/reflect" element={<ReflectPage />} />
         <Route path="/shelter" element={<ShelterPage />} />
-        <Route path="/shelter/thoughts" element={<ShelterThoughtsPage />} />
+        <Route
+          path="/shelter/thoughts"
+          element={
+            <RequireDailyReading>
+              <ShelterThoughtsPage />
+            </RequireDailyReading>
+          }
+        />
         <Route
           path="/shelter/thoughts/write"
-          element={<ShelterThoughtWritePage />}
+          element={
+            <RequireDailyReading>
+              <ShelterThoughtWritePage />
+            </RequireDailyReading>
+          }
+        />
+        <Route
+          path="/shelter/thoughts/mine"
+          element={<ShelterMyThoughtPage />}
+        />
+        <Route
+          path="/shelter/thoughts/mine/share"
+          element={<ShelterThoughtSharePage />}
         />
         <Route
           path="/shelter/thoughts/:thoughtId"
-          element={<ShelterThoughtDetailPage />}
+          element={
+            <RequireDailyReading>
+              <ShelterThoughtDetailPage />
+            </RequireDailyReading>
+          }
         />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
+        <Route path="/profile/membership" element={<MembershipPage />} />
         <Route path="/profile/push" element={<PushNotificationPage />} />
         <Route path="/profile/backup" element={<BackupSyncPage />} />
         <Route path="/profile/notice" element={<NoticePage />} />

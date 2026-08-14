@@ -70,7 +70,7 @@ export default function Modal({
   const hasActions = actions != null && actions.length > 0;
 
   const shellClass = isAlert
-    ? "relative z-10 w-full max-w-[353px] rounded-[20px] bg-white p-5 min-[431px]:w-[565px] min-[431px]:max-w-[565px] min-[431px]:px-[38px] min-[431px]:py-8"
+    ? "relative z-10 w-full max-w-[353px] rounded-[20px] bg-[#fefefe] p-5 min-[431px]:w-[565px] min-[431px]:max-w-[565px] min-[431px]:px-[38px] min-[431px]:py-8"
     : "relative z-10 w-full max-w-[353px] rounded-[20px] bg-white p-5 min-[431px]:w-[565px] min-[431px]:max-w-[565px] min-[431px]:rounded-[24px] min-[431px]:p-8";
 
   return (
@@ -153,25 +153,30 @@ export default function Modal({
 
         {hasActions && (
           <div
-            className={`flex gap-3 ${
+            className={`flex ${
               children != null
-                ? "mt-3"
+                ? "mt-3 gap-3"
                 : isAlert
-                  ? "mt-5 min-[431px]:mt-[26px]"
-                  : "mt-5"
-            } ${actions.length === 1 ? "flex-col" : ""}`}
+                  ? "mt-5 gap-3 min-[431px]:mt-[26px] min-[431px]:gap-5"
+                  : "mt-5 gap-3"
+            } ${actions.length === 1 ? "flex-col items-center" : ""}`}
           >
             {actions.map((action, index) => {
               const isLast = index === actions.length - 1;
               const buttonVariant =
                 action.variant ?? (isLast ? "primary" : "outline");
+              const isSingleAlert = isAlert && actions.length === 1;
 
               return (
                 <Button
                   key={`${action.label}-${index}`}
                   text={action.label}
                   variant={buttonVariant}
-                  size="h-[52px] flex-1 px-5 py-3"
+                  size={
+                    isSingleAlert
+                      ? "h-[54px] w-full max-w-[400px] rounded-[16px] px-5 py-3"
+                      : "h-[52px] flex-1 px-5 py-3"
+                  }
                   onClick={action.onClick}
                 />
               );

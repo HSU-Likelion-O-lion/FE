@@ -52,7 +52,7 @@ export default function Button({
           setInternalActive((prev) => !prev);
         }
         onClick?.();
-        e.currentTarget.blur();
+        e.currentTarget?.blur();
       }}
       className={`btn ${variantClass} ${size} ${className}`.trim()}
     >

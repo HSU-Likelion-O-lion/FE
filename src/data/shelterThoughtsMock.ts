@@ -54,12 +54,43 @@ const HOME_LAYOUT: ReadonlyArray<HomeSlot> = [
   { x: 236, y: 576, width: 147, rotate: -3 },
 ];
 
+/** 웹 초기 뷰 — Figma 726:4462 (1440×1024) */
+const WEB_HOME_LAYOUT: ReadonlyArray<HomeSlot> = [
+  { x: 176, y: 255, width: 229, rotate: -3.19 },
+  { x: 259, y: 484, width: 236, rotate: -4.9, variant: "curl" },
+  {
+    x: 504,
+    y: 243,
+    width: 451,
+    rotate: 3.95,
+    variant: "featured",
+    flip: false,
+  },
+  {
+    x: 1063,
+    y: 243,
+    width: 203,
+    rotate: 4.95,
+    variant: "tape",
+    flip: true,
+  },
+  { x: 1078, y: 506, width: 207, rotate: -0.74, variant: "curl" },
+  { x: 1081, y: 734, width: 199, rotate: 0.37 },
+  { x: 194, y: 727, width: 220, rotate: -5.21 },
+];
+
 const HOME_VIEW = { width: 393, height: 792 } as const;
+const WEB_HOME_VIEW = { width: 1440, height: 1024 } as const;
 
 /** 뷰포트 고정 오버레이 — 팬 끝에서도 가려지므로 추가 노트 배치 금지 */
 const OVERLAY = {
   top: 280,
   bottom: 86,
+} as const;
+
+const WEB_OVERLAY = {
+  top: 160,
+  bottom: 120,
 } as const;
 
 /** 홈 뷰포트 주변 — 축소·팬 시 보이는 영역 */
@@ -68,6 +99,13 @@ const WORLD = {
   minY: -40,
   maxX: 920,
   maxY: 1320,
+} as const;
+
+const WEB_WORLD = {
+  minX: -480,
+  minY: -280,
+  maxX: 2200,
+  maxY: 1800,
 } as const;
 
 const TEXTS = [
@@ -200,12 +238,16 @@ function overlaps(a: Box, b: Box, gap: number) {
   );
 }
 
-function intersectsHomeViewport(box: Box, margin = 16) {
+function intersectsHomeViewport(
+  box: Box,
+  homeView: { width: number; height: number },
+  margin = 16,
+) {
   const home: Box = {
     x: -margin,
     y: -margin,
-    width: HOME_VIEW.width + margin * 2,
-    height: HOME_VIEW.height + margin * 2,
+    width: homeView.width + margin * 2,
+    height: homeView.height + margin * 2,
   };
   return overlaps(box, home, 0);
 }
@@ -214,56 +256,71 @@ function intersectsHomeViewport(box: Box, margin = 16) {
  * 상·하단 그라데이션에 가려지는 월드 구간
  * (팬을 끝으로 밀었을 때 해당 노트가 오버레이 아래로 들어감)
  */
-function intersectsOverlayDeadZone(box: Box) {
+function intersectsOverlayDeadZone(
+  box: Box,
+  world: { minX: number; minY: number; maxX: number; maxY: number },
+  overlay: { top: number; bottom: number },
+) {
   const topDead: Box = {
-    x: WORLD.minX,
-    y: WORLD.minY,
-    width: WORLD.maxX - WORLD.minX,
-    height: OVERLAY.top,
+    x: world.minX,
+    y: world.minY,
+    width: world.maxX - world.minX,
+    height: overlay.top,
   };
   const bottomDead: Box = {
-    x: WORLD.minX,
-    y: WORLD.maxY - OVERLAY.bottom,
-    width: WORLD.maxX - WORLD.minX,
-    height: OVERLAY.bottom,
+    x: world.minX,
+    y: world.maxY - overlay.bottom,
+    width: world.maxX - world.minX,
+    height: overlay.bottom,
   };
   return overlaps(box, topDead, 0) || overlaps(box, bottomDead, 0);
 }
 
-function isInvalidOuterPlacement(box: Box) {
-  return intersectsHomeViewport(box) || intersectsOverlayDeadZone(box);
+type BoardLayoutConfig = {
+  homeLayout: ReadonlyArray<HomeSlot>;
+  homeView: { width: number; height: number };
+  world: { minX: number; minY: number; maxX: number; maxY: number };
+  overlay: { top: number; bottom: number };
+};
+
+function isInvalidOuterPlacement(box: Box, config: BoardLayoutConfig) {
+  return (
+    intersectsHomeViewport(box, config.homeView) ||
+    intersectsOverlayDeadZone(box, config.world, config.overlay)
+  );
 }
 
 /** 좌·우·하 스트립에 충분한 후보 슬롯 생성 */
-function buildOuterSlots(rand: () => number): Array<{ x: number; y: number }> {
+function buildOuterSlots(
+  rand: () => number,
+  config: BoardLayoutConfig,
+): Array<{ x: number; y: number }> {
+  const { world, overlay, homeView } = config;
   const slots: Array<{ x: number; y: number }> = [];
   const cellW = 148;
   const cellH = 156;
   const gap = 16;
-  const top = WORLD.minY + OVERLAY.top + gap;
-  const bottom = WORLD.maxY - OVERLAY.bottom - 130 - gap;
+  const top = world.minY + overlay.top + gap;
+  const bottom = world.maxY - overlay.bottom - 130 - gap;
 
-  // 좌측 여러 열
   for (let col = 0; col < 4; col += 1) {
-    const x = WORLD.minX + gap + col * cellW;
+    const x = world.minX + gap + col * cellW;
     if (x + 130 >= -gap) break;
     for (let y = top; y <= bottom; y += cellH) {
       slots.push({ x, y });
     }
   }
-  // 우측 여러 열
-  for (let col = 0; col < 4; col += 1) {
-    const x = HOME_VIEW.width + gap + col * cellW;
-    if (x + 130 > WORLD.maxX - gap) break;
+  for (let col = 0; col < 6; col += 1) {
+    const x = homeView.width + gap + col * cellW;
+    if (x + 130 > world.maxX - gap) break;
     for (let y = top; y <= bottom; y += cellH) {
       slots.push({ x, y });
     }
   }
-  // 하단 (홈 아래)
-  const belowHome = HOME_VIEW.height + gap;
+  const belowHome = homeView.height + gap;
   if (belowHome <= bottom) {
     for (let y = belowHome; y <= bottom; y += cellH) {
-      for (let x = gap; x + 130 < HOME_VIEW.width - gap; x += cellW) {
+      for (let x = gap; x + 130 < homeView.width - gap; x += cellW) {
         slots.push({ x, y });
       }
     }
@@ -278,25 +335,43 @@ function buildOuterSlots(rand: () => number): Array<{ x: number; y: number }> {
 
   return slots.filter((slot) => {
     const probe: Box = { x: slot.x, y: slot.y, width: 130, height: 140 };
-    return !isInvalidOuterPlacement(probe);
+    return !isInvalidOuterPlacement(probe, config);
   });
 }
+
+export type ThoughtBoardMode = "mobile" | "web";
+
+const MOBILE_LAYOUT_CONFIG: BoardLayoutConfig = {
+  homeLayout: HOME_LAYOUT,
+  homeView: HOME_VIEW,
+  world: WORLD,
+  overlay: OVERLAY,
+};
+
+const WEB_LAYOUT_CONFIG: BoardLayoutConfig = {
+  homeLayout: WEB_HOME_LAYOUT,
+  homeView: WEB_HOME_VIEW,
+  world: WEB_WORLD,
+  overlay: WEB_OVERLAY,
+};
 
 /** API 응답처럼 content만 있는 목록 → 화면용 배치 */
 export function layoutThoughtNotes(
   notes: ThoughtNote[],
   seedKey = "shelter-thoughts",
+  mode: ThoughtBoardMode = "mobile",
 ): PlacedThoughtNote[] {
-  const rand = mulberry32(hashSeed(seedKey));
+  const config = mode === "web" ? WEB_LAYOUT_CONFIG : MOBILE_LAYOUT_CONFIG;
+  const { homeLayout } = config;
+  const rand = mulberry32(hashSeed(`${seedKey}:${mode}`));
   const placed: PlacedThoughtNote[] = [];
   const boxes: Box[] = [];
   const gap = 20;
 
-  // 1) 기본 화면 고정 7개 (featured 포함)
-  const homeCount = Math.min(HOME_LAYOUT.length, notes.length);
+  const homeCount = Math.min(homeLayout.length, notes.length);
   for (let index = 0; index < homeCount; index += 1) {
     const note = notes[index]!;
-    const home = HOME_LAYOUT[index]!;
+    const home = homeLayout[index]!;
     const variant = home.variant ?? note.variant ?? pickBoardVariant(rand);
     const flip = home.flip ?? (variant !== "featured" && rand() > 0.6);
     const height = estimateHeight(variant, home.width);
@@ -315,15 +390,17 @@ export function layoutThoughtNotes(
     boxes.push(paddedBox(home.x, home.y, home.width, height, home.rotate));
   }
 
-  // 2) 나머지 — 홈/오버레이 바깥 슬롯에 순서대로 배치
-  const slots = buildOuterSlots(rand);
+  const slots = buildOuterSlots(rand, config);
   let slotCursor = 0;
 
   for (let index = homeCount; index < notes.length; index += 1) {
     const note = notes[index]!;
     const variant = note.variant ?? pickBoardVariant(rand);
     const flip = rand() > 0.55;
-    const width = 118 + Math.floor(rand() * 24);
+    const width =
+      mode === "web"
+        ? 160 + Math.floor(rand() * 40)
+        : 118 + Math.floor(rand() * 24);
     const height = estimateHeight(variant, width);
     const rotate = -5 + rand() * 10;
 
@@ -335,18 +412,17 @@ export function layoutThoughtNotes(
       const x = slot.x + (rand() - 0.5) * 8;
       const y = slot.y + (rand() - 0.5) * 8;
       const box = paddedBox(x, y, width, height, rotate);
-      if (isInvalidOuterPlacement(box)) continue;
+      if (isInvalidOuterPlacement(box, config)) continue;
       if (boxes.some((b) => overlaps(box, b, gap))) continue;
       placedAt = { x, y };
       break;
     }
 
     if (!placedAt) {
-      // 지터 없이 남은 슬롯 재시도
       for (let i = 0; i < slots.length && !placedAt; i += 1) {
         const slot = slots[i]!;
         const box = paddedBox(slot.x, slot.y, width, height, rotate);
-        if (isInvalidOuterPlacement(box)) continue;
+        if (isInvalidOuterPlacement(box, config)) continue;
         if (boxes.some((b) => overlaps(box, b, gap))) continue;
         placedAt = { x: slot.x, y: slot.y };
       }
@@ -365,9 +441,7 @@ export function layoutThoughtNotes(
       rotate,
     });
 
-    boxes.push(
-      paddedBox(placedAt.x, placedAt.y, width, height, rotate),
-    );
+    boxes.push(paddedBox(placedAt.x, placedAt.y, width, height, rotate));
   }
 
   return placed;
@@ -391,4 +465,13 @@ export const BOARD = {
   overlay: OVERLAY,
   minScale: 0.72,
   maxScale: 1.35,
+} as const;
+
+/** 웹 팬/줌 보드 — Figma 726:4462 초기 프레임 */
+export const WEB_BOARD = {
+  home: WEB_HOME_VIEW,
+  world: WEB_WORLD,
+  overlay: WEB_OVERLAY,
+  minScale: 0.55,
+  maxScale: 1.45,
 } as const;

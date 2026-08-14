@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import logoDark from "../assets/common/logo-dark.svg";
 import logoWhite from "../assets/common/logo-white.svg";
 import iconUser from "../assets/web/gnb-user.svg";
+import iconUserWhite from "../assets/web/gnb-user-white.svg";
 import type { NavTab } from "./NavigationBar";
 
 const TAB_PATHS: Partial<Record<NavTab, string>> = {
@@ -121,11 +122,9 @@ export default function WebGnb({
             }`}
           >
             <img
-              src={iconUser}
+              src={isDark ? iconUserWhite : iconUser}
               alt=""
-              className={`size-6 object-contain min-[768px]:size-7 ${
-                isDark ? "brightness-0 invert" : ""
-              }`}
+              className="size-6 object-contain min-[768px]:size-7"
             />
           </span>
           {active === "profile" && isDark ? (

@@ -84,8 +84,14 @@ export default function LibraryPage() {
               onGoMate={() => navigate("/mate")}
               onViewAll={() => navigate("/library/reasons")}
               onReasonClick={(reason) =>
-                navigate("/shelter/thoughts", {
-                  state: { title: reason.bookTitle, bookId: reason.id },
+                navigate("/shelter/thoughts/mine", {
+                  state: {
+                    title: reason.bookTitle,
+                    bookId: reason.id,
+                    body: reason.excerpt,
+                    date: reason.dateLabel,
+                    authorName: "지훈",
+                  },
                 })
               }
               onNextStep={() => {
@@ -133,8 +139,14 @@ export default function LibraryPage() {
                     }
                   }}
                   onReasonClick={(reason) =>
-                    navigate("/shelter/thoughts", {
-                      state: { title: reason.bookTitle, bookId: reason.id },
+                    navigate("/shelter/thoughts/mine", {
+                      state: {
+                        title: reason.bookTitle,
+                        bookId: reason.id,
+                        body: reason.excerpt,
+                        date: reason.dateLabel,
+                        authorName: "지훈",
+                      },
                     })
                   }
                 />

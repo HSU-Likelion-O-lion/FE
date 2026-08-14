@@ -8,6 +8,13 @@ import {
 } from "react";
 import { BOARD } from "../data/shelterThoughtsMock";
 
+export type BoardConfig = {
+  home: { width: number; height: number };
+  world: { minX: number; minY: number; maxX: number; maxY: number };
+  minScale: number;
+  maxScale: number;
+};
+
 type Transform = { x: number; y: number; scale: number };
 
 type PinchState = {
@@ -25,8 +32,9 @@ function clampTransform(
   next: Transform,
   viewportW: number,
   viewportH: number,
+  board: BoardConfig,
 ): Transform {
-  const { world, minScale, maxScale } = BOARD;
+  const { world, minScale, maxScale } = board;
   const scale = clamp(next.scale, minScale, maxScale);
   const viewW = viewportW / scale;
   const viewH = viewportH / scale;
@@ -66,11 +74,12 @@ function zoomAt(
   originY: number,
   viewportW: number,
   viewportH: number,
+  board: BoardConfig,
 ) {
   const nextScale = clamp(
     current.scale * scaleFactor,
-    BOARD.minScale,
-    BOARD.maxScale,
+    board.minScale,
+    board.maxScale,
   );
   const ratio = nextScale / current.scale;
   return clampTransform(
@@ -81,10 +90,36 @@ function zoomAt(
     },
     viewportW,
     viewportH,
+    board,
   );
 }
 
-export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
+/** 홈 프레임(0,0)~(homeW,homeH)이 뷰포트에 맞게 보이도록 초기 transform */
+function initialFitTransform(
+  viewportW: number,
+  viewportH: number,
+  board: BoardConfig,
+): Transform {
+  const { home } = board;
+  const scaleX = viewportW / home.width;
+  const scaleY = viewportH / home.height;
+  const scale = clamp(
+    Math.min(scaleX, scaleY),
+    board.minScale,
+    board.maxScale,
+  );
+  const x = (viewportW - home.width * scale) / 2;
+  const y = (viewportH - home.height * scale) / 2;
+  return clampTransform({ x, y, scale }, viewportW, viewportH, board);
+}
+
+export function useBoardPanZoom(
+  viewportRef: RefObject<HTMLElement | null>,
+  board: BoardConfig = BOARD,
+) {
+  const boardRef = useRef(board);
+  boardRef.current = board;
+
   const [transform, setTransform] = useState<Transform>({
     x: 0,
     y: 0,
@@ -107,12 +142,31 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
 
   const measure = useCallback(() => {
     const el = viewportRef.current;
-    if (!el) return { w: BOARD.home.width, h: BOARD.home.height };
+    if (!el) {
+      const b = boardRef.current;
+      return { w: b.home.width, h: b.home.height };
+    }
     const rect = el.getBoundingClientRect();
     return { w: rect.width, h: rect.height };
   }, [viewportRef]);
 
-  // React onWheel은 passive라 preventDefault 불가 → native non-passive로 처리
+  // 뷰포트/보드 변경 시 홈 프레임에 맞게 맞춤
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const fit = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      setTransform(initialFitTransform(rect.width, rect.height, board));
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [board, viewportRef]);
+
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
@@ -124,7 +178,9 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
       const ox = event.clientX - rect.left;
       const oy = event.clientY - rect.top;
       const factor = Math.exp(-event.deltaY * 0.0016);
-      setTransform((prev) => zoomAt(prev, factor, ox, oy, w, h));
+      setTransform((prev) =>
+        zoomAt(prev, factor, ox, oy, w, h, boardRef.current),
+      );
     };
 
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -143,7 +199,6 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
     (event: ReactPointerEvent<HTMLElement>) => {
       const el = viewportRef.current;
       if (!el) return;
-      // 클릭이 자식(PostIt)에서 살아남도록, 드래그/핀치 시작 전에는 capture하지 않음
       pointersRef.current.set(event.pointerId, {
         x: event.clientX,
         y: event.clientY,
@@ -191,6 +246,7 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
       const { w, h } = measure();
       const el = viewportRef.current;
       if (!el) return;
+      const boardCfg = boardRef.current;
 
       if (pointersRef.current.size >= 2 && pinchRef.current) {
         capturePointers(el);
@@ -211,6 +267,7 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
             midY,
             w,
             h,
+            boardCfg,
           ),
         );
         suppressClickRef.current = true;
@@ -221,7 +278,6 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
       if (!pan || pan.pointerId !== event.pointerId) return;
       const dx = event.clientX - pan.startX;
       const dy = event.clientY - pan.startY;
-      // 임계값 미만은 탭으로 보고 pan/capture 하지 않음 → PostIt click 유지
       if (Math.hypot(dx, dy) <= 6) return;
 
       if (!pan.moved) {
@@ -234,6 +290,7 @@ export function useBoardPanZoom(viewportRef: RefObject<HTMLElement | null>) {
           { ...prev, x: pan.originX + dx, y: pan.originY + dy },
           w,
           h,
+          boardCfg,
         ),
       );
     },

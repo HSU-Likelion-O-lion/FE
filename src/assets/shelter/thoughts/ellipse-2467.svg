@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" width="629" height="377" viewBox="0 0 629 377" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Figma Ellipse 2467: soft lower lavender glow -->
+  <ellipse cx="314.5" cy="188.5" rx="300" ry="170" fill="url(#paint_ellipse_2467_web)"/>
+  <defs>
+    <radialGradient id="paint_ellipse_2467_web" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(314.5 188.5) rotate(90) scale(170 300)">
+      <stop stop-color="#BEC4E7" stop-opacity="0.7"/>
+      <stop offset="0.45" stop-color="#7D89D0" stop-opacity="0.28"/>
+      <stop offset="0.75" stop-color="#5D6BC4" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#5D6BC4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

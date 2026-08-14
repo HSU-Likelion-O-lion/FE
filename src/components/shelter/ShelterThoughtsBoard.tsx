@@ -1,146 +1,258 @@
 import { useRef } from "react";
 import PostIt from "./PostIt";
+import WebGnb from "../WebGnb";
 import {
   BOARD,
+  WEB_BOARD,
   type PlacedThoughtNote,
 } from "../../data/shelterThoughtsMock";
 import { useBoardPanZoom } from "../../hooks/useBoardPanZoom";
-import bgGrid from "../../assets/shelter/thoughts/bg-grid.png";
 import iconBack from "../../assets/shelter/thoughts/icon-back.svg";
 import owlMascot from "../../assets/shelter/thoughts/owl-mascot.png";
-import ShelterTopGlow from "./ShelterTopGlow";
-
-const WORLD_W = BOARD.world.maxX - BOARD.world.minX;
-const WORLD_H = BOARD.world.maxY - BOARD.world.minY;
+import bgGlow from "../../assets/shelter/thoughts/bg-glow.svg";
+import ellipse2468 from "../../assets/shelter/thoughts/ellipse-2468.svg";
+import { SHELTER_BOARD_GRID_STYLE } from "./shelterBoardGrid";
 
 type ShelterThoughtsBoardProps = {
   title: string;
   notes: PlacedThoughtNote[];
+  /** 웹용 노트 배치 (팬/줌 + Figma 초기 프레임) */
+  webNotes?: PlacedThoughtNote[];
   onBack: () => void;
   onNoteClick: (thoughtId: string) => void;
 };
 
-/** 사유가 있을 때 — 팬/줌 맵 보드 */
+function BoardWorld({
+  notes,
+  world,
+  transform,
+  onNoteClick,
+  shouldSuppressClick,
+}: {
+  notes: PlacedThoughtNote[];
+  world: { minX: number; minY: number; maxX: number; maxY: number };
+  transform: { x: number; y: number; scale: number };
+  onNoteClick: (thoughtId: string) => void;
+  shouldSuppressClick: () => boolean;
+}) {
+  const worldW = world.maxX - world.minX;
+  const worldH = world.maxY - world.minY;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <div
+        className="absolute left-0 top-0 will-change-transform"
+        style={{
+          width: worldW,
+          height: worldH,
+          transform: `translate3d(${transform.x + world.minX * transform.scale}px, ${transform.y + world.minY * transform.scale}px, 0) scale(${transform.scale})`,
+          transformOrigin: "0 0",
+        }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={SHELTER_BOARD_GRID_STYLE}
+        />
+        {notes.map((note) => (
+          <div
+            key={note.id}
+            className="absolute"
+            style={{
+              left: note.x - world.minX,
+              top: note.y - world.minY,
+              zIndex: note.zIndex,
+            }}
+          >
+            <PostIt
+              variant={note.variant}
+              lines={note.content.split("\n")}
+              flip={note.flip}
+              width={note.width}
+              rotate={note.rotate}
+              textClassName={
+                note.variant === "featured" ? "text-gray-900" : "text-gray-800"
+              }
+              onClick={() => {
+                if (shouldSuppressClick()) return;
+                onNoteClick(note.id);
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 사유가 있을 때 — 모바일/웹 팬·줌 보드 (웹 Figma 726:4462) */
 export default function ShelterThoughtsBoard({
   title,
   notes,
+  webNotes,
   onBack,
   onNoteClick,
 }: ShelterThoughtsBoardProps) {
-  const viewportRef = useRef<HTMLElement>(null);
-  const {
-    transform,
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-    onPointerCancel,
-    shouldSuppressClick,
-  } = useBoardPanZoom(viewportRef);
+  const mobileViewportRef = useRef<HTMLElement>(null);
+  const webViewportRef = useRef<HTMLElement>(null);
+
+  const mobile = useBoardPanZoom(mobileViewportRef, BOARD);
+  const web = useBoardPanZoom(webViewportRef, WEB_BOARD);
+  const desktopNotes = webNotes ?? notes;
 
   return (
-    <main className="relative mx-auto min-h-dvh w-full max-w-[430px] overflow-x-hidden overflow-y-auto bg-[#f7f8fc]">
-      <div className="relative mx-auto min-h-[max(852px,100dvh)] w-full">
+    <>
+      {/* —— Mobile —— */}
+      <main className="relative mx-auto min-h-dvh w-full max-w-[430px] overflow-x-hidden overflow-y-auto bg-[#f7f8fc] min-[431px]:hidden">
+        <div className="relative mx-auto min-h-[max(852px,100dvh)] w-full">
+          <section
+            ref={mobileViewportRef}
+            className="absolute inset-0 z-10 cursor-grab touch-none overflow-hidden overscroll-none active:cursor-grabbing"
+            style={{ contain: "paint" }}
+            aria-label="사유 포스트잇 보드"
+            onPointerDown={mobile.onPointerDown}
+            onPointerMove={mobile.onPointerMove}
+            onPointerUp={mobile.onPointerUp}
+            onPointerCancel={mobile.onPointerCancel}
+          >
+            <BoardWorld
+              notes={notes}
+              world={BOARD.world}
+              transform={mobile.transform}
+              onNoteClick={onNoteClick}
+              shouldSuppressClick={mobile.shouldSuppressClick}
+            />
+          </section>
+
+          <img
+            src={bgGlow}
+            alt=""
+            className="pointer-events-none absolute left-1/2 top-[-320px] z-30 h-[860px] w-[620px] max-w-none -translate-x-1/2"
+          />
+
+          <header className="pointer-events-none absolute inset-x-0 top-0 z-40 px-5 pt-5">
+            <div className="relative flex h-11 w-full items-center justify-center">
+              <button
+                type="button"
+                aria-label="뒤로가기"
+                onClick={onBack}
+                className="pointer-events-auto absolute left-0 flex size-6 items-center justify-center"
+              >
+                <img
+                  src={iconBack}
+                  alt=""
+                  className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+                />
+              </button>
+              <h1 className="w-full text-center text-h3 text-white">{title}</h1>
+            </div>
+          </header>
+
+          <div className="pointer-events-none absolute left-[calc(50%-65px)] top-[86px] z-40 -translate-x-1/2 rounded-tl-xl rounded-tr-xl rounded-bl-xl bg-primary-10 px-4 py-[9.6px]">
+            <p className="whitespace-nowrap text-center text-[16px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800">
+              포스트잇을 클릭해, 다양한
+              <br />
+              사유를 읽어보세요!
+            </p>
+          </div>
+
+          <img
+            src={owlMascot}
+            alt=""
+            className="pointer-events-none absolute left-[calc(50%+31px)] top-[66px] z-40 h-[144px] w-[132px] object-contain object-bottom"
+          />
+
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-40 h-[86px] bg-[linear-gradient(3deg,#fff_9%,transparent_91%)]"
+          />
+        </div>
+      </main>
+
+      {/* —— Web (Figma 726:4462) ——
+          스크린 고정: Glow / GNB·타이틀 / 팁
+          월드 팬·줌: 격자 + 포스트잇 (홈 = 1440×1024 Figma 좌표)
+      */}
+      <main className="relative hidden h-dvh w-full overflow-hidden bg-[#f7f8fc] min-[431px]:block">
         <section
-          ref={viewportRef}
+          ref={webViewportRef}
           className="absolute inset-0 z-10 cursor-grab touch-none overflow-hidden overscroll-none active:cursor-grabbing"
           style={{ contain: "paint" }}
           aria-label="사유 포스트잇 보드"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
+          onPointerDown={web.onPointerDown}
+          onPointerMove={web.onPointerMove}
+          onPointerUp={web.onPointerUp}
+          onPointerCancel={web.onPointerCancel}
         >
-          <div className="absolute inset-0 overflow-hidden">
-            <div
-              className="absolute left-0 top-0 will-change-transform"
-              style={{
-                width: WORLD_W,
-                height: WORLD_H,
-                transform: `translate3d(${transform.x + BOARD.world.minX * transform.scale}px, ${transform.y + BOARD.world.minY * transform.scale}px, 0) scale(${transform.scale})`,
-                transformOrigin: "0 0",
-              }}
-            >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  backgroundImage: `url(${bgGrid})`,
-                  backgroundSize: "393px 792px",
-                  backgroundRepeat: "repeat",
-                }}
-              />
-              {notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="absolute"
-                  style={{
-                    left: note.x - BOARD.world.minX,
-                    top: note.y - BOARD.world.minY,
-                    zIndex: note.zIndex,
-                  }}
-                >
-                  <PostIt
-                    variant={note.variant}
-                    lines={note.content.split("\n")}
-                    flip={note.flip}
-                    width={note.width}
-                    rotate={note.rotate}
-                    textClassName={
-                      note.variant === "featured"
-                        ? "text-gray-900"
-                        : "text-gray-800"
-                    }
-                    onClick={() => {
-                      if (shouldSuppressClick()) return;
-                      onNoteClick(note.id);
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          <BoardWorld
+            notes={desktopNotes}
+            world={WEB_BOARD.world}
+            transform={web.transform}
+            onNoteClick={onNoteClick}
+            shouldSuppressClick={web.shouldSuppressClick}
+          />
         </section>
 
-        {/* Ellipse 2467 — 상단 글로우 */}
-        <ShelterTopGlow className="z-30" />
+        {/* Ellipse 2468 — 상단 보라 헤일로 (GNB 뒤). 뷰포트보다 항상 100px 넓게 */}
+        <img
+          src={ellipse2468}
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[-362px] z-20 h-[944px] max-w-none -translate-x-1/2"
+          style={{ width: "calc(100vw + 100px)" }}
+        />
 
-        <header className="pointer-events-none absolute inset-x-0 top-0 z-40 px-5 pt-5">
-          <div className="relative flex h-11 w-full items-center justify-center">
+        {/* Ellipse 2467 — 하단 소프트 글로우 (팁·부엉이 뒤) */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-[calc(50%+16px)] top-[520px] z-20 h-[420px] w-[640px] -translate-x-1/2 -rotate-[12deg]"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(190,196,231,0.55) 0%, rgba(125,137,208,0.22) 40%, rgba(93,107,196,0.06) 65%, transparent 78%)",
+            filter: "blur(8px)",
+          }}
+        />
+
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-40">
+          <WebGnb
+            active="shelter"
+            tone="dark"
+            className="pointer-events-auto relative bg-transparent"
+          />
+          <header className="flex items-center gap-5 px-8 pt-1 min-[1024px]:px-40">
             <button
               type="button"
               aria-label="뒤로가기"
               onClick={onBack}
-              className="pointer-events-auto absolute left-0 flex size-6 items-center justify-center"
+              className="pointer-events-auto flex size-[42px] shrink-0 items-center justify-center"
             >
               <img
                 src={iconBack}
                 alt=""
-                className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+                className="h-[18px] w-[10px] rotate-180 object-contain"
               />
             </button>
-            <h1 className="w-full text-center text-h3 text-white">{title}</h1>
-          </div>
-        </header>
-
-        <div className="pointer-events-none absolute left-[calc(50%-65px)] top-[86px] z-40 -translate-x-1/2 rounded-tl-xl rounded-tr-xl rounded-bl-xl bg-primary-10 px-4 py-[9.6px]">
-          <p className="whitespace-nowrap text-center text-[16px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800">
-            포스트잇을 클릭해, 다양한
-            <br />
-            사유를 읽어보세요!
-          </p>
+            <h1 className="truncate text-[32px] font-semibold leading-10 tracking-[-0.025em] text-[#fdfdff] min-[1100px]:text-[40px]">
+              {title}
+            </h1>
+          </header>
         </div>
 
-        <img
-          src={owlMascot}
-          alt=""
-          className="pointer-events-none absolute left-[calc(50%+31px)] top-[66px] z-40 h-[144px] w-[132px] object-contain object-bottom"
-        />
-
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-40 h-[86px] bg-[linear-gradient(3deg,#fff_9%,transparent_91%)]"
-        />
-      </div>
-    </main>
+        <div className="pointer-events-none absolute bottom-[max(24px,4vh)] left-1/2 z-40 flex -translate-x-1/2 items-end gap-1">
+          <div className="mb-6 rounded-tl-[12.7px] rounded-tr-[12.7px] rounded-bl-[12.7px] bg-primary-10 px-[17px] py-[10px]">
+            <p className="whitespace-nowrap text-[15px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800 min-[1100px]:text-[16.9px]">
+              포스트잇을 클릭해, 다양한
+              <br />
+              사유를 읽어보세요!
+            </p>
+          </div>
+          <img
+            src={owlMascot}
+            alt=""
+            className="h-[140px] w-[128px] object-contain object-bottom min-[1100px]:h-[152px] min-[1100px]:w-[139px]"
+          />
+        </div>
+      </main>
+    </>
   );
 }

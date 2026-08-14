@@ -1,7 +1,5 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="68.3333" height="68.3333" viewBox="0 0 68.3333 68.3333" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="elements">
-<circle id="Ellipse 1112" cx="34.1667" cy="34.1667" r="34.1667" fill="#E6E8F0"/>
-<path id="Vector" d="M34.1667 20.5V35.875" stroke="#FEFEFE" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path id="Vector_2" d="M34.1667 47.7933V47.8275" stroke="#FEFEFE" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
+<svg width="119" height="118" viewBox="0 0 119 118" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="59.0398" cy="59.0403" r="49.2" fill="#E6E8F0"/>
+<path d="M59.041 39.3604V61.5004" stroke="#FEFEFE" stroke-width="6.48" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M59.041 78.6626V78.7118" stroke="#FEFEFE" stroke-width="7.776" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

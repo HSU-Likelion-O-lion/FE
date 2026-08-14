@@ -8,16 +8,19 @@ import {
   type TouchEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import Modal from "../components/Modal";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
+import WebGnb from "../components/WebGnb";
 import ShelterEmptySection from "../components/shelter/ShelterEmptySection";
+import { loadLibraryBooks } from "../data/bookShelfStore";
+import { hasCompletedMateToday } from "../data/dailyReadingStore";
+import { MOCK_SHELF_BOOKS } from "../data/libraryMock";
 import iconBack from "../assets/shelter/icon-back.svg";
+import iconBackDark from "../assets/drawer/recommend/icon-back-dark.svg";
 import iconPin from "../assets/shelter/icon-pin.svg";
 import pinBg from "../assets/shelter/pin-bg.svg";
 import bgBlobPurple from "../assets/shelter/bg-blob-purple.svg";
 import bgBlobYellow from "../assets/shelter/bg-blob-yellow.svg";
-import cardCover1 from "../assets/shelter/card-cover-1.png";
-import cardCover2 from "../assets/shelter/card-cover-2.jpg";
-import cardCover3 from "../assets/shelter/card-cover-3.png";
 
 type ShelterBook = {
   id: string;
@@ -26,33 +29,39 @@ type ShelterBook = {
   coverUrl: string;
 };
 
-// 테스트용 빈 화면
-// const MOCK_BOOKS: ShelterBook[] = [];
+/**
+ * 서재 → 독서 성장 기록 → 내 책장 → 전체 목록을 쉼터에 표시.
+ * localStorage에 담긴 책(메이트/서랍에서 추가)도 합친다.
+ */
+function shelfToShelterBooks(): ShelterBook[] {
+  const byId = new Map<
+    string,
+    { id: string; title: string; coverUrl: string }
+  >();
 
-const MOCK_BOOKS: ShelterBook[] = [
-  {
-    id: "shelter-1",
-    title: "조용히 이기는 사람들",
-    thoughtCount: 8,
-    coverUrl: cardCover1,
-  },
-  {
-    id: "shelter-2",
-    title: "불안을 이기는 철학",
-    thoughtCount: 12,
-    coverUrl: cardCover2,
-  },
-  {
-    id: "shelter-3",
-    title: "뵈뵈를 찾아서",
-    thoughtCount: 12,
-    coverUrl: cardCover3,
-  },
-];
+  for (const book of MOCK_SHELF_BOOKS) {
+    byId.set(book.id, {
+      id: book.id,
+      title: book.title,
+      coverUrl: book.coverUrl,
+    });
+  }
+  for (const book of loadLibraryBooks()) {
+    byId.set(book.id, {
+      id: book.id,
+      title: book.title,
+      coverUrl: book.coverUrl,
+    });
+  }
+
+  return Array.from(byId.values()).map((book, index) => ({
+    ...book,
+    thoughtCount: 8 + (index % 5) * 2,
+  }));
+}
 
 const STACK_LAYERS = [
   {
-    // 맨 뒤
     width: 301,
     top: 0,
     opacity: 0.3,
@@ -70,7 +79,6 @@ const STACK_LAYERS = [
     shadow: "shadow-[0_0_7.8px_rgba(37,43,78,0.18)]",
   },
   {
-    // 중간
     width: 335,
     top: 27,
     opacity: 0.6,
@@ -88,7 +96,6 @@ const STACK_LAYERS = [
     shadow: "shadow-[0_0_8.6px_rgba(37,43,78,0.18)]",
   },
   {
-    // 맨 앞
     width: 353,
     top: 61,
     opacity: 1,
@@ -129,7 +136,6 @@ type ShelterCardProps = {
   className?: string;
   style?: CSSProperties;
   ariaHidden?: boolean;
-  /** false면 opacity를 인라인으로 넣지 않아 CSS 애니메이션이 제어 */
   applyOpacity?: boolean;
 };
 
@@ -251,22 +257,135 @@ function ShelterCard({
   );
 }
 
-export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
+function WebShelterCard({
+  book,
+  pinned,
+  onTogglePin,
+  onOpen,
+}: {
+  book: ShelterBook;
+  pinned: boolean;
+  onTogglePin: () => void;
+  onOpen: () => void;
+}) {
+  return (
+    <article
+      data-shelter-card
+      className="relative flex h-[336px] w-[min(100%,395px)] shrink-0 cursor-pointer items-start justify-between rounded-[13px] px-[22px] py-[18px] shadow-[0_0_5px_rgba(37,43,78,0.18)]"
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`${book.title} 사유 보러가기`}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-[13px]"
+      >
+        <div className="absolute inset-0 rounded-[13px] bg-[#fdfdff]" />
+        <div className="absolute inset-0 overflow-hidden rounded-[13px] opacity-70">
+          <img
+            src={book.coverUrl}
+            alt=""
+            className="absolute top-[19.63%] left-[0.22%] h-[193.5%] w-full max-w-none object-cover object-top"
+          />
+        </div>
+        <div
+          className="absolute inset-0 rounded-[13px]"
+          style={{
+            backgroundImage:
+              "linear-gradient(179.59deg, #fdfdff 22.9%, rgba(253,253,255,0) 99.6%)",
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 min-w-0">
+        <h2 className="text-[20px] font-semibold leading-[1.5] tracking-[-0.025em] text-black">
+          {book.title}
+        </h2>
+        <p className="mt-2 text-[16px] leading-[1.6] tracking-[-0.025em] text-gray-500">
+          누군가 남긴 {book.thoughtCount}개의 사유 조각
+        </p>
+      </div>
+
+      <button
+        type="button"
+        aria-label={pinned ? "핀 해제" : "책 핀 고정"}
+        aria-pressed={pinned}
+        onClick={(e) => {
+          e.stopPropagation();
+          onTogglePin();
+        }}
+        className="relative z-10 mt-2 flex size-10 shrink-0 items-center justify-center"
+      >
+        <img
+          src={pinBg}
+          alt=""
+          className="absolute inset-0 size-full object-contain"
+        />
+        <img
+          src={iconPin}
+          alt=""
+          className={`relative size-[22px] object-contain ${
+            pinned ? "opacity-100" : "opacity-70"
+          }`}
+        />
+      </button>
+    </article>
+  );
+}
+
+function CarouselArrow({
+  direction,
+  onClick,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+}) {
+  const isPrev = direction === "prev";
+  return (
+    <button
+      type="button"
+      aria-label={isPrev ? "이전 책" : "다음 책"}
+      onClick={onClick}
+      className="flex size-[50px] items-center justify-center rounded-full bg-white/90 shadow-[0_0_8px_rgba(37,43,78,0.12)] backdrop-blur-[2px]"
+    >
+      <img
+        src={iconBackDark}
+        alt=""
+        className={`size-8 object-contain ${isPrev ? "" : "rotate-180"}`}
+      />
+    </button>
+  );
+}
+
+/** 쉼터 — 모바일 235:6613 / 웹 695:8486 · 빈상태 695:10532 */
+export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
   const navigate = useNavigate();
+  const [books] = useState<ShelterBook[]>(
+    () => booksProp ?? shelfToShelterBooks(),
+  );
   const [activeTab, setActiveTab] = useState<NavTab>("shelter");
   const [frontIndex, setFrontIndex] = useState(0);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const [motion, setMotion] = useState<StackMotion | null>(null);
+  const [canUseShelter] = useState(() => hasCompletedMateToday());
   const touchStartY = useRef<number | null>(null);
   const swipedRef = useRef(false);
   const stackRef = useRef<HTMLElement>(null);
+  const webScrollerRef = useRef<HTMLDivElement>(null);
 
+  const goMate = () => navigate("/mate");
   const isEmpty = books.length === 0;
   const bookCount = books.length;
   const frontBook = books[frontIndex];
   const isAnimating = motion !== null;
 
-  // Safari 고무줄(overscroll) 방지 — 페이지 스크롤 잠금
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -290,7 +409,6 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
     };
   }, []);
 
-  // 카드 영역 touchmove는 passive라 React로 preventDefault 불가 → native로 처리
   useEffect(() => {
     if (isEmpty) return;
     const el = stackRef.current;
@@ -337,6 +455,21 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
     });
   };
 
+  const openThoughts = (book: ShelterBook) => {
+    if (!canUseShelter) return;
+    navigate("/shelter/thoughts", {
+      state: { title: book.title, bookId: book.id },
+    });
+  };
+
+  const scrollWebCarousel = (dir: -1 | 1) => {
+    const el = webScrollerRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-shelter-card]");
+    const amount = (card?.offsetWidth ?? 395) + 32;
+    el.scrollBy({ left: dir * amount, behavior: "smooth" });
+  };
+
   const handleTouchStart = (e: TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
     swipedRef.current = false;
@@ -346,7 +479,6 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
     if (touchStartY.current == null) return;
     const delta = e.changedTouches[0].clientY - touchStartY.current;
     touchStartY.current = null;
-    // 위로 스와이프만 허용
     if (delta > -SWIPE_THRESHOLD) return;
     swipedRef.current = true;
     goNext();
@@ -361,8 +493,6 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
     goNext();
   };
 
-  // 뒤에서 앞으로: frontIndex+2 → frontIndex+1 → frontIndex
-  // 앞 카드는 위로 페이드아웃만 (뒤로 보내지 않음)
   const stackBooks =
     bookCount === 0
       ? []
@@ -391,103 +521,199 @@ export default function ShelterPage({ books = MOCK_BOOKS }: ShelterPageProps) {
   ) : null;
 
   return (
-    <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden overscroll-none bg-white pb-[97px]">
-      {!isEmpty && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-        >
-          <img
-            src={bgBlobPurple}
-            alt=""
-            className="absolute left-[calc(50%-107px)] top-[calc(50%-76px)] h-[922px] w-[811px] max-w-none -translate-x-1/2 -translate-y-1/2"
-          />
-          <img
-            src={bgBlobYellow}
-            alt=""
-            className="absolute left-[calc(50%+246px)] top-[calc(50%+60px)] h-[894px] w-[786px] max-w-none -translate-x-1/2 -translate-y-1/2"
-          />
-        </div>
-      )}
-
-      <header className="relative z-10 flex shrink-0 flex-col px-5 pt-5">
-        <div className="relative flex h-11 items-center">
-          <button
-            type="button"
-            aria-label="뒤로가기"
-            onClick={() => navigate(-1)}
-            className="absolute left-0 flex size-6 items-center justify-center"
+    <>
+      {/* —— Mobile —— */}
+      <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden overscroll-none bg-white pb-[97px] min-[431px]:hidden">
+        {!isEmpty && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 overflow-hidden"
           >
             <img
-              src={iconBack}
+              src={bgBlobPurple}
               alt=""
-              className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+              className="absolute left-[calc(50%-107px)] top-[calc(50%-76px)] h-[922px] w-[811px] max-w-none -translate-x-1/2 -translate-y-1/2"
             />
-          </button>
-        </div>
-      </header>
+            <img
+              src={bgBlobYellow}
+              alt=""
+              className="absolute left-[calc(50%+246px)] top-[calc(50%+60px)] h-[894px] w-[786px] max-w-none -translate-x-1/2 -translate-y-1/2"
+            />
+          </div>
+        )}
 
-      {isEmpty ? (
-        <ShelterEmptySection onGoDrawer={() => navigate("/drawer")} />
-      ) : (
-        <>
-          <section className="relative z-10 mt-6 flex flex-col items-center gap-2 px-[78px] text-center">
-            <h1 className="w-full text-h1 text-gray-900">나만의 쉼터</h1>
-            <p className="w-full text-[14px] leading-[23px] tracking-[-0.025em] text-gray-700">
-              내가 담은 책을 매개로, 타인의 사유를 조용히
-              <br />
-              감상하는 공간입니다.
-            </p>
-          </section>
-
-          <section
-            ref={stackRef}
-            className="relative z-10 mx-auto mt-6 h-[361px] w-full max-w-[353px] touch-none select-none"
-            aria-label="쉼터 책 카드"
-            aria-roledescription="carousel"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-            onClick={handleStackClick}
-          >
-            {stackBooks.map(({ book, layer, isFront }) => (
-              <ShelterCard
-                key={book.id}
-                book={book}
-                layer={layer}
-                isFront={isFront}
-                pinned={pinnedIds.has(book.id)}
-                onTogglePin={
-                  isFront ? () => togglePin(book.id) : undefined
-                }
-                className="shelter-card-layer"
-              />
-            ))}
-            {motionOverlay}
-          </section>
-
-          <div className="relative z-10 mt-8 flex justify-center">
+        <header className="relative z-10 flex shrink-0 flex-col px-5 pt-5">
+          <div className="relative flex h-11 items-center">
             <button
               type="button"
-              aria-label={`${frontBook.title} 사유 보러가기`}
-              onClick={() =>
-                navigate("/shelter/thoughts", {
-                  state: {
-                    title: frontBook.title,
-                    bookId: frontBook.id,
-                  },
-                })
-              }
-              className="rounded-[25px] bg-white px-5 py-3 text-button1 text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
+              aria-label="뒤로가기"
+              onClick={() => navigate(-1)}
+              className="absolute left-0 flex size-6 items-center justify-center"
             >
-              보러가기
+              <img
+                src={iconBack}
+                alt=""
+                className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+              />
             </button>
           </div>
-        </>
-      )}
+        </header>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
-        <NavigationBar active={activeTab} onChange={setActiveTab} />
-      </div>
-    </main>
+        {isEmpty ? (
+          <ShelterEmptySection onGoDrawer={() => navigate("/drawer")} />
+        ) : (
+          <>
+            <section className="relative z-10 mt-6 flex flex-col items-center gap-2 px-[78px] text-center">
+              <h1 className="w-full text-h1 text-gray-900">나만의 쉼터</h1>
+              <p className="w-full text-[14px] leading-[23px] tracking-[-0.025em] text-gray-700">
+                내가 담은 책을 매개로, 타인의 사유를 조용히
+                <br />
+                감상하는 공간입니다.
+              </p>
+            </section>
+
+            <section
+              ref={stackRef}
+              className="relative z-10 mx-auto mt-6 h-[361px] w-full max-w-[353px] touch-none select-none"
+              aria-label="쉼터 책 카드"
+              aria-roledescription="carousel"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onClick={handleStackClick}
+            >
+              {stackBooks.map(({ book, layer, isFront }) => (
+                <ShelterCard
+                  key={book.id}
+                  book={book}
+                  layer={layer}
+                  isFront={isFront}
+                  pinned={pinnedIds.has(book.id)}
+                  onTogglePin={
+                    isFront ? () => togglePin(book.id) : undefined
+                  }
+                  className="shelter-card-layer"
+                />
+              ))}
+              {motionOverlay}
+            </section>
+
+            <div className="relative z-10 mt-8 flex justify-center">
+              <button
+                type="button"
+                aria-label={`${frontBook.title} 사유 보러가기`}
+                onClick={() => openThoughts(frontBook)}
+                className="rounded-[25px] bg-white px-5 py-3 text-button1 text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
+              >
+                보러가기
+              </button>
+            </div>
+          </>
+        )}
+
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">
+          <NavigationBar active={activeTab} onChange={setActiveTab} />
+        </div>
+      </main>
+
+      {/* —— Web (Figma 695:8486 / 695:10532) —— */}
+      <main className="relative hidden h-dvh w-full flex-col overflow-hidden bg-[#fdfdff] min-[431px]:flex">
+        {!isEmpty && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 overflow-hidden"
+          >
+            <img
+              src={bgBlobPurple}
+              alt=""
+              className="absolute left-[calc(50%-180px)] top-[calc(50%-40px)] h-[1100px] w-[980px] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-90"
+            />
+            <img
+              src={bgBlobYellow}
+              alt=""
+              className="absolute left-[calc(50%+320px)] top-[calc(50%+80px)] h-[1000px] w-[900px] max-w-none -translate-x-1/2 -translate-y-1/2 opacity-90"
+            />
+          </div>
+        )}
+
+        <WebGnb active="shelter" className="relative z-20 shrink-0" />
+
+        {isEmpty ? (
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center bg-[#fdfdff] px-8">
+            <ShelterEmptySection
+              variant="web"
+              onGoDrawer={() => navigate("/drawer")}
+            />
+          </div>
+        ) : (
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+            <section className="mx-auto mt-[min(8vh,72px)] flex w-full max-w-[565px] shrink-0 flex-col items-center gap-2 px-8 text-center">
+              <h1 className="text-[36px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900 min-[1100px]:text-[40px]">
+                나만의 쉼터
+              </h1>
+              <p className="text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-700 min-[1100px]:text-[22px]">
+                내가 담은 책을 매개로, 타인의 사유를 조용히 감상하는 공간입니다.
+              </p>
+            </section>
+
+            <section className="relative mt-10 flex min-h-0 flex-1 items-center">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-0 z-20 w-[120px] bg-linear-to-r from-[#fdfdff] to-transparent min-[1100px]:w-[180px]"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 right-0 z-20 w-[120px] bg-linear-to-l from-[#fdfdff] to-transparent min-[1100px]:w-[180px]"
+              />
+
+              <div className="absolute top-1/2 left-6 z-30 -translate-y-1/2 min-[1100px]:left-[100px]">
+                <CarouselArrow
+                  direction="prev"
+                  onClick={() => scrollWebCarousel(-1)}
+                />
+              </div>
+              <div className="absolute top-1/2 right-6 z-30 -translate-y-1/2 min-[1100px]:right-[100px]">
+                <CarouselArrow
+                  direction="next"
+                  onClick={() => scrollWebCarousel(1)}
+                />
+              </div>
+
+              <div
+                ref={webScrollerRef}
+                className="flex w-full gap-8 overflow-x-auto scroll-smooth px-[12vw] pb-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                aria-label="쉼터 책 카드"
+              >
+                {books.map((book) => (
+                  <WebShelterCard
+                    key={book.id}
+                    book={book}
+                    pinned={pinnedIds.has(book.id)}
+                    onTogglePin={() => togglePin(book.id)}
+                    onOpen={() => openThoughts(book)}
+                  />
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+      </main>
+
+      <Modal
+        open={!canUseShelter}
+        variant="alert"
+        status="warning"
+        title="잠깐, 메이트는 하고오셨나요?"
+        description="하루 독서를 완료한 분만 쉼터를 이용할 수 있습니다."
+        onClose={goMate}
+        closeOnBackdrop={false}
+        actions={[
+          {
+            label: "메이트로 돌아가기",
+            variant: "primary",
+            onClick: goMate,
+          },
+        ]}
+      />
+    </>
   );
 }

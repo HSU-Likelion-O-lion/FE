@@ -82,8 +82,14 @@ export default function LibraryReasonsPage() {
               <button
                 type="button"
                 onClick={() =>
-                  navigate("/shelter/thoughts", {
-                    state: { title: reason.bookTitle, bookId: reason.id },
+                  navigate("/shelter/thoughts/mine", {
+                    state: {
+                      title: reason.bookTitle,
+                      bookId: reason.id,
+                      body: reason.excerpt,
+                      date: reason.dateLabel,
+                      authorName: "지훈",
+                    },
                   })
                 }
                 className="w-full rounded-xl bg-[#fdfdff] px-5 py-3 text-left shadow-[0_0_2px_rgba(29,29,32,0.11)]"

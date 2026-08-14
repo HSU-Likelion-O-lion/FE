@@ -11,6 +11,7 @@ import iconInquiry from "../../assets/profile/icon-inquiry.svg";
 import iconHelp from "../../assets/profile/icon-help.svg";
 import iconPrivacy from "../../assets/profile/icon-privacy.svg";
 import iconAppInfo from "../../assets/profile/icon-app-info.svg";
+import iconMembership from "../../assets/profile/icon-membership.svg";
 import iconArrowRight from "../../assets/mate/icon-arrow-right.svg";
 
 const APP_VERSION = "1.0.0";
@@ -27,17 +28,10 @@ type MenuItem = {
 
 const MENU_ITEMS: MenuItem[] = [
   {
-    id: "push",
-    label: "푸시 알림 설정",
-    icon: iconNotification,
-    path: "/profile/push",
-  },
-  {
-    id: "backup",
-    label: "데이터 백업 및 동기화",
-    icon: iconCloudSync,
-    trailing: "연동됨",
-    path: "/profile/backup",
+    id: "membership",
+    label: "쓰담 멤버십",
+    icon: iconMembership,
+    path: "/profile/membership",
   },
   {
     id: "notice",
@@ -51,6 +45,19 @@ const MENU_ITEMS: MenuItem[] = [
     label: "1:1 문의 / 피드백",
     icon: iconInquiry,
     path: "/profile/inquiry",
+  },
+  {
+    id: "push",
+    label: "푸시 알림 설정",
+    icon: iconNotification,
+    path: "/profile/push",
+  },
+  {
+    id: "backup",
+    label: "데이터 백업 및 동기화",
+    icon: iconCloudSync,
+    trailing: "연동됨",
+    path: "/profile/backup",
   },
   {
     id: "terms",

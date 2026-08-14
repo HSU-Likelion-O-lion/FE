@@ -186,7 +186,7 @@ export default function LibraryEssayDraftPage() {
                   <img
                     src={iconBack}
                     alt=""
-                    className="size-8 object-contain"
+                    className="size-8 object-contain brightness-0"
                   />
                 </button>
                 <h1 className="text-center text-[24px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">

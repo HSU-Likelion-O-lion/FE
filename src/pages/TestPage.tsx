@@ -91,7 +91,7 @@ const ALERT_DEMOS: AlertDemo[] = [
     label: "쉬어가는 시간",
     status: "warning",
     title: "잠시 쉬어가는 시간이에요.",
-    description: "단기간에 너무 많은 사유를 남기셨습니다.",
+    description: "단기간에 너무 많은 사유를 남겼습니다.",
     actions: [{ label: "확인", variant: "primary" }],
   },
   {

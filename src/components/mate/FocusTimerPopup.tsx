@@ -9,6 +9,8 @@ import Modal from "../Modal";
 import WebGnb from "../WebGnb";
 import { PauseReasonOptions } from "../ModalOptionList";
 import PauseDetailForm from "./PauseDetailForm";
+import { markDailyReadingComplete } from "../../data/dailyReadingStore";
+// markDailyReadingComplete = markMateCompletedToday (하루 1회 메이트 → 쉼터)
 
 const RING_MOBILE = { size: 272, stroke: 10, minSize: 180 } as const;
 const RING_WEB = { size: 350, stroke: 10, minSize: 200 } as const;
@@ -266,6 +268,7 @@ export default function FocusTimerPopup({
     completedRef.current = true;
     clearFocusTimerSession();
     markFocusComplete(minutes);
+    markDailyReadingComplete(minutes);
     onCompleteRef.current?.(minutes);
   }, [open, introDone, remaining, minutes]);
 

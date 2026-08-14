@@ -28,7 +28,12 @@ export default function ShelterThoughtsPage() {
   );
 
   const notes = useMemo(
-    () => layoutThoughtNotes(rawNotes, `shelter-thoughts:${bookId}`),
+    () => layoutThoughtNotes(rawNotes, `shelter-thoughts:${bookId}`, "mobile"),
+    [rawNotes, bookId],
+  );
+
+  const webNotes = useMemo(
+    () => layoutThoughtNotes(rawNotes, `shelter-thoughts:${bookId}`, "web"),
     [rawNotes, bookId],
   );
 
@@ -40,14 +45,23 @@ export default function ShelterThoughtsPage() {
     });
   };
 
+  const onWrite = () => {
+    navigate("/shelter/thoughts/write", {
+      state: { title, bookId },
+    });
+  };
+
   if (rawNotes.length === 0) {
-    return <ShelterThoughtsEmpty title={title} onBack={onBack} />;
+    return (
+      <ShelterThoughtsEmpty title={title} onBack={onBack} onWrite={onWrite} />
+    );
   }
 
   return (
     <ShelterThoughtsBoard
       title={title}
       notes={notes}
+      webNotes={webNotes}
       onBack={onBack}
       onNoteClick={onNoteClick}
     />

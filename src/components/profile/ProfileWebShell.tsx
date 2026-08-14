@@ -8,6 +8,7 @@ import iconInquiry from "../../assets/profile/icon-inquiry.svg";
 import iconHelp from "../../assets/profile/icon-help.svg";
 import iconPrivacy from "../../assets/profile/icon-privacy.svg";
 import iconAppInfo from "../../assets/profile/icon-app-info.svg";
+import iconMembership from "../../assets/profile/icon-membership.svg";
 import iconArrowRight from "../../assets/mate/icon-arrow-right.svg";
 
 const APP_VERSION = "1.0.0";
@@ -30,6 +31,12 @@ type WebMenuItem = {
 
 /** 웹 사이드바 메뉴 — Figma 714:4815 (백업 항목 없음) */
 export const PROFILE_WEB_MENU: WebMenuItem[] = [
+  {
+    id: "membership",
+    label: "쓰담 멤버십",
+    icon: iconMembership,
+    path: "/profile/membership",
+  },
   {
     id: "push",
     label: "푸시 알림 설정",
