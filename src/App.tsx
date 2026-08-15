@@ -17,6 +17,7 @@ import MatePage from "./pages/MatePage";
 import OnboardingGuidePage from "./pages/OnboardingGuidePage";
 import LoginEmailPage from "./pages/LoginEmailPage";
 import LoginPage from "./pages/LoginPage";
+import SignupNicknamePage from "./pages/SignupNicknamePage";
 import SignupPage from "./pages/SignupPage";
 import ReflectPage from "./pages/ReflectPage";
 import ShelterPage from "./pages/ShelterPage";
@@ -45,6 +46,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/email" element={<LoginEmailPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/signup/nickname" element={<SignupNicknamePage />} />
         <Route path="/drawer" element={<DrawerPage />} />
         <Route path="/drawer/diagnosis" element={<DrawerDiagnosisPage />} />
         <Route path="/drawer/recommend" element={<DrawerRecommendPage />} />

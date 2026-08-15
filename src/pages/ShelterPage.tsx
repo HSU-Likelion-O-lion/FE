@@ -15,7 +15,7 @@ import ShelterEmptySection from "../components/shelter/ShelterEmptySection";
 import { loadLibraryBooks } from "../data/bookShelfStore";
 import { hasCompletedMateToday } from "../data/dailyReadingStore";
 import { MOCK_SHELF_BOOKS } from "../data/libraryMock";
-import iconBack from "../assets/shelter/icon-back.svg";
+import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import iconBackDark from "../assets/drawer/recommend/icon-back-dark.svg";
 import iconPin from "../assets/shelter/icon-pin.svg";
 import pinBg from "../assets/shelter/pin-bg.svg";
@@ -551,9 +551,9 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
               className="absolute left-0 flex size-6 items-center justify-center"
             >
               <img
-                src={iconBack}
+                src={iconBackWeb}
                 alt=""
-                className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+                className="size-6 object-contain brightness-0"
               />
             </button>
           </div>
@@ -562,52 +562,54 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
         {isEmpty ? (
           <ShelterEmptySection onGoDrawer={() => navigate("/drawer")} />
         ) : (
-          <>
-            <section className="relative z-10 mt-6 flex flex-col items-center gap-2 px-[78px] text-center">
-              <h1 className="w-full text-h1 text-gray-900">나만의 쉼터</h1>
-              <p className="w-full text-[14px] leading-[23px] tracking-[-0.025em] text-gray-700">
-                내가 담은 책을 매개로, 타인의 사유를 조용히
-                <br />
-                감상하는 공간입니다.
-              </p>
-            </section>
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+            <div className="my-auto flex w-full flex-col items-center py-6">
+              <section className="flex w-full flex-col items-center gap-2 px-[78px] text-center">
+                <h1 className="w-full text-display text-gray-900">나만의 쉼터</h1>
+                <p className="w-full text-body1 text-gray-700">
+                  내가 담은 책을 매개로, 타인의 사유를 조용히
+                  <br />
+                  감상하는 공간입니다.
+                </p>
+              </section>
 
-            <section
-              ref={stackRef}
-              className="relative z-10 mx-auto mt-6 h-[361px] w-full max-w-[353px] touch-none select-none"
-              aria-label="쉼터 책 카드"
-              aria-roledescription="carousel"
-              onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
-              onClick={handleStackClick}
-            >
-              {stackBooks.map(({ book, layer, isFront }) => (
-                <ShelterCard
-                  key={book.id}
-                  book={book}
-                  layer={layer}
-                  isFront={isFront}
-                  pinned={pinnedIds.has(book.id)}
-                  onTogglePin={
-                    isFront ? () => togglePin(book.id) : undefined
-                  }
-                  className="shelter-card-layer"
-                />
-              ))}
-              {motionOverlay}
-            </section>
-
-            <div className="relative z-10 mt-8 flex justify-center">
-              <button
-                type="button"
-                aria-label={`${frontBook.title} 사유 보러가기`}
-                onClick={() => openThoughts(frontBook)}
-                className="rounded-[25px] bg-white px-5 py-3 text-button1 text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
+              <section
+                ref={stackRef}
+                className="relative mx-auto mt-6 h-[361px] w-full max-w-[353px] shrink-0 touch-none select-none"
+                aria-label="쉼터 책 카드"
+                aria-roledescription="carousel"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onClick={handleStackClick}
               >
-                보러가기
-              </button>
+                {stackBooks.map(({ book, layer, isFront }) => (
+                  <ShelterCard
+                    key={book.id}
+                    book={book}
+                    layer={layer}
+                    isFront={isFront}
+                    pinned={pinnedIds.has(book.id)}
+                    onTogglePin={
+                      isFront ? () => togglePin(book.id) : undefined
+                    }
+                    className="shelter-card-layer"
+                  />
+                ))}
+                {motionOverlay}
+              </section>
+
+              <div className="mt-8 flex shrink-0 justify-center">
+                <button
+                  type="button"
+                  aria-label={`${frontBook.title} 사유 보러가기`}
+                  onClick={() => openThoughts(frontBook)}
+                  className="rounded-[25px] bg-white px-5 py-3 text-button1 text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
+                >
+                  보러가기
+                </button>
+              </div>
             </div>
-          </>
+          </div>
         )}
 
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white pb-[env(safe-area-inset-bottom)] drop-shadow-[0_-4px_4.05px_rgba(38,39,43,0.04)]">

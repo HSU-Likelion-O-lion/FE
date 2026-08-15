@@ -235,8 +235,6 @@ export default function DrawerDiagnosisPage() {
   };
 
   const rotate = dragX * 0.04;
-  const agreeOpacity = Math.min(1, Math.max(0, dragX / SWIPE_THRESHOLD));
-  const disagreeOpacity = Math.min(1, Math.max(0, -dragX / SWIPE_THRESHOLD));
   const dimmed = phase === "loading" || phase === "empty" || phase === "error";
   const stageScale = useWebStageScale(1024);
 
@@ -262,8 +260,6 @@ export default function DrawerDiagnosisPage() {
                 rotate={rotate + 0.67}
                 dragging={dragging}
                 exiting={exiting}
-                agreeOpacity={agreeOpacity}
-                disagreeOpacity={disagreeOpacity}
                 size="mobile"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -509,8 +505,6 @@ function SwipeCard({
   rotate,
   dragging,
   exiting,
-  agreeOpacity,
-  disagreeOpacity,
   size,
   onPointerDown,
   onPointerMove,
@@ -522,8 +516,6 @@ function SwipeCard({
   rotate: number;
   dragging: boolean;
   exiting: "left" | "right" | null;
-  agreeOpacity: number;
-  disagreeOpacity: number;
   size: "mobile" | "web";
   onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void;
@@ -569,28 +561,6 @@ function SwipeCard({
         >
           {card.text}
         </p>
-        {dragging ? (
-          <>
-            <div
-              aria-hidden
-              className={`absolute left-4 top-3 flex items-center justify-center rounded-full border-[3px] border-[#DA4263] font-bold text-[#DA4263] ${
-                isWeb ? "size-14 text-[24px]" : "size-12 text-[20px]"
-              }`}
-              style={{ opacity: disagreeOpacity }}
-            >
-              X
-            </div>
-            <div
-              aria-hidden
-              className={`absolute right-4 top-3 flex items-center justify-center rounded-full border-[3px] border-[#62CB60] font-bold text-[#62CB60] ${
-                isWeb ? "size-14 text-[24px]" : "size-12 text-[20px]"
-              }`}
-              style={{ opacity: agreeOpacity }}
-            >
-              O
-            </div>
-          </>
-        ) : null}
       </div>
     </div>
   );

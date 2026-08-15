@@ -226,8 +226,8 @@ export const MOCK_LIBRARY_REASONS: LibraryReason[] = [
 export const MOCK_LIBRARY_STATS: LibraryStats = {
   userName: "지훈",
   finishedCount: 4,
-  totalHours: 4,
-  totalMinutes: 14,
+  totalHours: 14,
+  totalMinutes: 0,
   streakDays: 5,
 };
 

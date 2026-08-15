@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import Button from "../../components/Button";
 import ProfileSubLayout from "../../components/profile/ProfileSubLayout";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
-import membershipOwl from "../../assets/shelter/empty-owl.png";
+import membershipOwl from "../../assets/profile/membership-mascot.png";
 import iconHeart from "../../assets/profile/icon-membership-heart.svg";
 import iconPin from "../../assets/profile/icon-membership-pin.svg";
 import iconChart from "../../assets/profile/icon-membership-chart.svg";
@@ -141,137 +141,134 @@ export default function MembershipPage() {
             : "relative px-5 pb-2 pt-4"
         }
       >
-        <div
-          className={
-            isDesktop
-              ? "relative flex items-start justify-between gap-4 pr-[120px]"
-              : "relative pr-[120px]"
-          }
-        >
-          <div className="min-w-0">
-            <h2
-              className={
-                isDesktop
-                  ? "text-[29px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900"
-                  : "text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900"
-              }
-            >
-              쓰담 멤버십을 업그레이드 할까요?
-            </h2>
-            <p
-              className={
-                isDesktop
-                  ? "mt-2 text-[18.5px] leading-[1.6] tracking-[-0.025em] text-gray-500"
-                  : "mt-1.5 text-body2 text-gray-500"
-              }
-            >
-              멤버십을 업그레이드하고 다양한 혜택을
-              <br />
-              누려보세요!
-            </p>
-          </div>
-          <img
-            src={membershipOwl}
-            alt=""
+        <div className="min-w-0">
+          <h2
             className={
               isDesktop
-                ? "pointer-events-none absolute right-0 top-6 h-[160px] w-[148px] object-contain object-bottom"
-                : "pointer-events-none absolute -right-1 top-[66px] z-10 h-[148px] w-[136px] object-contain object-bottom"
+                ? "text-[29px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900"
+                : "text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900"
             }
-          />
+          >
+            쓰담 멤버십을 업그레이드 할까요?
+          </h2>
+          <p
+            className={
+              isDesktop
+                ? "mt-2 text-[18.5px] leading-[1.6] tracking-[-0.025em] text-gray-500"
+                : "mt-1.5 text-body2 text-gray-500"
+            }
+          >
+            멤버십을 업그레이드하고 다양한 혜택을
+            <br />
+            누려보세요!
+          </p>
         </div>
 
         <div
           className={
             isDesktop
-              ? "mt-10 flex flex-col gap-[35px]"
-              : "mt-10 flex flex-col gap-7"
+              ? "relative mt-10 flex flex-col gap-[35px]"
+              : "relative mt-10 flex flex-col gap-7"
           }
         >
-          {PLANS.map((plan) => {
+          {PLANS.map((plan, index) => {
             const active = selected === plan.id;
+            const isFirst = index === 0;
             return (
-              <button
-                key={plan.id}
-                type="button"
-                onClick={() => setSelected(plan.id)}
-                className={`w-full text-left transition ${
-                  isDesktop
-                    ? `rounded-[16px] bg-[#fdfdff] py-4 shadow-[0_0_2.64px_rgba(29,29,32,0.11)] ${
-                        active ? "ring-2 ring-primary-500" : "ring-0"
-                      }`
-                    : `rounded-[12px] px-5 py-3 ${
-                        active
-                          ? "bg-primary-10 shadow-[0_0_3px_#5d6bc4]"
-                          : "bg-[#fdfdff] shadow-[0_0_2px_rgba(29,29,32,0.11)]"
-                      }`
-                }`}
-                aria-pressed={active}
-              >
-                <div
-                  className={
-                    isDesktop
-                      ? "border-b border-gray-100 px-[26px] pb-5"
-                      : "flex w-full flex-col gap-1.5 border-b border-gray-100 px-5 pb-4"
-                  }
-                >
-                  <span
+              <div key={plan.id} className={isFirst ? "relative" : undefined}>
+                {isFirst ? (
+                  <img
+                    src={membershipOwl}
+                    alt=""
+                    aria-hidden
                     className={
                       isDesktop
-                        ? "inline-flex items-center rounded-full bg-primary-10 px-3.5 py-1 text-[16px] leading-[24px] tracking-[-0.025em] text-primary-500"
-                        : "inline-flex w-fit items-center rounded-[15px] bg-primary-10 px-2.5 py-1 text-caption leading-[18px] text-primary-500"
+                        ? "pointer-events-none absolute -top-[171px] right-3 z-0 h-[195px] w-[180px] object-contain object-bottom"
+                        : "pointer-events-none absolute -top-[118px] -right-1 z-0 h-[148px] w-[136px] object-contain object-bottom"
+                    }
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setSelected(plan.id)}
+                  className={`relative z-10 w-full text-left transition ${
+                    isDesktop
+                      ? `rounded-[16px] bg-[#fdfdff] py-4 shadow-[0_0_2.64px_rgba(29,29,32,0.11)] ${
+                          active ? "ring-2 ring-primary-500" : "ring-0"
+                        }`
+                      : `rounded-[12px] px-5 py-3 ${
+                          active
+                            ? "bg-primary-10 shadow-[0_0_3px_#5d6bc4]"
+                            : "bg-[#fdfdff] shadow-[0_0_2px_rgba(29,29,32,0.11)]"
+                        }`
+                  }`}
+                  aria-pressed={active}
+                >
+                  <div
+                    className={
+                      isDesktop
+                        ? "border-b border-gray-100 px-[26px] pb-5"
+                        : "flex w-full flex-col gap-1.5 border-b border-gray-100 px-5 pb-4"
                     }
                   >
-                    {plan.badge}
-                  </span>
-                  <div className="flex items-start justify-between gap-3">
-                    <p
+                    <span
                       className={
                         isDesktop
-                          ? "text-[24px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900"
-                          : "text-h3 text-gray-900"
+                          ? "inline-flex items-center rounded-full bg-primary-10 px-3.5 py-1 text-[16px] leading-[24px] tracking-[-0.025em] text-primary-500"
+                          : "inline-flex w-fit items-center rounded-[15px] bg-primary-10 px-2.5 py-1 text-caption leading-[18px] text-primary-500"
                       }
                     >
-                      {plan.title}
-                    </p>
-                    <p className="shrink-0 whitespace-nowrap text-right leading-[1.5] tracking-[-0.025em]">
-                      {plan.priceNode}
-                    </p>
-                  </div>
-                </div>
-
-                <ul
-                  className={
-                    isDesktop
-                      ? "flex flex-col gap-3 px-[26px] pt-3"
-                      : "flex flex-col gap-[9px] pt-[9px]"
-                  }
-                >
-                  {plan.benefits.map((benefit) => (
-                    <li
-                      key={benefit.label}
-                      className="flex items-center gap-2 min-[431px]:gap-3"
-                    >
-                      <span
-                        className={`flex shrink-0 items-center justify-center ${
-                          benefit.iconSize === "sm"
-                            ? "size-[18px] min-[431px]:size-6"
-                            : "size-6 min-[431px]:size-7"
-                        }`}
+                      {plan.badge}
+                    </span>
+                    <div className="flex items-start justify-between gap-3">
+                      <p
+                        className={
+                          isDesktop
+                            ? "text-[24px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900"
+                            : "text-h3 text-gray-900"
+                        }
                       >
-                        <img
-                          src={benefit.icon}
-                          alt=""
-                          className="size-full object-contain"
-                        />
-                      </span>
-                      <span className="text-body2 leading-[1.6] tracking-[-0.025em] text-gray-700 min-[431px]:text-[18px]">
-                        {benefit.label}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </button>
+                        {plan.title}
+                      </p>
+                      <p className="shrink-0 whitespace-nowrap text-right leading-[1.5] tracking-[-0.025em]">
+                        {plan.priceNode}
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul
+                    className={
+                      isDesktop
+                        ? "flex flex-col gap-3 px-[26px] pt-3"
+                        : "flex flex-col gap-[9px] pt-[9px]"
+                    }
+                  >
+                    {plan.benefits.map((benefit) => (
+                      <li
+                        key={benefit.label}
+                        className="flex items-center gap-2 min-[431px]:gap-3"
+                      >
+                        <span
+                          className={`flex shrink-0 items-center justify-center ${
+                            benefit.iconSize === "sm"
+                              ? "size-[18px] min-[431px]:size-6"
+                              : "size-6 min-[431px]:size-7"
+                          }`}
+                        >
+                          <img
+                            src={benefit.icon}
+                            alt=""
+                            className="size-full object-contain"
+                          />
+                        </span>
+                        <span className="text-body2 leading-[1.6] tracking-[-0.025em] text-gray-700 min-[431px]:text-[18px]">
+                          {benefit.label}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              </div>
             );
           })}
         </div>

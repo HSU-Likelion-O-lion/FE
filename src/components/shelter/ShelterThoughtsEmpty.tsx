@@ -2,7 +2,7 @@ import WebGnb from "../WebGnb";
 import PostIt from "./PostIt";
 import ShelterTopGlow from "./ShelterTopGlow";
 import { SHELTER_BOARD_GRID_STYLE } from "./shelterBoardGrid";
-import iconBack from "../../assets/shelter/thoughts/icon-back.svg";
+import iconBackWeb from "../../assets/shelter/thoughts/icon-back-web.svg";
 import emptyOwlPeek from "../../assets/shelter/thoughts/empty-owl-peek.png";
 import emptyPencil1 from "../../assets/shelter/thoughts/empty-pencil-1.svg";
 import emptyPencil2 from "../../assets/shelter/thoughts/empty-pencil-2.svg";
@@ -55,9 +55,9 @@ export default function ShelterThoughtsEmpty({
                 className="pointer-events-auto absolute left-0 flex size-6 items-center justify-center"
               >
                 <img
-                  src={iconBack}
+                  src={iconBackWeb}
                   alt=""
-                  className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+                  className="size-6 object-contain"
                 />
               </button>
               <h1 className="w-full text-center text-h3 text-white">{title}</h1>
@@ -134,9 +134,9 @@ export default function ShelterThoughtsEmpty({
               className="pointer-events-auto flex size-[42px] shrink-0 items-center justify-center"
             >
               <img
-                src={iconBack}
+                src={iconBackWeb}
                 alt=""
-                className="h-[18px] w-[10px] rotate-180 object-contain"
+                className="size-[42px] object-contain"
               />
             </button>
             <h1 className="truncate text-[32px] font-semibold leading-10 tracking-[-0.025em] text-[#fdfdff] min-[1100px]:text-[40px]">

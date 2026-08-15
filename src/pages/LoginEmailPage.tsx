@@ -43,15 +43,17 @@ export default function LoginEmailPage() {
         />
       </div>
 
-      {/* —— 모바일 —— */}
-      <div className="flex min-h-0 flex-1 flex-col px-5 pt-[calc(68px+env(safe-area-inset-top))] min-[431px]:hidden">
-        <img
-          src={logoDark}
-          alt="쓰담"
-          className="mx-auto h-[61px] w-[89px] object-contain"
-        />
+      {/* —— 모바일 — Figma 181:4089 —— */}
+      <div className="flex min-h-0 flex-1 flex-col px-5 pt-[128px] min-[431px]:hidden">
+        <div className="mx-auto flex h-[91px] w-[113px] shrink-0 items-center justify-center">
+          <img
+            src={logoDark}
+            alt="쓰담"
+            className="h-[60px] w-[89px] object-contain"
+          />
+        </div>
 
-        <div className="mt-[40px] flex flex-col">
+        <div className="mt-10 flex flex-col">
           <div className="flex flex-col gap-4">
             <Input
               type="email"
@@ -80,7 +82,7 @@ export default function LoginEmailPage() {
         </div>
       </div>
 
-      <div className="shrink-0 px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3 min-[431px]:hidden">
+      <div className="shrink-0 px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2 min-[431px]:hidden">
         <button
           type="button"
           disabled={!canSubmit}
@@ -94,7 +96,7 @@ export default function LoginEmailPage() {
           로그인
         </button>
         <p className="mt-3 text-center text-body2 text-gray-500">
-          회원이 아니신가요?{" "}
+          아직 회원이 아니신가요?{" "}
           <button
             type="button"
             onClick={() => navigate("/signup")}
@@ -163,7 +165,7 @@ export default function LoginEmailPage() {
             로그인
           </button>
           <p className="mt-3 text-center text-body2 text-gray-500">
-            회원이 아니신가요?{" "}
+            아직 회원이 아니신가요?{" "}
             <button
               type="button"
               onClick={() => navigate("/signup")}

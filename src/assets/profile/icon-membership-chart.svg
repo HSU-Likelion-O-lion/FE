@@ -1,6 +1,11 @@
-<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="20.2" height="20.2" viewBox="0 0 20.2 20.2" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="Group 2117905037">
-<path id="Ellipse 1334" d="M19.6 10.1C19.6 4.8533 15.3467 0.600001 10.1 0.600001C4.85329 0.600001 0.6 4.8533 0.6 10.1C0.6 15.3467 4.85329 19.6 10.1 19.6C15.3467 19.6 19.6 15.3467 19.6 10.1Z" stroke="#3A3D4D" stroke-width="1.2"/>
-<path id="Vector 6662" d="M5.87778 11.9472C5.87778 11.9472 7.56667 12.9104 8.41111 14.3222C8.41111 14.3222 10.9444 8.78056 14.3222 6.93333" stroke="#3A3D4D" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_837_4499)">
+<path d="M27.7206 16.5C27.7206 9.57439 22.1063 3.96004 15.1806 3.96004C8.25497 3.96004 2.64062 9.57439 2.64062 16.5C2.64062 23.4257 8.25497 29.04 15.1806 29.04C22.1063 29.04 27.7206 23.4257 27.7206 16.5Z" stroke="#3A3D4D" stroke-width="1.584"/>
+<path d="M9.60742 18.9386C9.60742 18.9386 11.8368 20.2101 12.9514 22.0736C12.9514 22.0736 16.2954 14.7586 20.7541 12.3203" stroke="#3A3D4D" stroke-width="1.584" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
+<defs>
+<clipPath id="clip0_837_4499">
+<rect width="31.68" height="31.68" fill="white"/>
+</clipPath>
+</defs>
 </svg>

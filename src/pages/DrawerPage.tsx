@@ -36,13 +36,13 @@ export default function DrawerPage() {
 
   return (
     <>
-      {/* —— Mobile —— */}
-      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-[#2a3366] min-[431px]:hidden">
+      {/* —— Mobile (Figma 404:11734) —— */}
+      <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#2a3366] pb-[97px] min-[431px]:hidden">
         <RoomBackground constrained />
 
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center overflow-y-auto px-[40px] pb-[calc(112px+env(safe-area-inset-bottom))] pt-[calc(60px+env(safe-area-inset-top))]">
-          <section className="flex w-full max-w-[313px] shrink-0 flex-col items-center gap-1.5 text-center">
-            <h1 className="w-full text-h2 text-primary-10">
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pt-[176px] pb-6">
+          <section className="flex w-full shrink-0 flex-col items-center gap-1.5 px-[54px] text-center">
+            <h1 className="w-full text-[24px] font-semibold leading-[1.5] tracking-[-0.025em] text-primary-10">
               지금 당신의 마음을 들여다볼까요?
             </h1>
             <p className="w-full text-body2 text-primary-300">
@@ -52,7 +52,7 @@ export default function DrawerPage() {
 
           <div
             aria-hidden
-            className="mt-10 flex h-[254px] w-full max-w-[283px] shrink-0 items-center justify-center"
+            className="mx-auto mt-8 flex h-[254px] w-full max-w-[283px] shrink-0 items-center justify-center"
           >
             <img
               src={owlHero}
@@ -61,7 +61,7 @@ export default function DrawerPage() {
             />
           </div>
 
-          <div className="relative mt-[50px] w-full max-w-[313px] shrink-0">
+          <div className="mt-auto flex w-full justify-center px-5 pt-16">
             <StartButton onClick={startDiagnosis} size="mobile" />
           </div>
         </div>
@@ -146,17 +146,21 @@ function StartButton({
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex w-full items-center justify-center text-center font-semibold text-white ${
+      className={
         isWeb
-          ? "h-[71px] rounded-[21px] text-[22px] tracking-[-0.025em]"
-          : "h-[54px] rounded-2xl text-button1"
-      }`}
-      style={{
-        backgroundImage:
-          "linear-gradient(0.19deg, rgba(211,211,243,0.23) 0.93%, rgba(54,64,137,0.184) 84.5%)",
-        boxShadow:
-          "0 -3.96px 21.25px rgba(72,82,167,0.53), inset 0 0 5.28px rgba(241,241,241,0.53)",
-      }}
+          ? "relative flex h-[71px] w-full items-center justify-center rounded-[21px] text-center text-[22px] font-semibold tracking-[-0.025em] text-white"
+          : "relative flex h-[54px] w-full max-w-[353px] items-center justify-center rounded-2xl bg-[rgba(124,144,224,0.44)] px-20 py-[18px] text-center text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-[#fdfdff]"
+      }
+      style={
+        isWeb
+          ? {
+              backgroundImage:
+                "linear-gradient(0.19deg, rgba(211,211,243,0.23) 0.93%, rgba(54,64,137,0.184) 84.5%)",
+              boxShadow:
+                "0 -3.96px 21.25px rgba(72,82,167,0.53), inset 0 0 5.28px rgba(241,241,241,0.53)",
+            }
+          : undefined
+      }
     >
       마음 읽기 시작하기
     </button>

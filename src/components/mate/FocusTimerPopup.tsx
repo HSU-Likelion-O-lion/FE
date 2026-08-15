@@ -548,7 +548,7 @@ export default function FocusTimerPopup({
               fill="none"
               stroke="rgba(239,240,249,0.86)"
               strokeWidth={ring.stroke}
-              strokeLinecap="butt"
+              strokeLinecap="round"
               strokeDasharray={ring.circumference}
               strokeDashoffset={playIntro ? ring.circumference : dashOffset}
               className={

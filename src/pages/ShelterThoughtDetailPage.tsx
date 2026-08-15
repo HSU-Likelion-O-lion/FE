@@ -9,7 +9,7 @@ import {
   type ThoughtNote,
 } from "../data/shelterThoughtsMock";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
-import iconBack from "../assets/shelter/thoughts/icon-back.svg";
+import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
 import detailTape from "../assets/shelter/thoughts/detail-like.svg";
 import detailTapeCenter from "../assets/shelter/thoughts/detail-tape-center.svg";
@@ -287,9 +287,9 @@ export default function ShelterThoughtDetailPage() {
                 className="absolute left-0 flex size-6 items-center justify-center"
               >
                 <img
-                  src={iconBack}
+                  src={iconBackWeb}
                   alt=""
-                  className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+                  className="size-6 object-contain"
                 />
               </button>
               <h1 className="w-full text-center text-h3 text-white">
@@ -398,9 +398,9 @@ export default function ShelterThoughtDetailPage() {
               className="pointer-events-auto flex size-[42px] shrink-0 items-center justify-center"
             >
               <img
-                src={iconBack}
+                src={iconBackWeb}
                 alt=""
-                className="h-[18px] w-[10px] rotate-180 object-contain"
+                className="size-[42px] object-contain"
               />
             </button>
             <h1 className="truncate text-[clamp(24px,4vh,40px)] font-semibold leading-tight tracking-[-0.025em] text-[#fdfdff]">

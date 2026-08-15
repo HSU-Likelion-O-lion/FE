@@ -5,7 +5,7 @@ import logoWhite from "../assets/common/logo-white.svg";
 import { isOnboardingDone } from "../lib/onboarding";
 
 const startButtonClassName =
-  "relative flex h-[54px] w-full items-center justify-center rounded-2xl bg-[rgba(253,253,255,0.23)] text-button1 font-semibold text-white shadow-[inset_0_-2px_4px_rgba(241,241,241,0.43),inset_0_4px_2px_rgba(255,255,255,0.16)]";
+  "relative flex h-[54px] w-full max-w-[353px] items-center justify-center rounded-2xl bg-[rgba(124,144,224,0.44)] px-20 py-[18px] text-button1 font-semibold text-[#fdfdff]";
 
 /** 앱 첫 화면 (Figma 176:2503) — 웹 ≥431px (Figma 647:5018) */
 export default function OnboardingSplashPage() {
@@ -28,6 +28,11 @@ export default function OnboardingSplashPage() {
           className="absolute inset-0 size-full object-cover"
         />
       </picture>
+      {/* 모바일: 이미지 위 #4A569D 63% 오버레이 (Figma 176:2503) */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[rgba(74,86,157,0.63)] min-[431px]:hidden"
+      />
 
       {/* 모바일 */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-5 min-[431px]:hidden">
@@ -41,7 +46,7 @@ export default function OnboardingSplashPage() {
         </p>
       </div>
 
-      <div className="relative z-10 mx-auto w-full shrink-0 px-10 pb-[calc(48px+env(safe-area-inset-bottom))] min-[431px]:hidden">
+      <div className="relative z-10 mx-auto flex w-full shrink-0 justify-center px-10 pb-[calc(48px+env(safe-area-inset-bottom))] min-[431px]:hidden">
         <button
           type="button"
           onClick={goOnboarding}

@@ -12,7 +12,7 @@ import {
   recordThoughtWrite,
 } from "../data/shelterThoughtWriteStore";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
-import iconBack from "../assets/shelter/thoughts/icon-back.svg";
+import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import iconPencil from "../assets/shelter/thoughts/write-icon-pencil.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
 import detailTape from "../assets/shelter/thoughts/detail-like.svg";
@@ -252,9 +252,9 @@ export default function ShelterThoughtWritePage() {
                 className="absolute left-0 flex size-6 items-center justify-center"
               >
                 <img
-                  src={iconBack}
+                  src={iconBackWeb}
                   alt=""
-                  className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+                  className="size-6 object-contain"
                 />
               </button>
               <h1 className="w-full text-center text-h3 text-white">
@@ -393,9 +393,9 @@ export default function ShelterThoughtWritePage() {
               className="pointer-events-auto flex size-[42px] shrink-0 items-center justify-center"
             >
               <img
-                src={iconBack}
+                src={iconBackWeb}
                 alt=""
-                className="h-[18px] w-[10px] rotate-180 object-contain"
+                className="size-[42px] object-contain"
               />
             </button>
             <h1 className="min-w-0 flex-1 truncate text-[32px] font-semibold leading-10 tracking-[-0.025em] text-[#fdfdff] min-[1100px]:text-[40px]">
@@ -481,7 +481,7 @@ export default function ShelterThoughtWritePage() {
           <Button
             text="계속하기"
             variant="primary"
-            size="h-[65px] w-full max-w-[424px] rounded-[16px] px-5 py-3 text-[23px]"
+            size="h-[65px] w-full max-w-[424px] rounded-[16px] px-5 py-3 text-[19.2px]"
             className="shadow-none"
             disabled={!canSubmit}
             onClick={handleSubmit}

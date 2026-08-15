@@ -32,17 +32,20 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* 모바일 */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center px-5 pt-[calc(68px+env(safe-area-inset-top))] min-[431px]:hidden">
-        <img
-          src={logoDark}
-          alt="쓰담"
-          className="h-[61px] w-[89px] object-contain"
-        />
+      {/* 모바일 — Figma 445:2099 위치 */}
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-5 pb-[calc(40px+env(safe-area-inset-bottom))] pt-[128px] min-[431px]:hidden">
+        <div className="flex h-[91px] w-[113px] shrink-0 items-center justify-center">
+          <img
+            src={logoDark}
+            alt="쓰담"
+            className="h-[60px] w-[89px] object-contain"
+          />
+        </div>
+
         <img
           src={loginMascot}
           alt=""
-          className="mt-8 h-[104px] w-[134px] object-contain object-bottom"
+          className="mt-[62px] h-[104px] w-[133px] object-contain object-bottom opacity-80"
         />
 
         <p className="mt-3 text-center text-h3 text-gray-900">
@@ -52,11 +55,11 @@ export default function LoginPage() {
           가져보세요.
         </p>
 
-        <div className="mt-10 flex w-full flex-col gap-3">
+        <div className="mt-8 flex w-full max-w-[353px] flex-col gap-3">
           <button
             type="button"
             onClick={() => navigate("/mate", { replace: true })}
-            className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800"
+            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800"
           >
             <img src={iconKakao} alt="" className="size-6 object-contain" />
             카카오로 시작하기
@@ -64,7 +67,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => navigate("/mate", { replace: true })}
-            className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-gray-800 text-button1 font-medium text-white"
+            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-gray-800 text-button1 font-medium text-white"
           >
             <img src={iconApple} alt="" className="size-6 object-contain" />
             Apple로 시작하기
@@ -72,15 +75,13 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => navigate("/login/email")}
-            className="flex h-[54px] w-full items-center justify-center rounded-2xl bg-primary-50 text-button1 font-medium text-primary-500"
+            className="flex h-14 w-full items-center justify-center rounded-2xl bg-primary-50 text-button1 font-medium text-primary-500"
           >
             이메일로 로그인
           </button>
         </div>
-      </div>
 
-      <div className="relative z-10 shrink-0 pb-[calc(40px+env(safe-area-inset-bottom))] pt-4 text-center min-[431px]:hidden">
-        <p className="text-body2 text-gray-500">
+        <p className="mt-8 text-center text-body2 text-gray-500">
           회원이 아니신가요?{" "}
           <button
             type="button"

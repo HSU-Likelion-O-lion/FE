@@ -290,8 +290,6 @@ function GrowthWeb({
   shelfCount: number;
   shelfGrid: { id: string; coverUrl: string; title: string }[];
 }) {
-  const hours = String(stats.totalHours).padStart(2, "0");
-  const minutes = String(stats.totalMinutes).padStart(2, "0");
   const rows = [0, 1, 2].map((row) => shelfGrid.slice(row * 3, row * 3 + 3));
 
   return (
@@ -315,24 +313,8 @@ function GrowthWeb({
             멋진 기록을 남겨봐요!
           </p>
 
-          <div className="mt-5 flex items-center gap-7 px-6 py-3">
-            <div className="flex items-center gap-1">
-              <span className="text-[48px] font-bold leading-12 tracking-[-0.025em] text-gray-900">
-                {hours}
-              </span>
-              <span className="text-[36px] font-thin leading-12 text-[#fdfdff]">
-                ㅣ
-              </span>
-              <span className="text-[48px] font-bold leading-12 tracking-[-0.025em] text-gray-300">
-                {minutes}
-              </span>
-            </div>
-            <div>
-              <p className="text-[17px] font-semibold leading-[22px] tracking-[-0.025em] text-gray-700">
-                지금까지 완독한 책 ㅣ {stats.finishedCount}권
-              </p>
-              <p className="mt-1 text-[14px] text-gray-400">누적 독서 시간</p>
-            </div>
+          <div className="mt-5">
+            <GrowthStatDial stats={stats} size="web" />
           </div>
 
           <div className="mt-6 flex items-center gap-3 rounded-[14px] bg-[#fdfdff] p-6 shadow-[0_0_4.3px_rgba(29,29,32,0.1)]">
@@ -509,6 +491,107 @@ function ReasonsSection({
   );
 }
 
+type GrowthMetric = "books" | "hours";
+
+/** 독서 성장 통계 다이얼 — Figma 547:3124 / 1041:6301 */
+function GrowthStatDial({
+  stats,
+  size = "mobile",
+}: {
+  stats: typeof MOCK_LIBRARY_STATS;
+  size?: "mobile" | "web";
+}) {
+  const [active, setActive] = useState<GrowthMetric>("books");
+  const isWeb = size === "web";
+
+  const booksDigits = String(stats.finishedCount).padStart(2, "0");
+  const hoursDigits = String(stats.totalHours).padStart(2, "0");
+  const booksActive = active === "books";
+
+  const dialH = isWeb ? 46 : 38;
+  const numClass = isWeb
+    ? "text-[48px] font-bold leading-12 tracking-[-0.025em] transition-colors duration-500"
+    : "text-[40px] font-bold leading-10 tracking-[-0.025em] transition-colors duration-500";
+  const sepClass = isWeb
+    ? "text-[36px] font-thin leading-12 text-[#fdfdff]"
+    : "text-[30px] font-thin leading-10 text-[#fdfdff]";
+  const activeLabel = isWeb
+    ? "text-[17px] font-semibold leading-[22px] tracking-[-0.025em] text-gray-700"
+    : "text-[14px] font-semibold leading-[18px] tracking-[-0.025em] text-gray-700";
+  const inactiveLabel = isWeb
+    ? "text-[14px] leading-[22px] tracking-[-0.025em] text-[#868aa0]"
+    : "text-[12px] leading-[18px] tracking-[-0.025em] text-[#868aa0]";
+
+  return (
+    <div
+      className={`flex items-center ${
+        isWeb ? "gap-7 px-6 py-3" : "gap-6 px-5 py-2.5"
+      }`}
+    >
+      <div className="relative flex shrink-0 items-center">
+        <button
+          type="button"
+          aria-pressed={booksActive}
+          aria-label={`지금까지 완독한 책 ${stats.finishedCount}권`}
+          onClick={() => setActive("books")}
+          className={`${numClass} ${
+            booksActive ? "text-gray-900" : "text-gray-300"
+          }`}
+        >
+          {booksDigits}
+        </button>
+        <span aria-hidden className={`mx-1 ${sepClass}`}>
+          ㅣ
+        </span>
+        <button
+          type="button"
+          aria-pressed={!booksActive}
+          aria-label={`누적 독서 시간 ${stats.totalHours}시간`}
+          onClick={() => setActive("hours")}
+          className={`${numClass} ${
+            booksActive ? "text-gray-300" : "text-gray-900"
+          }`}
+        >
+          {hoursDigits}
+        </button>
+      </div>
+
+      <div
+        className="relative min-w-0 overflow-hidden"
+        style={{ height: dialH }}
+      >
+        <div
+          className="transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          style={{
+            transform: `translateY(${booksActive ? 0 : -dialH}px)`,
+          }}
+        >
+          <div
+            className="flex flex-col justify-between"
+            style={{ height: dialH }}
+          >
+            <p className={activeLabel}>
+              지금까지 완독한 책 ㅣ {stats.finishedCount}권
+            </p>
+            <p className={inactiveLabel}>누적 독서 시간</p>
+          </div>
+          <div
+            className="flex flex-col justify-between"
+            style={{ height: dialH }}
+          >
+            <p className={activeLabel}>
+              누적 독서 시간 ㅣ {stats.totalHours}시간
+            </p>
+            <p className={inactiveLabel}>
+              지금까지 완독한 책 ㅣ {stats.finishedCount}권
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GrowthSection({
   stats,
   shelfCount,
@@ -520,9 +603,6 @@ function GrowthSection({
   shelfPreview: { id: string; coverUrl: string; title: string }[];
   onViewAll: () => void;
 }) {
-  const hours = String(stats.totalHours).padStart(2, "0");
-  const minutes = String(stats.totalMinutes).padStart(2, "0");
-
   return (
     <div className="relative flex flex-col px-5 pt-8">
       <div
@@ -543,24 +623,8 @@ function GrowthSection({
           멋진 기록을 남겨봐요!
         </p>
 
-        <div className="mt-[18px] flex items-center gap-6 px-5 py-2.5">
-          <div className="flex items-center gap-1">
-            <span className="text-[40px] font-bold leading-10 tracking-[-0.025em] text-gray-900">
-              {hours}
-            </span>
-            <span className="text-[30px] font-thin leading-10 text-[#fdfdff]">
-              ㅣ
-            </span>
-            <span className="text-[40px] font-bold leading-10 tracking-[-0.025em] text-gray-300">
-              {minutes}
-            </span>
-          </div>
-          <div>
-            <p className="text-[14px] font-semibold leading-[18px] tracking-[-0.025em] text-gray-700">
-              지금까지 완독한 책 ㅣ {stats.finishedCount}권
-            </p>
-            <p className="mt-0.5 text-caption text-gray-400">누적 독서 시간</p>
-          </div>
+        <div className="mt-[18px]">
+          <GrowthStatDial stats={stats} size="mobile" />
         </div>
 
         <div className="mt-6 flex items-center gap-3 rounded-xl bg-[#fdfdff] p-5 shadow-[0_0_3.6px_rgba(29,29,32,0.1)]">

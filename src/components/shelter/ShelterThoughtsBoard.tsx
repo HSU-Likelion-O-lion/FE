@@ -7,9 +7,10 @@ import {
   type PlacedThoughtNote,
 } from "../../data/shelterThoughtsMock";
 import { useBoardPanZoom } from "../../hooks/useBoardPanZoom";
-import iconBack from "../../assets/shelter/thoughts/icon-back.svg";
+import iconBackWeb from "../../assets/shelter/thoughts/icon-back-web.svg";
 import owlMascot from "../../assets/shelter/thoughts/owl-mascot.png";
 import bgGlow from "../../assets/shelter/thoughts/bg-glow.svg";
+import ellipse2467 from "../../assets/shelter/thoughts/ellipse-2467.svg";
 import ellipse2468 from "../../assets/shelter/thoughts/ellipse-2468.svg";
 import { SHELTER_BOARD_GRID_STYLE } from "./shelterBoardGrid";
 
@@ -139,9 +140,9 @@ export default function ShelterThoughtsBoard({
                 className="pointer-events-auto absolute left-0 flex size-6 items-center justify-center"
               >
                 <img
-                  src={iconBack}
+                  src={iconBackWeb}
                   alt=""
-                  className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+                  className="size-6 object-contain"
                 />
               </button>
               <h1 className="w-full text-center text-h3 text-white">{title}</h1>
@@ -202,14 +203,15 @@ export default function ShelterThoughtsBoard({
           style={{ width: "calc(100vw + 100px)" }}
         />
 
-        {/* Ellipse 2467 — 하단 소프트 글로우 (팁·부엉이 뒤) */}
-        <div
+        {/* Ellipse 2467 — 하단 소프트 글로우 (Figma: top 500 / ~693×499 / rotate -12°) */}
+        <img
+          src={ellipse2467}
+          alt=""
           aria-hidden
-          className="pointer-events-none absolute left-[calc(50%+16px)] top-[520px] z-20 h-[420px] w-[640px] -translate-x-1/2 -rotate-[12deg]"
+          className="pointer-events-none absolute left-[calc(50%+1.09%)] top-[48.83%] z-20 max-w-none -translate-x-1/2 -rotate-[12deg] object-contain"
           style={{
-            background:
-              "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(190,196,231,0.55) 0%, rgba(125,137,208,0.22) 40%, rgba(93,107,196,0.06) 65%, transparent 78%)",
-            filter: "blur(8px)",
+            width: "48.15%",
+            height: "48.74%",
           }}
         />
 
@@ -227,9 +229,9 @@ export default function ShelterThoughtsBoard({
               className="pointer-events-auto flex size-[42px] shrink-0 items-center justify-center"
             >
               <img
-                src={iconBack}
+                src={iconBackWeb}
                 alt=""
-                className="h-[18px] w-[10px] rotate-180 object-contain"
+                className="size-[42px] object-contain"
               />
             </button>
             <h1 className="truncate text-[32px] font-semibold leading-10 tracking-[-0.025em] text-[#fdfdff] min-[1100px]:text-[40px]">
@@ -238,9 +240,19 @@ export default function ShelterThoughtsBoard({
           </header>
         </div>
 
-        <div className="pointer-events-none absolute bottom-[max(24px,4vh)] left-1/2 z-40 flex -translate-x-1/2 items-end gap-1">
-          <div className="mb-6 rounded-tl-[12.7px] rounded-tr-[12.7px] rounded-bl-[12.7px] bg-primary-10 px-[17px] py-[10px]">
-            <p className="whitespace-nowrap text-[15px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800 min-[1100px]:text-[16.9px]">
+        {/* Group 2117905007 — Figma 726:4285 (1440×1024) */}
+        <div className="pointer-events-none absolute inset-0 z-40">
+          <div
+            className="absolute flex -translate-x-1/2 items-center rounded-tl-[12.7px] rounded-tr-[12.7px] rounded-bl-[12.7px] bg-primary-10"
+            style={{
+              left: "calc(50% - 64.5px)",
+              top: "69.18%",
+              width: 205.8,
+              height: 74.7,
+              padding: "10.14px 16.9px",
+            }}
+          >
+            <p className="whitespace-nowrap text-[16.9px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-800">
               포스트잇을 클릭해, 다양한
               <br />
               사유를 읽어보세요!
@@ -249,7 +261,13 @@ export default function ShelterThoughtsBoard({
           <img
             src={owlMascot}
             alt=""
-            className="h-[140px] w-[128px] object-contain object-bottom min-[1100px]:h-[152px] min-[1100px]:w-[139px]"
+            className="absolute object-contain object-bottom"
+            style={{
+              left: "calc(50% + 37.4px)",
+              top: "67.12%",
+              width: 139.4,
+              height: 152.1,
+            }}
           />
         </div>
       </main>
