@@ -8,12 +8,17 @@ import {
 import { useNavigate } from "react-router-dom";
 import WebGnb from "../components/WebGnb";
 import {
+  ApiError,
   getRandomEmotionCards,
   submitEmotionDiagnosis,
   type EmotionCard,
   type RecommendedBook,
 } from "../api";
 import { saveLastDiagnosisId } from "../api/sessionDraft";
+import {
+  collectLikedKeywords,
+  parseEmotionCardId,
+} from "../data/emotionCards";
 import bgRoom from "../assets/drawer/bg-room.png";
 import webBg from "../assets/common/web-bg.png";
 import cardFrontShape from "../assets/drawer/diagnosis/card-front-shape.svg";
@@ -57,11 +62,17 @@ const WEB_SLOT = {
 } as const;
 
 function toUiCards(cards: EmotionCard[]): UiCard[] {
-  return cards.map((card) => ({
-    id: String(card.cardId),
-    cardId: card.cardId,
-    text: card.content,
-  }));
+  return cards.flatMap((card) => {
+    const cardId = parseEmotionCardId(card.cardId);
+    if (cardId == null) return [];
+    return [
+      {
+        id: String(cardId),
+        cardId,
+        text: card.content,
+      },
+    ];
+  });
 }
 
 /** Figma 1024 높이 기준으로 짧은 뷰포트만 origin-top 스케일 */
@@ -117,6 +128,7 @@ export default function DrawerDiagnosisPage() {
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting] = useState<"left" | "right" | null>(null);
   const [webRotating, setWebRotating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const startXRef = useRef(0);
   const dragXRef = useRef(0);
@@ -127,6 +139,7 @@ export default function DrawerDiagnosisPage() {
     recommendedBooks: RecommendedBook[];
   } | null>(null);
   const loadingStartedAtRef = useRef(0);
+  const submitLockRef = useRef(false);
 
   const front = cards[index] as UiCard | undefined;
   /** 웹 슬롯: 왼쪽=이전(처음엔 마지막 카드), 중앙=현재, 오른쪽=다음 */
@@ -155,16 +168,17 @@ export default function DrawerDiagnosisPage() {
     setWebRotating(false);
     pendingSwipesRef.current = [];
     resultRef.current = null;
+    submitLockRef.current = false;
+    setErrorMessage(null);
     try {
       const { cards: next } = await getRandomEmotionCards();
-      const mapped = toUiCards(next);
-      if (mapped.length === 0) {
-        setPhase("empty");
-        return;
-      }
-      setCards(mapped);
+      setCards(toUiCards(next));
       setPhase("swiping");
-    } catch {
+    } catch (err) {
+      console.error("[emotion-cards]", err);
+      setErrorMessage(
+        err instanceof ApiError ? err.message : "카드를 불러오지 못했습니다.",
+      );
       setPhase("error");
     }
   }, []);
@@ -183,24 +197,46 @@ export default function DrawerDiagnosisPage() {
       state: {
         diagnosisId: result.diagnosisId,
         recommendedBooks: result.recommendedBooks,
+        keywords: collectLikedKeywords(pendingSwipesRef.current),
       },
       replace: true,
     });
   }, [navigate]);
 
   const submitDiagnosis = useCallback(async (finalSwipes: DiagnosisSwipe[]) => {
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     loadingStartedAtRef.current = Date.now();
     setPhase("loading");
+    setErrorMessage(null);
     try {
-      const result = await submitEmotionDiagnosis(finalSwipes);
+      // API: swipes 배열을 한 번에 제출 (cardId는 숫자). O/X마다 호출하면 429 발생.
+      const result = await submitEmotionDiagnosis(
+        finalSwipes.map((s) => ({
+          cardId: parseEmotionCardId(s.cardId) ?? s.cardId,
+          liked: s.liked,
+        })),
+      );
       saveLastDiagnosisId(result.diagnosisId);
       resultRef.current = result;
+      pendingSwipesRef.current = finalSwipes;
       const elapsed = Date.now() - loadingStartedAtRef.current;
       const wait = Math.max(0, LOADING_MS - elapsed);
       window.setTimeout(() => {
         goToRecommend();
       }, wait);
-    } catch {
+    } catch (err) {
+      submitLockRef.current = false;
+      console.error("[emotion-diagnosis]", err);
+      if (err instanceof ApiError && err.httpStatus === 429) {
+        setErrorMessage("오늘 진단 가능 횟수를 모두 사용했어요. 잠시 후 다시 시도해주세요.");
+      } else if (err instanceof ApiError) {
+        setErrorMessage(err.message);
+      } else if (err instanceof Error) {
+        setErrorMessage(err.message);
+      } else {
+        setErrorMessage(null);
+      }
       setPhase("error");
     }
   }, [goToRecommend]);
@@ -362,6 +398,7 @@ export default function DrawerDiagnosisPage() {
         <Overlays
           phase={phase}
           size="mobile"
+          errorMessage={errorMessage}
           onRestart={restart}
           onAbort={() => navigate("/drawer")}
           onRetry={retrySubmit}
@@ -452,6 +489,7 @@ export default function DrawerDiagnosisPage() {
         <Overlays
           phase={phase}
           size="web"
+          errorMessage={errorMessage}
           onRestart={restart}
           onAbort={() => navigate("/drawer")}
           onRetry={retrySubmit}
@@ -712,12 +750,14 @@ function ActionBar({
 function Overlays({
   phase,
   size,
+  errorMessage,
   onRestart,
   onAbort,
   onRetry,
 }: {
   phase: Phase;
   size: "mobile" | "web";
+  errorMessage?: string | null;
   onRestart: () => void;
   onAbort: () => void;
   onRetry: () => void;
@@ -837,14 +877,16 @@ function Overlays({
               isWeb ? "text-[28px] leading-9" : "text-[20px] leading-7"
             }`}
           >
-            인터넷 연결이 불안정해요
+            {errorMessage?.includes("횟수")
+              ? "지금은 진단을 할 수 없어요"
+              : "인터넷 연결이 불안정해요"}
           </p>
           <p
             className={`mt-2 text-center text-gray-300 ${
               isWeb ? "text-[18px]" : "text-body2"
             }`}
           >
-            분석 결과를 불러오지 못했습니다.
+            {errorMessage ?? "분석 결과를 불러오지 못했습니다."}
           </p>
           <button
             type="button"

@@ -112,10 +112,8 @@ export default function LibraryPage() {
     };
   }, []);
 
-  const shelfPreview = useMemo(
-    () => shelfBooks.filter((b) => b.status === "finished").slice(0, 3),
-    [shelfBooks],
-  );
+  // 미리보기는 완독 여부 무관 — 책장에 담긴 책을 최대 3권 표시
+  const shelfPreview = useMemo(() => shelfBooks.slice(0, 3), [shelfBooks]);
   const shelfGrid = useMemo(() => shelfBooks.slice(0, 9), [shelfBooks]);
 
   return (
@@ -744,13 +742,20 @@ function GrowthSection({
 
         <div className="relative mx-auto mt-4 w-full max-w-[353px] pb-10">
           <div className="relative h-[134px] w-full">
-            <div className="absolute inset-x-0 top-0 z-10 flex items-end justify-center gap-2 px-2">
+            {/* Figma 547:3183 — 표지 79×124, 좌우 30px, 3권일 때 책 간 ~28px */}
+            <div
+              className={`absolute inset-x-0 top-0 z-10 flex items-end px-[30px] ${
+                shelfPreview.length >= 3
+                  ? "justify-between"
+                  : "justify-center gap-[30px]"
+              }`}
+            >
               {shelfPreview.map((book) => (
                 <img
                   key={book.id}
                   src={book.coverUrl}
                   alt={book.title}
-                  className="h-[124px] w-[79px] rounded-tr-[4px] rounded-bl-[4px] object-cover opacity-90 shadow-[3px_3px_4px_rgba(99,75,4,0.2)]"
+                  className="h-[124px] w-[79px] shrink-0 rounded-tr-[4px] rounded-bl-[4px] object-cover opacity-80 shadow-[3px_3px_4px_rgba(99,75,4,0.2)]"
                 />
               ))}
             </div>

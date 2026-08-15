@@ -10,12 +10,11 @@ import goalImage from "../assets/mate/goal-image.png";
 import goalDayDone from "../assets/mate/goal-day-done.svg";
 import goalDayMiss from "../assets/mate/goal-day-miss.svg";
 import goalDayDashed from "../assets/mate/goal-day-dashed.png";
-import goalDayFuture from "../assets/mate/goal-day-future.svg";
 import goalCheck from "../assets/mate/goal-check.svg";
 
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
-type DayStatus = "done" | "miss" | "today" | "dashed" | "future";
+type DayStatus = "done" | "miss" | "today" | "future";
 
 type WeekItem = {
   day: (typeof WEEK_DAYS)[number];
@@ -23,21 +22,24 @@ type WeekItem = {
   date: string;
 };
 
+/**
+ * 점선(miss) = 지나간 + 안 읽은 날
+ * 회색(future) = 다가올 날
+ * 채움(done) = 지나간 + 읽은 날
+ * 채움+체크(today) = 오늘이면서 읽음
+ */
 function mapWeekToUi(week: Day[]): WeekItem[] {
   const today = formatLocalDate(new Date());
-  const firstFuture = week
-    .map((w) => w.date)
-    .filter((date) => date > today)
-    .sort()[0];
 
   return week.map((item) => {
     const d = new Date(`${item.date}T00:00:00`);
     const day = WEEK_DAYS[Number.isNaN(d.getTime()) ? 0 : d.getDay()];
     let status: DayStatus;
-    if (item.date === today) {
+    if (item.date > today) {
+      status = "future";
+    } else if (item.date === today) {
+      // 목표 달성 화면이므로 오늘은 읽음+체크로 표시
       status = "today";
-    } else if (item.date > today) {
-      status = item.date === firstFuture ? "dashed" : "future";
     } else {
       status = item.achieved ? "done" : "miss";
     }
@@ -59,10 +61,8 @@ function DayDot({ status }: { status: DayStatus }) {
     status === "done"
       ? goalDayDone
       : status === "miss"
-        ? goalDayMiss
-        : status === "dashed"
-          ? goalDayDashed
-          : goalDayFuture;
+        ? goalDayDashed
+        : goalDayMiss;
 
   return <img src={src} alt="" className="size-[31px] object-contain" />;
 }
@@ -139,8 +139,7 @@ export default function GoalAchievedPage() {
                         className={`text-body2 ${
                           item.status === "today"
                             ? "font-bold text-primary-500"
-                            : item.status === "dashed" ||
-                                item.status === "future"
+                            : item.status === "future"
                               ? "text-gray-300"
                               : "text-gray-500"
                         }`}

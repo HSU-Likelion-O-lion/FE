@@ -4,6 +4,7 @@ import Modal from "../components/Modal";
 import WebGnb from "../components/WebGnb";
 import {
   addToBookshelf,
+  ApiError,
   clickPurchase,
   getBook,
   getBookCuration,
@@ -117,7 +118,14 @@ export default function DrawerBookIntroPage() {
     if (!book || busy) return;
     setBusy(true);
     try {
-      await addToBookshelf(book.bookId);
+      try {
+        await addToBookshelf(book.bookId);
+      } catch (err) {
+        // 이미 서재에 있으면 성공으로 처리
+        if (!(err instanceof ApiError && err.httpStatus === 409)) {
+          throw err;
+        }
+      }
       try {
         const { redirectUrl } = await clickPurchase(book.bookId);
         if (redirectUrl) {
@@ -127,7 +135,8 @@ export default function DrawerBookIntroPage() {
         // 구매 링크는 선택적 — 서재 담기는 유지
       }
       setLibrarySavedOpen(true);
-    } catch {
+    } catch (err) {
+      console.error("[save-library]", err);
       setBusy(false);
       return;
     }

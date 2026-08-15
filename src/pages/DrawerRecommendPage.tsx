@@ -10,6 +10,7 @@ import iconInfo from "../assets/drawer/recommend/icon-info.svg";
 type LocationState = {
   diagnosisId?: number;
   recommendedBooks?: RecommendedBook[];
+  keywords?: string[];
 };
 
 type BookItem = {
@@ -52,7 +53,10 @@ export default function DrawerRecommendPage() {
   const [error, setError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const headline = useMemo(() => getHeadlineForKeywords([]), []);
+  const headline = useMemo(
+    () => getHeadlineForKeywords(state?.keywords ?? []),
+    [state?.keywords],
+  );
 
   useEffect(() => {
     if (books.length > 0) {

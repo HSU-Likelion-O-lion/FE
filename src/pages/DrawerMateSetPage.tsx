@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import owlGlasses from "../assets/drawer/owl-glasses.png";
 import Button from "../components/Button";
-import { addToBookshelf, pinMateBook } from "../api";
+import { assignMateFromBook } from "../api";
 
 type MateSetState = {
   bookId?: number | string;
@@ -32,12 +32,13 @@ export default function DrawerMateSetPage() {
 
     void (async () => {
       try {
-        const added = await addToBookshelf(bookId);
-        await pinMateBook(added.userBookId);
+        // StrictMode 중복 호출은 assignMateFromBook에서 합침
+        const { userBookId: pinnedId } = await assignMateFromBook(bookId);
         if (cancelled) return;
-        setUserBookId(added.userBookId);
+        setUserBookId(pinnedId);
         setPhase("done");
-      } catch {
+      } catch (err) {
+        console.error("[mate-set]", err);
         if (cancelled) return;
         setPhase("error");
       }

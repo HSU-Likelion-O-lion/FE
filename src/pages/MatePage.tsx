@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
 import WebGnb from "../components/WebGnb";
@@ -27,13 +27,21 @@ import {
   mapBookItemToLibraryBook,
   pinMateBook,
   unpinMateBook,
-  type Day,
   type TargetMinutes,
 } from "../api";
 
 export type { MateBookItem, MateBooks };
 
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+const WEB_DAY_LABEL: Record<(typeof WEEK_DAYS)[number], string> = {
+  일: "일요일",
+  월: "월요일",
+  화: "화요일",
+  수: "수요일",
+  목: "목요일",
+  금: "금요일",
+  토: "토요일",
+};
 
 type WeekDay = {
   day: (typeof WEEK_DAYS)[number];
@@ -47,51 +55,86 @@ type MateLocationState = {
   mateBookId?: string;
 };
 
-function buildWeekDays(week: Day[]): WeekDay[] {
-  const today = formatLocalDate(new Date());
-  return week.map((item) => {
-    const d = new Date(`${item.date}T00:00:00`);
-    const dayIdx = Number.isNaN(d.getTime()) ? 0 : d.getDay();
-    let status: WeekDay["status"] = "future";
-    if (item.date === today) status = "today";
-    else if (item.date < today) status = "past";
-    return {
-      day: WEEK_DAYS[dayIdx],
-      date: Number.isNaN(d.getTime()) ? 0 : d.getDate(),
-      fullDate: item.date,
-      status,
-    };
-  });
+function startOfSundayWeek(base: Date): Date {
+  const d = new Date(base);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
 }
 
-function buildWebWeekDays(week: WeekDay[]): WeekDay[] {
-  if (week.length === 0) return [];
-  const first = week[0];
-  const last = week[week.length - 1];
+function startOfMondayWeek(base: Date): Date {
+  const d = new Date(base);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  return d;
+}
+
+/** 실제 달력으로 주간 생성 */
+function buildCalendarWeek(weekStart: Date, length: number): WeekDay[] {
+  const today = formatLocalDate(new Date());
+  const days: WeekDay[] = [];
+  for (let i = 0; i < length; i += 1) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const fullDate = formatLocalDate(d);
+    let status: WeekDay["status"] = "future";
+    if (fullDate === today) status = "today";
+    else if (fullDate < today) status = "past";
+    days.push({
+      day: WEEK_DAYS[d.getDay()],
+      date: d.getDate(),
+      fullDate,
+      status,
+    });
+  }
+  return days;
+}
+
+/** 모바일: 일~토 */
+function buildMobileWeekDays(): WeekDay[] {
+  return buildCalendarWeek(startOfSundayWeek(new Date()), 7);
+}
+
+/**
+ * 웹: 월~일 주 + 앞뒤 2일 패딩 → 전체 토~화
+ * (토·일) + (월~일) + (월·화)
+ */
+function buildWebWeekDays(): WeekDay[] {
+  const core = buildCalendarWeek(startOfMondayWeek(new Date()), 7);
+  if (core.length === 0) return [];
+
+  const first = core[0];
+  const last = core[core.length - 1];
   const padBefore: WeekDay[] = [];
   const padAfter: WeekDay[] = [];
+  const today = formatLocalDate(new Date());
 
   for (let i = 2; i >= 1; i -= 1) {
     const d = new Date(`${first.fullDate}T00:00:00`);
     d.setDate(d.getDate() - i);
+    const fullDate = formatLocalDate(d);
     padBefore.push({
       day: WEEK_DAYS[d.getDay()],
       date: d.getDate(),
-      fullDate: formatLocalDate(d),
-      status: "past",
+      fullDate,
+      status:
+        fullDate === today ? "today" : fullDate < today ? "past" : "future",
     });
   }
   for (let i = 1; i <= 2; i += 1) {
     const d = new Date(`${last.fullDate}T00:00:00`);
     d.setDate(d.getDate() + i);
+    const fullDate = formatLocalDate(d);
     padAfter.push({
       day: WEEK_DAYS[d.getDay()],
       date: d.getDate(),
-      fullDate: formatLocalDate(d),
-      status: "future",
+      fullDate,
+      status:
+        fullDate === today ? "today" : fullDate < today ? "past" : "future",
     });
   }
-  return [...padBefore, ...week, ...padAfter];
+  return [...padBefore, ...core, ...padAfter];
 }
 
 function pinsToMateBooks(
@@ -115,10 +158,12 @@ export default function MatePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<NavTab>("center");
-  const [selectedDate, setSelectedDate] = useState(formatLocalDate(new Date()));
   const [mateBooks, setMateBooks] = useState<MateBooks>([]);
   const [libraryBooks, setLibraryBooks] = useState<LibraryBook[]>([]);
-  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
+  const [weekDays, setWeekDays] = useState<WeekDay[]>(() =>
+    buildMobileWeekDays(),
+  );
+  const [weekWeb, setWeekWeb] = useState<WeekDay[]>(() => buildWebWeekDays());
   const [badgeCount, setBadgeCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [pickSheetOpen, setPickSheetOpen] = useState(false);
@@ -139,7 +184,7 @@ export default function MatePage() {
   const canPick = libraryBooks.length > 0;
   const showEmpty = !loading && mateBooks.length === 0 && libraryBooks.length === 0;
   const showCarousel = !loading && !showEmpty;
-  const weekWeb = useMemo(() => buildWebWeekDays(weekDays), [weekDays]);
+  const todayDate = formatLocalDate(new Date());
 
   const refreshDashboard = useCallback(async () => {
     const [dashboard, shelf] = await Promise.all([
@@ -149,14 +194,11 @@ export default function MatePage() {
     const library = shelf.books.map(mapBookItemToLibraryBook);
     const byId = new Map(library.map((b) => [b.id, b]));
     const mates = pinsToMateBooks(dashboard.pins, byId);
-    const days = buildWeekDays(dashboard.week);
     setLibraryBooks(library);
     setMateBooks(mates);
-    setWeekDays(days);
+    setWeekDays(buildMobileWeekDays());
+    setWeekWeb(buildWebWeekDays());
     setBadgeCount(dashboard.badgeCount);
-    const today = formatLocalDate(new Date());
-    const todayItem = days.find((d) => d.fullDate === today);
-    setSelectedDate(todayItem?.fullDate ?? days.find((d) => d.status !== "future")?.fullDate ?? today);
     return { mates, library };
   }, []);
 
@@ -257,18 +299,8 @@ export default function MatePage() {
           ...toUnpin.map((id) => unpinMateBook(Number(id))),
           ...toPin.map((id) => pinMateBook(Number(id))),
         ]);
-        setMateBooks(
-          nextSelected.map((book) => {
-            const existing = mateBooks.find((m) => m.id === book.id);
-            return {
-              id: book.id,
-              title: book.title,
-              coverUrl: book.coverUrl,
-              lastReadDaysAgo: existing?.lastReadDaysAgo ?? 0,
-            };
-          }),
-        );
         setPickSheetOpen(false);
+        window.location.reload();
       } catch (err) {
         const message =
           err instanceof ApiError
@@ -368,17 +400,14 @@ export default function MatePage() {
           </div>
           <div className="flex items-center justify-center rounded-b-[11px] bg-white px-2 pb-2">
             {weekDays.map((item) => {
-              const selected = selectedDate === item.fullDate;
-              const disabled = item.status === "future";
+              const selected = item.fullDate === todayDate;
+              const disabled = item.status !== "today";
 
               return (
                 <button
                   key={item.fullDate}
                   type="button"
                   disabled={disabled}
-                  onClick={() => {
-                    if (!disabled) setSelectedDate(item.fullDate);
-                  }}
                   className={`relative flex h-10 flex-1 items-center justify-center ${
                     disabled ? "cursor-default" : "cursor-pointer"
                   }`}
@@ -396,7 +425,7 @@ export default function MatePage() {
                   >
                     {item.date}
                   </span>
-                  {selected && !disabled && (
+                  {selected && (
                     <span className="absolute bottom-0 left-1/2 h-0.5 w-9 -translate-x-1/2 rounded-t-[3px] bg-primary-500" />
                   )}
                 </button>
@@ -412,8 +441,8 @@ export default function MatePage() {
         >
           <div className="flex items-start justify-center gap-[54px] px-10 min-[1024px]:px-40">
             {weekWeb.map((item) => {
-              const selected = selectedDate === item.fullDate;
-              const disabled = item.status === "future";
+              const selected = item.fullDate === todayDate;
+              const disabled = item.status !== "today";
               const faded = item.status === "past";
 
               return (
@@ -421,13 +450,11 @@ export default function MatePage() {
                   key={`${item.day}-${item.fullDate}`}
                   type="button"
                   disabled={disabled}
-                  onClick={() => {
-                    if (!disabled) setSelectedDate(item.fullDate);
-                  }}
                   className={`flex flex-col items-center gap-3 ${
                     faded ? "opacity-75" : ""
                   } ${disabled ? "cursor-default" : "cursor-pointer"}`}
                   aria-pressed={selected}
+                  aria-disabled={disabled}
                 >
                   <span
                     className={`flex size-[52px] items-center justify-center rounded-full text-[20px] tracking-[-0.025em] ${
@@ -445,19 +472,7 @@ export default function MatePage() {
                         : "font-normal text-gray-400"
                     }`}
                   >
-                    {item.day === "일"
-                      ? "일요일"
-                      : item.day === "월"
-                        ? "월요일"
-                        : item.day === "화"
-                          ? "화요일"
-                          : item.day === "수"
-                            ? "수요일"
-                            : item.day === "목"
-                              ? "목요일"
-                              : item.day === "금"
-                                ? "금요일"
-                                : "토요일"}
+                    {WEB_DAY_LABEL[item.day]}
                   </span>
                 </button>
               );

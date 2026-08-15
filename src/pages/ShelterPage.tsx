@@ -415,7 +415,19 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
       setBooksReady(true);
       return;
     }
+
+    // 입장 가능 여부 확인 전엔 대기
+    if (canUseShelter === null) return;
+
+    // 오늘 독서 미완료면 rooms 호출하지 않음 (BE 500 방지)
+    if (!canUseShelter) {
+      setBooks([]);
+      setBooksReady(true);
+      return;
+    }
+
     let cancelled = false;
+    setBooksReady(false);
     loadShelterBooks()
       .then((next) => {
         if (!cancelled) {
@@ -423,7 +435,8 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
           setBooksReady(true);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[shelter/rooms]", err);
         if (!cancelled) {
           setBooks([]);
           setBooksReady(true);
@@ -432,7 +445,7 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
     return () => {
       cancelled = true;
     };
-  }, [booksProp]);
+  }, [booksProp, canUseShelter]);
 
   useEffect(() => {
     const html = document.documentElement;

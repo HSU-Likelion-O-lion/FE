@@ -35,6 +35,7 @@ type RequestOptions = {
   query?: Record<string, string | number | boolean | undefined | null>;
   /** 401 시 refresh 재시도 여부 (기본 true) */
   retryOnUnauthorized?: boolean;
+  signal?: AbortSignal;
 };
 
 function buildUrl(
@@ -107,6 +108,7 @@ export async function apiRequest<T>(
     formData,
     query,
     retryOnUnauthorized = true,
+    signal,
   } = options;
 
   const headers: Record<string, string> = {};
@@ -121,6 +123,7 @@ export async function apiRequest<T>(
   const res = await fetch(buildUrl(path, query), {
     method,
     headers,
+    signal,
     body: formData
       ? formData
       : body !== undefined

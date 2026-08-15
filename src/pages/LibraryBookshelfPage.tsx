@@ -26,7 +26,7 @@ export default function LibraryBookshelfPage() {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
   const [books, setBooks] = useState<LibraryShelfBook[]>([]);
-  const [filter, setFilter] = useState<ShelfFilter>("finished");
+  const [filter, setFilter] = useState<ShelfFilter>("all");
   const [statusTarget, setStatusTarget] = useState<LibraryShelfBook | null>(
     null,
   );

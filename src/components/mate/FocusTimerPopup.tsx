@@ -59,8 +59,8 @@ const RING_INTRO_MS = 500;
 /**
  * 개발용 타이머 배속 (1 = 실시간).
  */
-const DEV_TIMER_SPEED = 100;
-// const DEV_TIMER_SPEED = 1;
+const DEV_TIMER_SPEED = 1;
+// const DEV_TIMER_SPEED = 100;
 
 export type FocusTimerSession = {
   minutes: number;
@@ -76,17 +76,36 @@ export type FocusCompleteSession = {
 
 function mapPauseReasonToApi(id?: string): InterruptionReason {
   switch (id) {
+    case "TASTE_MISMATCH":
     case "wrong-book":
       return "TASTE_MISMATCH";
+    case "NOTIFICATION":
     case "notification":
       return "NOTIFICATION";
+    case "EBOOK_SWITCH":
     case "ebook":
       return "EBOOK_SWITCH";
+    case "OTHER":
     case "other":
       return "OTHER";
+    case "CONTINUE":
+      return "CONTINUE";
+    case "UNAVOIDABLE":
     default:
       return "UNAVOIDABLE";
   }
+}
+
+function isOtherPauseReason(id?: string) {
+  return id === "OTHER" || id === "other";
+}
+
+function needsPauseDetail(id?: string) {
+  return (
+    id === "TASTE_MISMATCH" ||
+    id === "wrong-book" ||
+    isOtherPauseReason(id)
+  );
 }
 
 export function loadFocusTimerSession(): FocusTimerSession | null {
@@ -577,7 +596,7 @@ export default function FocusTimerPopup({
 
   const handleSelectPauseReason = (id: string) => {
     setPauseReasonId(id);
-    if (id === "wrong-book" || id === "other") {
+    if (needsPauseDetail(id)) {
       setPauseStep("detail");
       return;
     }
@@ -590,21 +609,35 @@ export default function FocusTimerPopup({
     setPauseStep("confirm");
   };
 
-  const handleStopReading = async () => {
+  const postInterruption = async (
+    reason: InterruptionReason,
+    customText?: string,
+  ) => {
     const sid = sessionIdRef.current;
+    if (!sid) {
+      console.warn("[interruption] sessionId 없음 — API 스킵");
+      return;
+    }
+    await recordInterruption(sid, {
+      reason,
+      customText:
+        reason === "OTHER"
+          ? customText?.trim() || undefined
+          : undefined,
+      occurredAt: new Date().toISOString(),
+    });
+  };
+
+  const handleStopReading = async () => {
     const reason = mapPauseReasonToApi(pauseReasonId);
-    const customText =
-      pauseReasonId === "wrong-book" || pauseReasonId === "other"
-        ? pauseDetailRef.current || pauseDetailText || undefined
-        : undefined;
+    const customText = needsPauseDetail(pauseReasonId)
+      ? pauseDetailRef.current || pauseDetailText || undefined
+      : undefined;
 
     try {
+      const sid = sessionIdRef.current;
       if (sid) {
-        await recordInterruption(sid, {
-          reason,
-          customText,
-          occurredAt: new Date().toISOString(),
-        });
+        await postInterruption(reason, customText);
         await abandonReadingSession(sid);
       }
     } catch (err) {
@@ -623,6 +656,8 @@ export default function FocusTimerPopup({
     const sid = sessionIdRef.current;
     try {
       if (sid) {
+        // 이어서 읽기 → CONTINUE
+        await postInterruption("CONTINUE");
         const resumed = await resumeReadingSession(sid);
         if (typeof resumed.remainingSeconds === "number") {
           setRemaining(resumed.remainingSeconds);
@@ -855,12 +890,12 @@ export default function FocusTimerPopup({
       <Modal
         open={pauseModalOpen && pauseStep === "detail"}
         title={
-          pauseReasonId === "other"
+          isOtherPauseReason(pauseReasonId)
             ? "멈춘 이유를 자세히 알려주세요!"
             : "어떤 점이 아쉬웠나요?"
         }
         description={
-          pauseReasonId === "other" ? (
+          isOtherPauseReason(pauseReasonId) ? (
             isDesktop ? (
               "독서를 멈춘 이유를 알려주시면 더 나은 집중 환경을 만들어드릴게요."
             ) : (
@@ -880,7 +915,7 @@ export default function FocusTimerPopup({
         <PauseDetailForm
           key={pauseReasonId ?? "detail"}
           placeholder={
-            pauseReasonId === "other"
+            isOtherPauseReason(pauseReasonId)
               ? "(예시: 집중이 잘 안 돼요, 시간이 부족해요)"
               : "(예시: 내용이 너무 어려워요, 문체가 안 맞아요)"
           }

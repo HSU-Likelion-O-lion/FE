@@ -51,10 +51,10 @@ export default function ModalOptionList({
 }
 
 export const PAUSE_REASON_OPTIONS: ModalOption[] = [
-  { id: "wrong-book", label: "저와는 맞지 않는 책이에요." },
-  { id: "notification", label: "스마트폰 알림이 울려서요." },
-  { id: "ebook", label: "전자책 기기로 바꿔서 읽었어요." },
-  { id: "other", label: "기타" },
+  { id: "TASTE_MISMATCH", label: "저와는 맞지 않는 책이에요." },
+  { id: "NOTIFICATION", label: "스마트폰 알림이 울려서요." },
+  { id: "EBOOK_SWITCH", label: "전자책 기기로 바꿔서 읽었어요." },
+  { id: "OTHER", label: "기타" },
 ];
 
 /** 선택 상태를 가지는 일시정지 사유 리스트 */
