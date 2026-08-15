@@ -41,14 +41,24 @@ function buildUrl(
   path: string,
   query?: RequestOptions["query"],
 ): string {
-  const url = new URL(path.startsWith("http") ? path : `${BASE_URL}${path}`);
+  // 개발(BASE_URL="")은 `/api/...` 상대경로 — `new URL('/api')`는 base 없이 실패함
+  let url =
+    path.startsWith("http") || BASE_URL === ""
+      ? path
+      : `${BASE_URL}${path}`;
+
   if (query) {
+    const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined || value === null || value === "") continue;
-      url.searchParams.set(key, String(value));
+      params.set(key, String(value));
+    }
+    const qs = params.toString();
+    if (qs) {
+      url += url.includes("?") ? `&${qs}` : `?${qs}`;
     }
   }
-  return url.toString();
+  return url;
 }
 
 let refreshPromise: Promise<boolean> | null = null;

@@ -7,6 +7,7 @@ import { useIsDesktop } from "../../hooks/useIsDesktop";
 import defaultAvatarEdit from "../../assets/profile/avatar-edit.png";
 import iconCameraEdit from "../../assets/profile/icon-camera-edit.svg";
 import iconKakao from "../../assets/profile/icon-kakao.svg";
+import iconArrowRight from "../../assets/mate/icon-arrow-right.svg";
 
 export default function ProfileEditPage() {
   const navigate = useNavigate();
@@ -64,8 +65,20 @@ export default function ProfileEditPage() {
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white">
-      <header className="flex shrink-0 flex-col px-5 pt-5">
-        <div className="flex h-11 items-center justify-center">
+      <header className="relative flex shrink-0 flex-col px-5 pt-5">
+        <div className="relative flex h-11 w-full items-center justify-center">
+          <button
+            type="button"
+            aria-label="뒤로가기"
+            onClick={() => navigate(-1)}
+            className="absolute left-0 flex size-6 items-center justify-center"
+          >
+            <img
+              src={iconArrowRight}
+              alt=""
+              className="h-[13.5px] w-[7.5px] rotate-180 object-contain"
+            />
+          </button>
           <h1 className="w-full text-center text-h3 text-gray-900">
             프로필 수정
           </h1>

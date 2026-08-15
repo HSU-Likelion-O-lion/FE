@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ApiError, checkEmailAvailable } from "../api";
 import { saveSignupDraft } from "../api/sessionDraft";
 import Input from "../components/Input";
 import webBg from "../assets/common/web-bg.png";
@@ -52,37 +51,17 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const fieldError = resolveSignupError(email, password, passwordConfirm);
   const canSubmit =
     EMAIL_RE.test(email.trim()) &&
     password.length >= 8 &&
-    password === passwordConfirm &&
-    !submitting;
+    password === passwordConfirm;
 
-  const submit = async () => {
+  const submit = () => {
     if (!canSubmit) return;
-    setSubmitting(true);
-    setServerError(null);
-    try {
-      const { available } = await checkEmailAvailable(email.trim());
-      if (!available) {
-        setServerError("이미 사용 중인 이메일입니다.");
-        return;
-      }
-      saveSignupDraft({ email: email.trim(), password });
-      navigate("/signup/nickname");
-    } catch (err) {
-      setServerError(
-        err instanceof ApiError
-          ? err.message
-          : "이메일 확인에 실패했습니다. 다시 시도해주세요.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    saveSignupDraft({ email: email.trim(), password });
+    navigate("/signup/nickname");
   };
 
   return (
@@ -155,23 +134,15 @@ export default function SignupPage() {
         <button
           type="button"
           disabled={!canSubmit}
-          onClick={() => void submit()}
+          onClick={submit}
           className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 font-semibold ${
             canSubmit
               ? "bg-primary-500 text-white"
               : "bg-gray-100 text-gray-400"
           }`}
         >
-          {submitting ? "확인 중…" : "가입하기"}
+          가입하기
         </button>
-        {serverError ? (
-          <p
-            role="alert"
-            className="mt-2 text-center text-[12px] leading-[18px] text-error"
-          >
-            {serverError}
-          </p>
-        ) : null}
         <p className="mt-3 text-center text-body2 text-gray-500">
           이미 회원이신가요?{" "}
           <button
@@ -219,7 +190,7 @@ export default function SignupPage() {
           />
         </div>
 
-        {fieldError || serverError ? (
+        {fieldError ? (
           <div
             role="alert"
             className="mt-[31px] flex h-[54px] w-full shrink-0 items-center gap-3 rounded-2xl bg-[rgba(241,201,210,0.71)] px-5"
@@ -230,9 +201,7 @@ export default function SignupPage() {
             >
               !
             </span>
-            <p className="text-body1 text-[#da4263]">
-              {serverError ?? fieldError?.message}
-            </p>
+            <p className="text-body1 text-[#da4263]">{fieldError.message}</p>
           </div>
         ) : null}
 
@@ -240,14 +209,14 @@ export default function SignupPage() {
           <button
             type="button"
             disabled={!canSubmit}
-            onClick={() => void submit()}
+            onClick={submit}
             className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 font-semibold ${
               canSubmit
                 ? "bg-primary-500 text-white"
                 : "bg-gray-100 text-gray-400"
             }`}
           >
-            {submitting ? "확인 중…" : "가입하기"}
+            가입하기
           </button>
           <p className="mt-3 text-center text-body2 text-gray-500">
             이미 회원이신가요?{" "}

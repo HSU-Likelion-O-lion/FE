@@ -61,10 +61,13 @@ export default function SignupNicknamePage() {
       clearSignupDraft();
       navigate("/mate", { replace: true });
     } catch (err) {
+      console.error("[signup]", err);
       setFormError(
         err instanceof ApiError
           ? err.message
-          : "회원가입에 실패했습니다. 다시 시도해주세요.",
+          : err instanceof Error
+            ? err.message
+            : "회원가입에 실패했습니다. 다시 시도해주세요.",
       );
     } finally {
       setSubmitting(false);
