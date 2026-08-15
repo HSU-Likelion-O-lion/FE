@@ -1,23 +1,75 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import WebGnb from "../components/WebGnb";
+import {
+  ApiError,
+  getTodayCapsule,
+  openTodayCapsule,
+} from "../api";
 import webBg from "../assets/mate/capsule-bg-web.png";
 import capsuleBg from "../assets/mate/capsule-bg.png";
 import capsuleEllipse from "../assets/mate/capsule-ellipse.svg";
 import capsuleOwl from "../assets/mate/capsule-owl.png";
 import iconBack from "../assets/mate/icon-back.svg";
 
-const MOCK_CAPSULE = {
-  speech: "천천히 읽기 좋은 하루예요.",
-  quote: `"진정한 휴식은 아무것도 하지 않는 것이 아니라, 나에게 온전히 몰입하는 것이다."`,
-  source:
-    "이 문장은 『몰입의 기술』에서 발췌되었어요. 오늘의 여운을 이어가고 싶다면, 이 책을 통해 더 많은 이야기를 만나보세요.",
-  body: `오늘은 천천히 읽을수록 더 깊이 몰입할 수 있는 하루예요. 최근의 독서 리듬을 살펴보면, 빠르게 많은 페이지를 읽기보다 한 문장을 충분히 음미할 때 더 오래 집중하는 경향이 나타났어요. 오늘은 속도를 조금 늦추고 여유롭게 읽어보세요. 평소에는 지나쳤던 문장 속에서 새로운 영감과 의미를 발견할 수 있을 거예요.`,
+type CapsuleContent = {
+  quoteText: string;
+  bookTitle: string;
 };
 
 /** 영감캡슐 — 모바일 + 웹(Figma 695:9643) */
 export default function CapsulePage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [capsule, setCapsule] = useState<CapsuleContent | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const today = await getTodayCapsule();
+        if (cancelled) return;
+
+        if (today.opened && today.quoteText) {
+          setCapsule({
+            quoteText: today.quoteText,
+            bookTitle: today.bookTitle ?? "",
+          });
+          return;
+        }
+
+        const opened = await openTodayCapsule();
+        if (cancelled) return;
+        setCapsule({
+          quoteText: opened.quoteText,
+          bookTitle: opened.bookTitle,
+        });
+      } catch (err) {
+        if (cancelled) return;
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "영감 캡슐을 불러오지 못했어요.";
+        alert(message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const speech = "천천히 읽기 좋은 하루예요.";
+  const quote = capsule?.quoteText
+    ? `"${capsule.quoteText.replace(/^["“]|["”]$/g, "")}"`
+    : "";
+  const source = capsule?.bookTitle
+    ? `이 문장은 『${capsule.bookTitle}』에서 발췌되었어요. 오늘의 여운을 이어가고 싶다면, 이 책을 통해 더 많은 이야기를 만나보세요.`
+    : "";
 
   return (
     <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden min-[431px]:max-w-none">
@@ -71,9 +123,7 @@ export default function CapsulePage() {
       {/* —— 모바일: 올빼미 + 말풍선 —— */}
       <section className="relative z-10 mt-8 flex items-start justify-center min-[431px]:hidden">
         <div className="mt-2 rounded-tl-[20px] rounded-tr-[20px] rounded-br-[2px] rounded-bl-[20px] bg-[#FBFCFF] px-[13px] py-2.5">
-          <p className="whitespace-nowrap text-body2 text-gray-800">
-            {MOCK_CAPSULE.speech}
-          </p>
+          <p className="whitespace-nowrap text-body2 text-gray-800">{speech}</p>
         </div>
         <img
           src={capsuleOwl}
@@ -85,21 +135,30 @@ export default function CapsulePage() {
       {/* —— 모바일: 콘텐츠 카드 + CTA —— */}
       <section className="relative z-10 -mt-10 flex flex-1 flex-col px-5 pb-[calc(20px+env(safe-area-inset-bottom))] min-[431px]:hidden">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-t-[24px] bg-[linear-gradient(180deg,#FDFDFF_0%,#EFF0F9_100%)] px-8 pt-7">
-          <p className="whitespace-pre-line px-[32.5px] py-[12.5px] text-center text-h3 text-primary-500">
-            {MOCK_CAPSULE.quote}
-          </p>
-          <p className="mt-5 whitespace-pre-line text-body2 text-gray-500">
-            {MOCK_CAPSULE.source}
-          </p>
-          <p className="mt-5 whitespace-pre-line text-body2 text-gray-500">
-            {MOCK_CAPSULE.body}
-          </p>
+          {loading ? (
+            <p className="py-10 text-center text-body2 text-gray-400">
+              불러오는 중…
+            </p>
+          ) : (
+            <>
+              <p className="whitespace-pre-line px-[32.5px] py-[12.5px] text-center text-h3 text-primary-500">
+                {quote || "오늘의 문장을 준비하지 못했어요."}
+              </p>
+              {source ? (
+                <p className="mt-5 whitespace-pre-line text-body2 text-gray-500">
+                  {source}
+                </p>
+              ) : null}
+            </>
+          )}
         </div>
 
         <Button
           text="이 책 펼쳐보기"
           variant="primary"
           size="mt-4 h-[54px] w-full shrink-0 px-5"
+          disabled={!capsule?.bookTitle}
+          onClick={() => navigate("/drawer")}
         />
       </section>
 
@@ -115,9 +174,7 @@ export default function CapsulePage() {
               <span className="font-bold text-primary-900">
                 오늘 당신을 위한 한줄,{" "}
               </span>
-              <span className="font-semibold text-gray-400">
-                {MOCK_CAPSULE.speech}
-              </span>
+              <span className="font-semibold text-gray-400">{speech}</span>
             </h1>
 
             {/* Figma 695:9678 — 올빼미 + 가로로 긴 타원 그라데이션 */}
@@ -135,16 +192,22 @@ export default function CapsulePage() {
               />
             </div>
 
-            <p className="mt-6 text-left text-[28px] font-semibold leading-[1.5] tracking-[-0.025em] text-primary-500">
-              {MOCK_CAPSULE.quote}
-            </p>
-
-            <p className="mt-8 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-600">
-              {MOCK_CAPSULE.source}
-            </p>
-            <p className="mt-4 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-600">
-              {MOCK_CAPSULE.body}
-            </p>
+            {loading ? (
+              <p className="mt-6 text-center text-body2 text-gray-400">
+                불러오는 중…
+              </p>
+            ) : (
+              <>
+                <p className="mt-6 text-left text-[28px] font-semibold leading-[1.5] tracking-[-0.025em] text-primary-500">
+                  {quote || "오늘의 문장을 준비하지 못했어요."}
+                </p>
+                {source ? (
+                  <p className="mt-8 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-600">
+                    {source}
+                  </p>
+                ) : null}
+              </>
+            )}
           </section>
         </div>
       </div>

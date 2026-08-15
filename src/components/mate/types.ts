@@ -10,6 +10,8 @@ export type LibraryBook = {
   publisher: string;
   coverUrl: string;
   status: BookStatus;
+  bookId?: number;
+  userBookId?: number;
 };
 
 /** 메이트에 꺼내둔 책 */

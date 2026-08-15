@@ -8,56 +8,69 @@ import {
   type TouchEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  getBookshelf,
+  getCommunityRooms,
+  getRoomPostPreviews,
+} from "../api";
 import Modal from "../components/Modal";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
 import WebGnb from "../components/WebGnb";
 import ShelterEmptySection from "../components/shelter/ShelterEmptySection";
-import { loadLibraryBooks } from "../data/bookShelfStore";
-import { hasCompletedMateToday } from "../data/dailyReadingStore";
-import { MOCK_SHELF_BOOKS } from "../data/libraryMock";
+import { checkCanEnterCommunity } from "../data/dailyReadingStore";
 import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import iconBackDark from "../assets/drawer/recommend/icon-back-dark.svg";
 import iconPin from "../assets/shelter/icon-pin.svg";
 import pinBg from "../assets/shelter/pin-bg.svg";
 import bgBlobPurple from "../assets/shelter/bg-blob-purple.svg";
 import bgBlobYellow from "../assets/shelter/bg-blob-yellow.svg";
+import fallbackCover from "../assets/mate/book-cover.png";
 
 type ShelterBook = {
   id: string;
+  roomId: number;
+  bookId: number;
   title: string;
   thoughtCount: number;
   coverUrl: string;
 };
 
-/**
- * 서재 → 독서 성장 기록 → 내 책장 → 전체 목록을 쉼터에 표시.
- * localStorage에 담긴 책(메이트/서랍에서 추가)도 합친다.
- */
-function shelfToShelterBooks(): ShelterBook[] {
-  const byId = new Map<
-    string,
-    { id: string; title: string; coverUrl: string }
-  >();
+async function loadShelterBooks(): Promise<ShelterBook[]> {
+  const [{ rooms }, bookshelf] = await Promise.all([
+    getCommunityRooms(),
+    getBookshelf().catch(() => ({ books: [] as Awaited<
+      ReturnType<typeof getBookshelf>
+    >["books"] })),
+  ]);
 
-  for (const book of MOCK_SHELF_BOOKS) {
-    byId.set(book.id, {
-      id: book.id,
-      title: book.title,
-      coverUrl: book.coverUrl,
-    });
-  }
-  for (const book of loadLibraryBooks()) {
-    byId.set(book.id, {
-      id: book.id,
-      title: book.title,
-      coverUrl: book.coverUrl,
-    });
-  }
+  const coverByBookId = new Map(
+    bookshelf.books.map((item) => [
+      item.book.bookId,
+      item.book.coverImageUrl ?? "",
+    ]),
+  );
 
-  return Array.from(byId.values()).map((book, index) => ({
-    ...book,
-    thoughtCount: 8 + (index % 5) * 2,
-  }));
+  const books = await Promise.all(
+    rooms.map(async (room) => {
+      let thoughtCount = 0;
+      try {
+        const { previews } = await getRoomPostPreviews(room.roomId);
+        thoughtCount = previews.length;
+      } catch {
+        thoughtCount = 0;
+      }
+      return {
+        id: String(room.roomId),
+        roomId: room.roomId,
+        bookId: room.bookId,
+        title: room.bookTitle,
+        thoughtCount,
+        coverUrl: coverByBookId.get(room.bookId) || fallbackCover,
+      } satisfies ShelterBook;
+    }),
+  );
+
+  return books;
 }
 
 const STACK_LAYERS = [
@@ -367,24 +380,59 @@ function CarouselArrow({
 /** 쉼터 — 모바일 235:6613 / 웹 695:8486 · 빈상태 695:10532 */
 export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
   const navigate = useNavigate();
-  const [books] = useState<ShelterBook[]>(
-    () => booksProp ?? shelfToShelterBooks(),
-  );
+  const [books, setBooks] = useState<ShelterBook[]>(booksProp ?? []);
+  const [booksReady, setBooksReady] = useState(Boolean(booksProp));
   const [activeTab, setActiveTab] = useState<NavTab>("shelter");
   const [frontIndex, setFrontIndex] = useState(0);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const [motion, setMotion] = useState<StackMotion | null>(null);
-  const [canUseShelter] = useState(() => hasCompletedMateToday());
+  const [canUseShelter, setCanUseShelter] = useState<boolean | null>(null);
   const touchStartY = useRef<number | null>(null);
   const swipedRef = useRef(false);
   const stackRef = useRef<HTMLElement>(null);
   const webScrollerRef = useRef<HTMLDivElement>(null);
 
   const goMate = () => navigate("/mate");
-  const isEmpty = books.length === 0;
+  const isLoadingBooks = !booksReady;
+  const isEmpty = booksReady && books.length === 0;
   const bookCount = books.length;
   const frontBook = books[frontIndex];
   const isAnimating = motion !== null;
+
+  useEffect(() => {
+    let cancelled = false;
+    checkCanEnterCommunity().then((ok) => {
+      if (!cancelled) setCanUseShelter(ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (booksProp) {
+      setBooks(booksProp);
+      setBooksReady(true);
+      return;
+    }
+    let cancelled = false;
+    loadShelterBooks()
+      .then((next) => {
+        if (!cancelled) {
+          setBooks(next);
+          setBooksReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBooks([]);
+          setBooksReady(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [booksProp]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -457,8 +505,12 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
 
   const openThoughts = (book: ShelterBook) => {
     if (!canUseShelter) return;
-    navigate("/shelter/thoughts", {
-      state: { title: book.title, bookId: book.id },
+    navigate(`/shelter/thoughts?roomId=${book.roomId}`, {
+      state: {
+        title: book.title,
+        bookId: book.bookId,
+        roomId: book.roomId,
+      },
     });
   };
 
@@ -559,7 +611,11 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
           </div>
         </header>
 
-        {isEmpty ? (
+        {isLoadingBooks ? (
+          <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
+            <p className="text-body1 text-gray-500">쉼터를 불러오는 중…</p>
+          </div>
+        ) : isEmpty ? (
           <ShelterEmptySection onGoDrawer={() => navigate("/drawer")} />
         ) : (
           <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
@@ -601,8 +657,8 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
               <div className="mt-8 flex shrink-0 justify-center">
                 <button
                   type="button"
-                  aria-label={`${frontBook.title} 사유 보러가기`}
-                  onClick={() => openThoughts(frontBook)}
+                  aria-label={`${frontBook?.title ?? "책"} 사유 보러가기`}
+                  onClick={() => frontBook && openThoughts(frontBook)}
                   className="rounded-[25px] bg-white px-5 py-3 text-button1 text-gray-800 drop-shadow-[0_0_2px_rgba(169,173,190,0.57)]"
                 >
                   보러가기
@@ -639,7 +695,11 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
 
         <WebGnb active="shelter" className="relative z-20 shrink-0" />
 
-        {isEmpty ? (
+        {isLoadingBooks ? (
+          <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center">
+            <p className="text-[18px] text-gray-500">쉼터를 불러오는 중…</p>
+          </div>
+        ) : isEmpty ? (
           <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center bg-[#fdfdff] px-8">
             <ShelterEmptySection
               variant="web"
@@ -701,7 +761,7 @@ export default function ShelterPage({ books: booksProp }: ShelterPageProps) {
       </main>
 
       <Modal
-        open={!canUseShelter}
+        open={canUseShelter === false}
         variant="alert"
         status="warning"
         title="잠깐, 메이트는 하고오셨나요?"

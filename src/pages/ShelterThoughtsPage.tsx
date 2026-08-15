@@ -1,55 +1,148 @@
-import { useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { getRoomPosts } from "../api";
+import type { CommunityPost } from "../api";
 import ShelterThoughtsBoard from "../components/shelter/ShelterThoughtsBoard";
 import ShelterThoughtsEmpty from "../components/shelter/ShelterThoughtsEmpty";
 import {
-  createMockThoughtNotes,
+  communityPostToThoughtNote,
   layoutThoughtNotes,
-} from "../data/shelterThoughtsMock";
+} from "../data/shelterThoughtsLayout";
 
-type ThoughtsLocationState = {
+export type ThoughtsLocationState = {
   title?: string;
-  bookId?: string;
+  bookId?: number | string;
+  roomId?: number;
+  posts?: CommunityPost[];
 };
 
-/** API 연동 전 — 0이면 빈 화면(줌 없음), 20이면 맵 보드 */
-const MOCK_THOUGHT_COUNT = 20;
+function parseRoomId(
+  searchParams: URLSearchParams,
+  state: ThoughtsLocationState | null,
+): number | null {
+  const fromQuery = Number(searchParams.get("roomId"));
+  if (Number.isFinite(fromQuery) && fromQuery > 0) return fromQuery;
+  if (typeof state?.roomId === "number" && state.roomId > 0) return state.roomId;
+  return null;
+}
 
 export default function ShelterThoughtsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = (location.state as ThoughtsLocationState | null) ?? null;
-  const title = state?.title ?? "불안을 이기는 철학";
-  const bookId = state?.bookId ?? "default";
+  const roomId = parseRoomId(searchParams, state);
+  const title = state?.title ?? "쉼터";
+  const bookId = state?.bookId;
+
+  const [posts, setPosts] = useState<CommunityPost[]>(state?.posts ?? []);
+  const [loading, setLoading] = useState(!state?.posts?.length && roomId != null);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    if (roomId == null) {
+      setLoading(false);
+      setLoadError(true);
+      return;
+    }
+    if (state?.posts?.length) {
+      setPosts(state.posts);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
+    getRoomPosts(roomId)
+      .then((data) => {
+        if (cancelled) return;
+        setPosts(data.posts);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPosts([]);
+        setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId, state?.posts]);
 
   const rawNotes = useMemo(
-    () => createMockThoughtNotes(MOCK_THOUGHT_COUNT),
-    [],
+    () => posts.map(communityPostToThoughtNote),
+    [posts],
   );
 
+  const seedKey = `shelter-thoughts:${roomId ?? bookId ?? "default"}`;
+
   const notes = useMemo(
-    () => layoutThoughtNotes(rawNotes, `shelter-thoughts:${bookId}`, "mobile"),
-    [rawNotes, bookId],
+    () => layoutThoughtNotes(rawNotes, seedKey, "mobile"),
+    [rawNotes, seedKey],
   );
 
   const webNotes = useMemo(
-    () => layoutThoughtNotes(rawNotes, `shelter-thoughts:${bookId}`, "web"),
-    [rawNotes, bookId],
+    () => layoutThoughtNotes(rawNotes, seedKey, "web"),
+    [rawNotes, seedKey],
   );
+
+  const navState = {
+    title,
+    bookId,
+    roomId: roomId ?? undefined,
+    posts,
+  };
 
   const onBack = () => navigate(-1);
 
   const onNoteClick = (thoughtId: string) => {
-    navigate(`/shelter/thoughts/${thoughtId}`, {
-      state: { title, bookId },
-    });
+    const post = posts.find((item) => String(item.postId) === thoughtId);
+    if (post?.isMine) {
+      navigate("/shelter/thoughts/mine", {
+        state: {
+          ...navState,
+          postId: post.postId,
+          body: post.content,
+          authorName: post.anonymousNickname,
+        },
+      });
+      return;
+    }
+    const query = roomId != null ? `?roomId=${roomId}` : "";
+    navigate(`/shelter/thoughts/${thoughtId}${query}`, { state: navState });
   };
 
   const onWrite = () => {
-    navigate("/shelter/thoughts/write", {
-      state: { title, bookId },
-    });
+    const query = roomId != null ? `?roomId=${roomId}` : "";
+    navigate(`/shelter/thoughts/write${query}`, { state: navState });
   };
+
+  if (loading) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center bg-[#f7f8fc]">
+        <p className="text-body1 text-gray-500">사유를 불러오는 중…</p>
+      </main>
+    );
+  }
+
+  if (loadError && roomId == null) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col items-center justify-center gap-4 bg-[#f7f8fc] px-5">
+        <p className="text-body1 text-gray-600">방을 찾을 수 없어요.</p>
+        <button
+          type="button"
+          className="text-button1 text-primary-500"
+          onClick={() => navigate("/shelter")}
+        >
+          쉼터로 돌아가기
+        </button>
+      </main>
+    );
+  }
 
   if (rawNotes.length === 0) {
     return (

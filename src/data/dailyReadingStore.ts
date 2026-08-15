@@ -1,9 +1,10 @@
 /**
  * 오늘 메이트(집중 독서) 완료 여부.
  * - 하루 1회만 완료하면 그날 쉼터 입장 가능
- * - 현재: localStorage
- * - 이후: 백엔드 API 응답으로 교체 (같은 함수 시그니처 유지)
+ * - 로컬 캐시 + `getCommunityAccess().canEnter` 병행
  */
+import { getCommunityAccess } from "../api";
+
 const MATE_DAILY_KEY = "sseudam-mate-daily-complete";
 /** @deprecated 이전 키 — 마이그레이션용 */
 const LEGACY_READING_KEY = "sseudam-daily-reading-complete";
@@ -50,10 +51,28 @@ export function loadMateDailyComplete(): MateDailyComplete | null {
   return parsePayload(raw);
 }
 
-/** 오늘 메이트를 한 번이라도 완료했는지 (쉼터 입장 조건) */
+/** 오늘 메이트를 한 번이라도 완료했는지 (쉼터 입장 조건, 로컬) */
 export function hasCompletedMateToday(): boolean {
   const data = loadMateDailyComplete();
   return data != null && data.date === todayKey();
+}
+
+/**
+ * 쉼터 입장 가능 여부 — API `canEnter` 우선, 실패 시 로컬 완료 여부.
+ */
+export async function checkCanEnterCommunity(): Promise<boolean> {
+  try {
+    const { canEnter } = await getCommunityAccess();
+    if (canEnter) {
+      if (!hasCompletedMateToday()) {
+        markMateCompletedToday();
+      }
+      return true;
+    }
+    return false;
+  } catch {
+    return hasCompletedMateToday();
+  }
 }
 
 export function clearMateDailyComplete() {

@@ -6,24 +6,12 @@ export function formatLocalDate(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-function buildConsecutiveDaysEndingToday(count: number): string[] {
-  const dates: string[] = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  for (let i = count - 1; i >= 0; i -= 1) {
-    const day = new Date(today);
-    day.setDate(today.getDate() - i);
-    dates.push(formatLocalDate(day));
-  }
-  return dates;
+/** API week.achieved 날짜 목록으로 변환 */
+export function achievedDatesFromWeek(
+  week: { date: string; achieved: boolean }[],
+): string[] {
+  return week.filter((d) => d.achieved).map((d) => d.date);
 }
-
-/**
- * 목데이터 — 오늘 포함 연속 7일 독서 기록.
- * 연속이 끊긴 케이스를 보려면 날짜를 빼면 됨.
- */
-export const MOCK_READING_DATES: string[] = buildConsecutiveDaysEndingToday(7);
 
 /** endDate부터 하루씩 거슬러 올라가며 연속 독서 일수 */
 export function getConsecutiveReadingDays(
@@ -44,7 +32,7 @@ export function getConsecutiveReadingDays(
 }
 
 export function hasSevenDayStreak(
-  dates: string[] = MOCK_READING_DATES,
+  dates: string[] = [],
   endDate: Date = new Date(),
 ): boolean {
   return getConsecutiveReadingDays(dates, endDate) >= 7;

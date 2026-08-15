@@ -8,11 +8,12 @@ import {
 import { useNavigate } from "react-router-dom";
 import WebGnb from "../components/WebGnb";
 import {
-  accumulateKeywords,
-  pickRandomDiagnosisCards,
-  type DiagnosisCard,
-  type DiagnosisSwipe,
-} from "../data/drawerDiagnosisMock";
+  getRandomEmotionCards,
+  submitEmotionDiagnosis,
+  type EmotionCard,
+  type RecommendedBook,
+} from "../api";
+import { saveLastDiagnosisId } from "../api/sessionDraft";
 import bgRoom from "../assets/drawer/bg-room.png";
 import webBg from "../assets/common/web-bg.png";
 import cardFrontShape from "../assets/drawer/diagnosis/card-front-shape.svg";
@@ -29,7 +30,18 @@ const EXIT_DISTANCE = 420;
 const LOADING_MS = 2200;
 const WEB_ROTATE_MS = 520;
 
-type Phase = "swiping" | "loading" | "empty" | "error";
+type Phase = "fetching" | "swiping" | "loading" | "empty" | "error";
+
+type UiCard = {
+  id: string;
+  cardId: number;
+  text: string;
+};
+
+type DiagnosisSwipe = {
+  cardId: number;
+  liked: boolean;
+};
 
 /** Figma 웹 포스트잇 슬롯 — 좌=이전, 중=현재, 우=다음 (예: 5 1 2 → 1 2 3) */
 const WEB_SLOT = {
@@ -44,8 +56,12 @@ const WEB_SLOT = {
     "absolute left-[calc(50%-435px)] top-[584px] z-0 w-[253px] -rotate-[23.45deg] scale-90 opacity-0",
 } as const;
 
-function createSession() {
-  return { cards: pickRandomDiagnosisCards(5) };
+function toUiCards(cards: EmotionCard[]): UiCard[] {
+  return cards.map((card) => ({
+    id: String(card.cardId),
+    cardId: card.cardId,
+    text: card.content,
+  }));
 }
 
 /** Figma 1024 높이 기준으로 짧은 뷰포트만 origin-top 스케일 */
@@ -93,10 +109,10 @@ function RoomBackground({ fullBleed = false }: { fullBleed?: boolean }) {
 /** 서랍 — 마음 읽기 진단중 (모바일 409:12567 / 웹 738:4657) */
 export default function DrawerDiagnosisPage() {
   const navigate = useNavigate();
-  const [{ cards }, setSession] = useState(createSession);
+  const [cards, setCards] = useState<UiCard[]>([]);
   const [index, setIndex] = useState(0);
   const [swipes, setSwipes] = useState<DiagnosisSwipe[]>([]);
-  const [phase, setPhase] = useState<Phase>("swiping");
+  const [phase, setPhase] = useState<Phase>("fetching");
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [exiting, setExiting] = useState<"left" | "right" | null>(null);
@@ -105,9 +121,14 @@ export default function DrawerDiagnosisPage() {
   const startXRef = useRef(0);
   const dragXRef = useRef(0);
   const pointerIdRef = useRef<number | null>(null);
-  const keywordsRef = useRef<string[]>([]);
+  const pendingSwipesRef = useRef<DiagnosisSwipe[]>([]);
+  const resultRef = useRef<{
+    diagnosisId: number;
+    recommendedBooks: RecommendedBook[];
+  } | null>(null);
+  const loadingStartedAtRef = useRef(0);
 
-  const front = cards[index] as DiagnosisCard | undefined;
+  const front = cards[index] as UiCard | undefined;
   /** 웹 슬롯: 왼쪽=이전(처음엔 마지막 카드), 중앙=현재, 오른쪽=다음 */
   const webLeft =
     cards.length > 0
@@ -119,37 +140,91 @@ export default function DrawerDiagnosisPage() {
     index + 1 < cards.length ? cards[index + 1] : undefined;
   const webIncomingRight =
     index + 2 < cards.length ? cards[index + 2] : undefined;
-  const progress = `${Math.min(index + 1, cards.length)}/${cards.length}`;
+  const progress =
+    cards.length > 0
+      ? `${Math.min(index + 1, cards.length)}/${cards.length}`
+      : "0/0";
 
-  const goToRecommend = useCallback(
-    (keywords: string[]) => {
-      navigate("/drawer/recommend", { state: { keywords }, replace: true });
-    },
-    [navigate],
-  );
-
-  useEffect(() => {
-    if (phase !== "loading") return;
-    const timer = window.setTimeout(() => {
-      goToRecommend(keywordsRef.current);
-    }, LOADING_MS);
-    return () => window.clearTimeout(timer);
-  }, [phase, goToRecommend]);
-
-  const finishSession = useCallback((finalSwipes: DiagnosisSwipe[]) => {
-    const keywords = accumulateKeywords(finalSwipes);
-    keywordsRef.current = keywords;
-    if (keywords.length === 0) {
-      setPhase("empty");
-      return;
+  const loadCards = useCallback(async () => {
+    setPhase("fetching");
+    setCards([]);
+    setIndex(0);
+    setSwipes([]);
+    setDragX(0);
+    setExiting(null);
+    setWebRotating(false);
+    pendingSwipesRef.current = [];
+    resultRef.current = null;
+    try {
+      const { cards: next } = await getRandomEmotionCards();
+      const mapped = toUiCards(next);
+      if (mapped.length === 0) {
+        setPhase("empty");
+        return;
+      }
+      setCards(mapped);
+      setPhase("swiping");
+    } catch {
+      setPhase("error");
     }
-    setPhase("loading");
   }, []);
 
+  useEffect(() => {
+    void loadCards();
+  }, [loadCards]);
+
+  const goToRecommend = useCallback(() => {
+    const result = resultRef.current;
+    if (!result) {
+      setPhase("error");
+      return;
+    }
+    navigate("/drawer/recommend", {
+      state: {
+        diagnosisId: result.diagnosisId,
+        recommendedBooks: result.recommendedBooks,
+      },
+      replace: true,
+    });
+  }, [navigate]);
+
+  const submitDiagnosis = useCallback(async (finalSwipes: DiagnosisSwipe[]) => {
+    loadingStartedAtRef.current = Date.now();
+    setPhase("loading");
+    try {
+      const result = await submitEmotionDiagnosis(finalSwipes);
+      saveLastDiagnosisId(result.diagnosisId);
+      resultRef.current = result;
+      const elapsed = Date.now() - loadingStartedAtRef.current;
+      const wait = Math.max(0, LOADING_MS - elapsed);
+      window.setTimeout(() => {
+        goToRecommend();
+      }, wait);
+    } catch {
+      setPhase("error");
+    }
+  }, [goToRecommend]);
+
+  const finishSession = useCallback(
+    (finalSwipes: DiagnosisSwipe[]) => {
+      const likedAny = finalSwipes.some((s) => s.liked);
+      if (!likedAny) {
+        setPhase("empty");
+        return;
+      }
+      pendingSwipesRef.current = finalSwipes;
+      void submitDiagnosis(finalSwipes);
+    },
+    [submitDiagnosis],
+  );
+
   const applySwipeResult = useCallback(
-    (agreed: boolean) => {
+    (liked: boolean) => {
       if (!front) return;
-      const nextSwipes = [...swipes, { cardId: front.id, agreed }];
+      const nextSwipes = [
+        ...swipes,
+        { cardId: front.cardId, liked },
+      ];
       setSwipes(nextSwipes);
       if (index + 1 >= cards.length) {
         finishSession(nextSwipes);
@@ -162,17 +237,17 @@ export default function DrawerDiagnosisPage() {
 
   /** 모바일 — 스와이프 슬라이드 아웃 */
   const commitSwipe = useCallback(
-    (agreed: boolean) => {
+    (liked: boolean) => {
       if (!front || exiting || phase !== "swiping") return;
 
-      setExiting(agreed ? "right" : "left");
-      setDragX(agreed ? EXIT_DISTANCE : -EXIT_DISTANCE);
+      setExiting(liked ? "right" : "left");
+      setDragX(liked ? EXIT_DISTANCE : -EXIT_DISTANCE);
 
       window.setTimeout(() => {
         setExiting(null);
         setDragX(0);
         dragXRef.current = 0;
-        applySwipeResult(agreed);
+        applySwipeResult(liked);
       }, 280);
     },
     [applySwipeResult, exiting, front, phase],
@@ -180,13 +255,11 @@ export default function DrawerDiagnosisPage() {
 
   /** 웹 — O/X만. 반시계: 우→중, 중→좌, 좌 퇴장, 새 카드 우 입장 (5 1 2 → 1 2 3) */
   const commitWeb = useCallback(
-    (agreed: boolean) => {
+    (liked: boolean) => {
       if (!front || webRotating || phase !== "swiping") return;
       setWebRotating(true);
       window.setTimeout(() => {
-        // index 먼저 갱신 + rotating off를 한 프레임에 묶어
-        // key=card.id 기준으로 슬롯이 목표 위치에 고정되어 역재생되지 않음
-        applySwipeResult(agreed);
+        applySwipeResult(liked);
         setWebRotating(false);
       }, WEB_ROTATE_MS);
     },
@@ -194,14 +267,19 @@ export default function DrawerDiagnosisPage() {
   );
 
   const restart = () => {
-    setSession(createSession());
-    setIndex(0);
-    setSwipes([]);
-    setPhase("swiping");
-    setDragX(0);
-    setExiting(null);
-    setWebRotating(false);
-    keywordsRef.current = [];
+    void loadCards();
+  };
+
+  const retrySubmit = () => {
+    if (pendingSwipesRef.current.length > 0) {
+      void submitDiagnosis(pendingSwipesRef.current);
+      return;
+    }
+    if (resultRef.current) {
+      goToRecommend();
+      return;
+    }
+    void loadCards();
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -235,7 +313,11 @@ export default function DrawerDiagnosisPage() {
   };
 
   const rotate = dragX * 0.04;
-  const dimmed = phase === "loading" || phase === "empty" || phase === "error";
+  const dimmed =
+    phase === "fetching" ||
+    phase === "loading" ||
+    phase === "empty" ||
+    phase === "error";
   const stageScale = useWebStageScale(1024);
 
   return (
@@ -282,7 +364,7 @@ export default function DrawerDiagnosisPage() {
           size="mobile"
           onRestart={restart}
           onAbort={() => navigate("/drawer")}
-          onRetry={() => setPhase("loading")}
+          onRetry={retrySubmit}
         />
       </main>
 
@@ -372,7 +454,7 @@ export default function DrawerDiagnosisPage() {
           size="web"
           onRestart={restart}
           onAbort={() => navigate("/drawer")}
-          onRetry={() => setPhase("loading")}
+          onRetry={retrySubmit}
         />
       </main>
     </>
@@ -427,15 +509,15 @@ function WebPostItCarousel({
   incomingRight,
   rotating,
 }: {
-  left?: DiagnosisCard;
-  center: DiagnosisCard;
-  right?: DiagnosisCard;
-  incomingRight?: DiagnosisCard;
+  left?: UiCard;
+  center: UiCard;
+  right?: UiCard;
+  incomingRight?: UiCard;
   rotating: boolean;
 }) {
   // key=card.id 로 노드를 유지해 슬롯만 바꿔 반시계 1회 전환 (역재생 방지)
   type Item = {
-    card: DiagnosisCard;
+    card: UiCard;
     slot: keyof typeof WEB_SLOT | "enter";
   };
 
@@ -511,7 +593,7 @@ function SwipeCard({
   onPointerUp,
   onPointerCancel,
 }: {
-  card: DiagnosisCard;
+  card: UiCard;
   dragX: number;
   rotate: number;
   dragging: boolean;
@@ -641,7 +723,11 @@ function Overlays({
   onRetry: () => void;
 }) {
   const isWeb = size === "web";
-  const dimmed = phase === "loading" || phase === "empty" || phase === "error";
+  const dimmed =
+    phase === "fetching" ||
+    phase === "loading" ||
+    phase === "empty" ||
+    phase === "error";
 
   return (
     <>
@@ -649,7 +735,7 @@ function Overlays({
         <div className="absolute inset-0 z-30 bg-[rgba(58,61,77,0.78)]" />
       ) : null}
 
-      {phase === "loading" ? (
+      {phase === "fetching" || phase === "loading" ? (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center px-6">
           <div
             className={`relative flex items-center justify-center ${
@@ -677,14 +763,18 @@ function Overlays({
               isWeb ? "text-[28px] leading-9" : "text-[20px] leading-7"
             }`}
           >
-            잠시만요, 마음의 결을 읽고 있어요!
+            {phase === "fetching"
+              ? "카드를 준비하고 있어요!"
+              : "잠시만요, 마음의 결을 읽고 있어요!"}
           </p>
           <p
             className={`mt-2 text-center text-gray-200 ${
               isWeb ? "text-[18px]" : "text-body2"
             }`}
           >
-            당신에게 꼭 필요한 문장을 찾는 중...
+            {phase === "fetching"
+              ? "곧 마음 읽기를 시작할 수 있어요."
+              : "당신에게 꼭 필요한 문장을 찾는 중..."}
           </p>
         </div>
       ) : null}

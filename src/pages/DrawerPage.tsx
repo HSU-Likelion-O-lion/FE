@@ -1,11 +1,12 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  getEmotionDiagnoses,
+  getEmotionDiagnosis,
+  formatReflectionDate,
+} from "../api";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
 import WebGnb from "../components/WebGnb";
-import {
-  loadDiagnosisHistory,
-  type DiagnosisRecord,
-} from "../data/drawerDiagnosisMock";
 import bgRoom from "../assets/drawer/bg-room.png";
 import webBg from "../assets/common/web-bg.png";
 import owlHero from "../assets/drawer/owl-hero.png";
@@ -13,11 +14,69 @@ import owlPeek from "../assets/drawer/home/owl-peek.png";
 import ellipseGlow from "../assets/drawer/home/ellipse-glow.svg";
 import iconBackDark from "../assets/drawer/recommend/icon-back-dark.svg";
 
+type DiagnosisRecord = {
+  id: string;
+  diagnosisId: number;
+  bookTitle: string;
+  quote: string;
+  thumbUrl: string;
+  dateLabel: string;
+};
+
 /** 서랍 홈 — 시작전(모바일 404:11734 / 웹 738:4566) · 최근 진단결과(모바일 420:13210 / 웹 742:7070) */
 export default function DrawerPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<NavTab>("drawer");
-  const history = loadDiagnosisHistory();
+  const [history, setHistory] = useState<DiagnosisRecord[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { diagnoses } = await getEmotionDiagnoses();
+        const records = await Promise.all(
+          diagnoses.slice(0, 20).map(async (d) => {
+            try {
+              const detail = await getEmotionDiagnosis(d.diagnosisId);
+              const book = detail.recommendedBooks[0];
+              return {
+                id: String(d.diagnosisId),
+                diagnosisId: d.diagnosisId,
+                bookTitle: book?.title ?? "추천 도서",
+                quote: book?.shortDesc ?? "감정 진단으로 추천된 책이에요.",
+                thumbUrl: book?.coverImageUrl ?? "",
+                dateLabel: formatReflectionDate(d.createdAt),
+              } satisfies DiagnosisRecord;
+            } catch {
+              return {
+                id: String(d.diagnosisId),
+                diagnosisId: d.diagnosisId,
+                bookTitle: "감정 진단",
+                quote: "진단 기록을 불러왔어요.",
+                thumbUrl: "",
+                dateLabel: formatReflectionDate(d.createdAt),
+              } satisfies DiagnosisRecord;
+            }
+          }),
+        );
+        if (!cancelled) setHistory(records);
+      } catch {
+        if (!cancelled) setHistory([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (history === null) {
+    return (
+      <main className="flex h-dvh w-full items-center justify-center bg-[#2a3366] text-white">
+        불러오는 중…
+      </main>
+    );
+  }
+
   const showRecent = history.length > 0;
 
   if (showRecent) {

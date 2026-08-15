@@ -1,4 +1,5 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { GuestOnly, RequireAuth, FallbackRedirect } from "./components/auth/AuthGates";
 import CapsulePage from "./pages/CapsulePage";
 import DrawerDiagnosisPage from "./pages/DrawerDiagnosisPage";
 import DrawerPage from "./pages/DrawerPage";
@@ -41,79 +42,94 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/onboarding" element={<OnboardingGuidePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/login/email" element={<LoginEmailPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/signup/nickname" element={<SignupNicknamePage />} />
-        <Route path="/drawer" element={<DrawerPage />} />
-        <Route path="/drawer/diagnosis" element={<DrawerDiagnosisPage />} />
-        <Route path="/drawer/recommend" element={<DrawerRecommendPage />} />
-        <Route
-          path="/drawer/recommend/:bookId"
-          element={<DrawerBookIntroPage />}
-        />
-        <Route path="/drawer/mate-set" element={<DrawerMateSetPage />} />
-        <Route path="/library" element={<LibraryPage />} />
-        <Route path="/library/bookshelf" element={<LibraryBookshelfPage />} />
-        <Route path="/library/reasons" element={<LibraryReasonsPage />} />
-        <Route
-          path="/library/reasons/select"
-          element={<LibraryReasonSelectPage />}
-        />
-        <Route path="/library/essay" element={<LibraryEssayDraftPage />} />
-        <Route
-          path="/library/essay/complete"
-          element={<LibraryPdfCompletePage />}
-        />
-        <Route path="/mate" element={<MatePage />} />
-        <Route path="/mate/capsule" element={<CapsulePage />} />
-        <Route path="/mate/goal" element={<GoalAchievedPage />} />
-        <Route path="/mate/reflect" element={<ReflectPage />} />
-        <Route path="/shelter" element={<ShelterPage />} />
-        <Route
-          path="/shelter/thoughts"
-          element={
-            <RequireDailyReading>
-              <ShelterThoughtsPage />
-            </RequireDailyReading>
-          }
-        />
-        <Route
-          path="/shelter/thoughts/write"
-          element={
-            <RequireDailyReading>
-              <ShelterThoughtWritePage />
-            </RequireDailyReading>
-          }
-        />
-        <Route
-          path="/shelter/thoughts/mine"
-          element={<ShelterMyThoughtPage />}
-        />
-        <Route
-          path="/shelter/thoughts/mine/share"
-          element={<ShelterThoughtSharePage />}
-        />
-        <Route
-          path="/shelter/thoughts/:thoughtId"
-          element={
-            <RequireDailyReading>
-              <ShelterThoughtDetailPage />
-            </RequireDailyReading>
-          }
-        />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/profile/edit" element={<ProfileEditPage />} />
-        <Route path="/profile/membership" element={<MembershipPage />} />
-        <Route path="/profile/push" element={<PushNotificationPage />} />
-        <Route path="/profile/backup" element={<BackupSyncPage />} />
-        <Route path="/profile/notice" element={<NoticePage />} />
-        <Route path="/profile/inquiry" element={<InquiryPage />} />
-        <Route path="/profile/terms" element={<TermsPage />} />
-        <Route path="/profile/privacy" element={<PrivacyPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* 온보딩 (미로그인 + 온보딩 미완료만) */}
+        <Route element={<GuestOnly area="onboarding" />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/onboarding" element={<OnboardingGuidePage />} />
+        </Route>
+
+        {/* 로그인·회원가입 (미로그인 + 온보딩 완료만) */}
+        <Route element={<GuestOnly area="auth" />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/email" element={<LoginEmailPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signup/nickname" element={<SignupNicknamePage />} />
+        </Route>
+
+        {/* 앱 본문 — 로그인 필수 */}
+        <Route element={<RequireAuth />}>
+          <Route path="/drawer" element={<DrawerPage />} />
+          <Route path="/drawer/diagnosis" element={<DrawerDiagnosisPage />} />
+          <Route path="/drawer/recommend" element={<DrawerRecommendPage />} />
+          <Route
+            path="/drawer/recommend/:bookId"
+            element={<DrawerBookIntroPage />}
+          />
+          <Route path="/drawer/mate-set" element={<DrawerMateSetPage />} />
+          <Route path="/library" element={<LibraryPage />} />
+          <Route path="/library/bookshelf" element={<LibraryBookshelfPage />} />
+          <Route path="/library/reasons" element={<LibraryReasonsPage />} />
+          <Route
+            path="/library/reasons/select"
+            element={<LibraryReasonSelectPage />}
+          />
+          <Route
+            path="/library/essay/:essayId"
+            element={<LibraryEssayDraftPage />}
+          />
+          <Route
+            path="/library/essay/:essayId/complete"
+            element={<LibraryPdfCompletePage />}
+          />
+          <Route path="/mate" element={<MatePage />} />
+          <Route path="/mate/capsule" element={<CapsulePage />} />
+          <Route path="/mate/goal" element={<GoalAchievedPage />} />
+          <Route path="/mate/reflect" element={<ReflectPage />} />
+          <Route path="/shelter" element={<ShelterPage />} />
+          <Route
+            path="/shelter/thoughts"
+            element={
+              <RequireDailyReading>
+                <ShelterThoughtsPage />
+              </RequireDailyReading>
+            }
+          />
+          <Route
+            path="/shelter/thoughts/write"
+            element={
+              <RequireDailyReading>
+                <ShelterThoughtWritePage />
+              </RequireDailyReading>
+            }
+          />
+          <Route
+            path="/shelter/thoughts/mine"
+            element={<ShelterMyThoughtPage />}
+          />
+          <Route
+            path="/shelter/thoughts/mine/share"
+            element={<ShelterThoughtSharePage />}
+          />
+          <Route
+            path="/shelter/thoughts/:thoughtId"
+            element={
+              <RequireDailyReading>
+                <ShelterThoughtDetailPage />
+              </RequireDailyReading>
+            }
+          />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/edit" element={<ProfileEditPage />} />
+          <Route path="/profile/membership" element={<MembershipPage />} />
+          <Route path="/profile/push" element={<PushNotificationPage />} />
+          <Route path="/profile/backup" element={<BackupSyncPage />} />
+          <Route path="/profile/notice" element={<NoticePage />} />
+          <Route path="/profile/inquiry" element={<InquiryPage />} />
+          <Route path="/profile/terms" element={<TermsPage />} />
+          <Route path="/profile/privacy" element={<PrivacyPage />} />
+        </Route>
+
+        <Route path="*" element={<FallbackRedirect />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,8 +1,7 @@
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import splashBg from "../assets/onboarding/splash-bg.png";
 import webBg from "../assets/common/web-bg.png";
 import logoWhite from "../assets/common/logo-white.svg";
-import { isOnboardingDone } from "../lib/onboarding";
 
 const startButtonClassName =
   "relative flex h-[54px] w-full max-w-[353px] items-center justify-center rounded-2xl bg-[rgba(124,144,224,0.44)] px-20 py-[18px] text-button1 font-semibold text-[#fdfdff]";
@@ -10,10 +9,6 @@ const startButtonClassName =
 /** 앱 첫 화면 (Figma 176:2503) — 웹 ≥431px (Figma 647:5018) */
 export default function OnboardingSplashPage() {
   const navigate = useNavigate();
-
-  if (isOnboardingDone()) {
-    return <Navigate to="/login" replace />;
-  }
 
   const goOnboarding = () => navigate("/onboarding");
 

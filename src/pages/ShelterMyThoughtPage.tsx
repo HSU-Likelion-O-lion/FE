@@ -1,10 +1,11 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { getRoomPosts } from "../api";
 import Button from "../components/Button";
 import WebGnb from "../components/WebGnb";
 import ThoughtShareSheet from "../components/shelter/ThoughtShareSheet";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
 import { useIsDesktop } from "../hooks/useIsDesktop";
-import { useMemo, useState } from "react";
 import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import iconPencil from "../assets/shelter/thoughts/write-icon-pencil.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
@@ -20,12 +21,11 @@ const MAX_LENGTH = 200;
 const CARD_GRADIENT =
   "linear-gradient(-23deg, rgba(225,231,255,0.96) 2%, rgba(223,229,255,0.96) 96%)";
 
-const DEFAULT_BODY =
-  "원래 저 같은 경우에는 모든 일을 완벽하게 해내야 한다는 생각이 강해서 작은 실수에도 스스로를 많이 몰아붙이곤 했어요. 하지만 이 책을 읽으며 내가 통제할 수 없는 일들은 흘려보내도 괜찮다는 사실을 깨달았어요. 모든 결과를 내 힘으로 바꾸려 하기보다, 지금 내가 할 수 있는 일에 집중하는 것이 더 중요하다는 생각이 들었어요.";
-
 export type MyThoughtLocationState = {
   title?: string;
-  bookId?: string;
+  bookId?: number | string;
+  roomId?: number;
+  postId?: number;
   body?: string;
   date?: string;
   authorName?: string;
@@ -35,42 +35,118 @@ export type MyThoughtLocationState = {
 export default function ShelterMyThoughtPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isDesktop = useIsDesktop();
   const state = (location.state as MyThoughtLocationState | null) ?? null;
 
-  const bookTitle = state?.title ?? "불안을 이기는 철학";
-  const bookId = state?.bookId ?? "default";
-  const body = state?.body?.trim() ? state.body : DEFAULT_BODY;
-  const date = state?.date ?? "2026.06.25";
-  const authorName = state?.authorName ?? "지훈";
+  const bookTitle = state?.title ?? "쉼터";
+  const bookId = state?.bookId;
+  const roomId =
+    (typeof state?.roomId === "number" && state.roomId > 0
+      ? state.roomId
+      : null) ??
+    (() => {
+      const q = Number(searchParams.get("roomId"));
+      return Number.isFinite(q) && q > 0 ? q : null;
+    })();
+
+  const [body, setBody] = useState(state?.body?.trim() ? state.body : "");
+  const [authorName, setAuthorName] = useState(state?.authorName ?? "");
+  const [postId, setPostId] = useState<number | undefined>(state?.postId);
+  const [loading, setLoading] = useState(!state?.body?.trim());
   const [sheetOpen, setSheetOpen] = useState(false);
+  const date = state?.date ?? "";
+
+  useEffect(() => {
+    if (state?.body?.trim()) {
+      setLoading(false);
+      return;
+    }
+    if (roomId == null) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    getRoomPosts(roomId)
+      .then((data) => {
+        if (cancelled) return;
+        const mine =
+          (state?.postId != null
+            ? data.posts.find((p) => p.postId === state.postId && p.isMine)
+            : undefined) ?? data.posts.find((p) => p.isMine);
+        if (mine) {
+          setPostId(mine.postId);
+          setBody(mine.content);
+          setAuthorName(mine.anonymousNickname);
+        }
+      })
+      .catch(() => {
+        /* keep empty */
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId, state?.body, state?.postId]);
 
   const shareText = useMemo(
-    () => `[${bookTitle}]\n${authorName} · ${date}\n\n${body}`,
+    () =>
+      `[${bookTitle}]\n${authorName || "나"}${date ? ` · ${date}` : ""}\n\n${body}`,
     [authorName, body, bookTitle, date],
   );
 
+  const navState = {
+    title: bookTitle,
+    bookId,
+    roomId: roomId ?? undefined,
+    postId,
+    body,
+    date,
+    authorName,
+  };
+
   const goEdit = () => {
-    navigate("/shelter/thoughts/write", {
-      state: { title: bookTitle, bookId, body },
+    const query = roomId != null ? `?roomId=${roomId}` : "";
+    navigate(`/shelter/thoughts/write${query}`, {
+      state: navState,
     });
   };
 
   const handleShare = () => {
     if (!isDesktop) {
-      navigate("/shelter/thoughts/mine/share", {
-        state: {
-          title: bookTitle,
-          bookId,
-          body,
-          date,
-          authorName,
-        },
-      });
+      navigate("/shelter/thoughts/mine/share", { state: navState });
       return;
     }
     setSheetOpen(true);
   };
+
+  if (loading) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center bg-[#f7f8fc]">
+        <p className="text-body1 text-gray-500">내 사유를 불러오는 중…</p>
+      </main>
+    );
+  }
+
+  if (!body.trim()) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col items-center justify-center gap-4 bg-[#f7f8fc] px-5">
+        <p className="text-body1 text-gray-600">아직 남긴 사유가 없어요.</p>
+        <button
+          type="button"
+          className="text-button1 text-primary-500"
+          onClick={goEdit}
+        >
+          사유 남기기
+        </button>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -141,11 +217,13 @@ export default function ShelterMyThoughtPage() {
                   className="size-[77px] rounded-full object-cover"
                 />
                 <p className="mt-3 text-center text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
-                  {authorName}
+                  {authorName || "나"}
                 </p>
-                <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
-                  {date}
-                </p>
+                {date ? (
+                  <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
+                    {date}
+                  </p>
+                ) : null}
               </div>
               <p className="w-full whitespace-pre-wrap text-center text-body1 leading-[1.6] text-gray-800">
                 {body}
@@ -245,11 +323,13 @@ export default function ShelterMyThoughtPage() {
                   className="size-[92px] rounded-full object-cover"
                 />
                 <p className="mt-3 text-center text-[28px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
-                  {authorName}
+                  {authorName || "나"}
                 </p>
-                <p className="mt-1 text-center text-[20px] leading-[33px] tracking-[-0.025em] text-gray-400">
-                  {date}
-                </p>
+                {date ? (
+                  <p className="mt-1 text-center text-[20px] leading-[33px] tracking-[-0.025em] text-gray-400">
+                    {date}
+                  </p>
+                ) : null}
               </div>
               <p className="w-full whitespace-pre-wrap text-center text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-800">
                 {body}

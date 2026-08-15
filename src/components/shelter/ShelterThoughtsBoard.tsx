@@ -5,7 +5,7 @@ import {
   BOARD,
   WEB_BOARD,
   type PlacedThoughtNote,
-} from "../../data/shelterThoughtsMock";
+} from "../../data/shelterThoughtsLayout";
 import { useBoardPanZoom } from "../../hooks/useBoardPanZoom";
 import iconBackWeb from "../../assets/shelter/thoughts/icon-back-web.svg";
 import owlMascot from "../../assets/shelter/thoughts/owl-mascot.png";

@@ -1,9 +1,10 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getMe } from "../../api";
 import NavigationBar from "../../components/NavigationBar";
-import ProfileWebShell, {
-  PROFILE_MOCK_USER,
-} from "../../components/profile/ProfileWebShell";
+import ProfileWebShell from "../../components/profile/ProfileWebShell";
 import ProfileEditPanel from "../../components/profile/ProfileEditPanel";
+import defaultAvatar from "../../assets/profile/avatar.png";
 import iconNotification from "../../assets/profile/icon-notification.svg";
 import iconCloudSync from "../../assets/profile/icon-cloud-sync.svg";
 import iconAnnouncement from "../../assets/profile/icon-announcement.svg";
@@ -82,6 +83,28 @@ const MENU_ITEMS: MenuItem[] = [
 
 export default function ProfilePage() {
   const navigate = useNavigate();
+  const [nickname, setNickname] = useState("");
+  const [email, setEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(defaultAvatar);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        setNickname(me.nickname);
+        setEmail(me.email);
+        setAvatarUrl(me.profileImageUrl ?? defaultAvatar);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <>
@@ -90,7 +113,7 @@ export default function ProfilePage() {
         <header className="flex shrink-0 flex-col px-5 pt-5">
           <div className="flex h-11 items-center justify-center">
             <h1 className="w-full text-center text-h3 text-gray-900">
-              {PROFILE_MOCK_USER.name}님의 프로필
+              {nickname ? `${nickname}님의 프로필` : "프로필"}
             </h1>
           </div>
         </header>
@@ -103,17 +126,15 @@ export default function ProfilePage() {
             aria-label="프로필 수정"
           >
             <img
-              src={PROFILE_MOCK_USER.avatarUrl}
+              src={avatarUrl}
               alt=""
               className="size-[60px] shrink-0 rounded-full object-cover"
             />
             <div className="min-w-0 flex-1">
               <p className="text-h3 text-gray-900">
-                {PROFILE_MOCK_USER.name}님
+                {nickname ? `${nickname}님` : " "}
               </p>
-              <p className="mt-0.5 truncate text-body1 text-gray-500">
-                {PROFILE_MOCK_USER.email}
-              </p>
+              <p className="mt-0.5 truncate text-body1 text-gray-500">{email}</p>
             </div>
             <span className="flex size-6 shrink-0 items-center justify-center">
               <img
@@ -161,9 +182,7 @@ export default function ProfilePage() {
                 </span>
               </span>
               {item.trailing && (
-                <span className="text-body2 text-gray-400">
-                  {item.trailing}
-                </span>
+                <span className="text-body2 text-gray-400">{item.trailing}</span>
               )}
             </button>
           ))}
@@ -179,7 +198,13 @@ export default function ProfilePage() {
       </main>
 
       {/* —— 웹: Figma 714:4815 —— */}
-      <ProfileWebShell>
+      <ProfileWebShell
+        user={
+          nickname
+            ? { nickname, email, avatarUrl }
+            : null
+        }
+      >
         <ProfileEditPanel />
       </ProfileWebShell>
     </>

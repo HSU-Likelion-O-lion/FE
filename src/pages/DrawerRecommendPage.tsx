@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import WebGnb from "../components/WebGnb";
-import {
-  filterBooksByKeywords,
-  getHeadlineForKeywords,
-} from "../data/drawerDiagnosisMock";
+import { getEmotionDiagnosis, type RecommendedBook } from "../api";
+import { loadLastDiagnosisId } from "../api/sessionDraft";
+import { getHeadlineForKeywords } from "../data/drawerDiagnosisHelpers";
 import { startRecommendSession, loadRecommendSession } from "../data/bookShelfStore";
 import iconInfo from "../assets/drawer/recommend/icon-info.svg";
 
 type LocationState = {
-  keywords?: string[];
+  diagnosisId?: number;
+  recommendedBooks?: RecommendedBook[];
 };
 
 type BookItem = {
   id: string;
+  bookId: number;
   title: string;
   author: string;
   blurb: string;
@@ -21,18 +22,75 @@ type BookItem = {
   coverUrl: string;
 };
 
+function mapRecommendedBook(book: RecommendedBook): BookItem {
+  return {
+    id: String(book.bookId),
+    bookId: book.bookId,
+    title: book.title,
+    author: "",
+    blurb: book.shortDesc ?? "",
+    meta: "",
+    coverUrl: book.coverImageUrl ?? "",
+  };
+}
+
 /** 서랍 — 책 추천 3권 (모바일 472:2396 / 웹 739:5125) */
 export default function DrawerRecommendPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const keywords = (location.state as LocationState | null)?.keywords ?? [];
+  const state = (location.state as LocationState | null) ?? null;
 
-  const books = useMemo(() => filterBooksByKeywords(keywords, 3), [keywords]);
-  const headline = useMemo(() => getHeadlineForKeywords(keywords), [keywords]);
-
+  const [books, setBooks] = useState<BookItem[]>(() =>
+    (state?.recommendedBooks ?? []).map(mapRecommendedBook),
+  );
+  const [diagnosisId, setDiagnosisId] = useState<number | null>(
+    () => state?.diagnosisId ?? loadLastDiagnosisId(),
+  );
+  const [loading, setLoading] = useState(
+    () => (state?.recommendedBooks?.length ?? 0) === 0,
+  );
+  const [error, setError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const headline = useMemo(() => getHeadlineForKeywords([]), []);
+
   useEffect(() => {
+    if (books.length > 0) {
+      setLoading(false);
+      return;
+    }
+
+    const id = diagnosisId ?? loadLastDiagnosisId();
+    if (id == null) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+
+    void getEmotionDiagnosis(id)
+      .then((result) => {
+        if (cancelled) return;
+        setDiagnosisId(result.diagnosisId);
+        setBooks(result.recommendedBooks.map(mapRecommendedBook));
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError(true);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [books.length, diagnosisId]);
+
+  useEffect(() => {
+    if (books.length === 0) return;
     const ids = books.map((book) => book.id);
     const existing = loadRecommendSession();
     const sameSet =
@@ -40,14 +98,14 @@ export default function DrawerRecommendPage() {
       existing.bookIds.length === ids.length &&
       existing.bookIds.every((id, index) => id === ids[index]);
     if (sameSet) return;
-    startRecommendSession(keywords, ids);
-  }, [books, keywords]);
+    startRecommendSession([], ids);
+  }, [books]);
 
   const selected = books.find((b) => b.id === selectedId) ?? null;
 
   const goIntro = (bookId: string) => {
     navigate(`/drawer/recommend/${bookId}`, {
-      state: { keywords },
+      state: { diagnosisId },
     });
   };
 
@@ -55,6 +113,29 @@ export default function DrawerRecommendPage() {
     if (!selected) return;
     goIntro(selected.id);
   };
+
+  if (loading) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col items-center justify-center bg-[#fdfdff] px-5">
+        <p className="text-body1 text-gray-600">추천 책을 불러오는 중...</p>
+      </main>
+    );
+  }
+
+  if (error || books.length === 0) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col items-center justify-center bg-[#fdfdff] px-5">
+        <p className="text-body1 text-gray-600">추천 결과를 불러오지 못했어요.</p>
+        <button
+          type="button"
+          className="mt-4 text-button1 text-primary-500"
+          onClick={() => navigate("/drawer/diagnosis", { replace: true })}
+        >
+          다시 진단하기
+        </button>
+      </main>
+    );
+  }
 
   return (
     <>
@@ -156,16 +237,26 @@ function MobileBookCard({
         }`}
       >
         <div className="absolute top-[-17px] left-5 h-[159px] w-[107px] overflow-hidden rounded border-2 border-[#e9ecf8]">
-          <img src={book.coverUrl} alt="" className="size-full object-cover" />
+          {book.coverUrl ? (
+            <img src={book.coverUrl} alt="" className="size-full object-cover" />
+          ) : (
+            <div className="size-full bg-gray-100" />
+          )}
         </div>
         <div>
           <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-h3 text-gray-900">{book.title}</span>
-            <span className="text-caption text-gray-300">{book.author}</span>
+            {book.author ? (
+              <span className="text-caption text-gray-300">{book.author}</span>
+            ) : null}
           </div>
-          <p className="mt-1 text-body2 text-gray-500">{book.blurb}</p>
+          {book.blurb ? (
+            <p className="mt-1 text-body2 text-gray-500">{book.blurb}</p>
+          ) : null}
         </div>
-        <p className="text-caption text-gray-300">{book.meta}</p>
+        {book.meta ? (
+          <p className="text-caption text-gray-300">{book.meta}</p>
+        ) : null}
       </button>
     </li>
   );
@@ -186,7 +277,11 @@ function WebBookCard({
         className="relative flex h-[437px] w-full flex-col items-center justify-between gap-[18px] rounded-[24px] bg-[#fdfdff] px-8 pt-[155px] pb-8 text-center shadow-[0_0_10px_rgba(102,106,128,0.21)] transition hover:ring-2 hover:ring-primary-300"
       >
         <div className="pointer-events-none absolute top-[-85px] left-1/2 z-10 h-[228px] w-[154px] -translate-x-1/2 overflow-hidden rounded-[6px] border-[3px] border-[#e9ecf8]">
-          <img src={book.coverUrl} alt="" className="size-full object-cover" />
+          {book.coverUrl ? (
+            <img src={book.coverUrl} alt="" className="size-full object-cover" />
+          ) : (
+            <div className="size-full bg-gray-100" />
+          )}
         </div>
 
         <div className="relative z-0 flex flex-col items-center">
@@ -194,18 +289,26 @@ function WebBookCard({
             <span className="text-[26px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
               {book.title}
             </span>
-            <span className="text-[17px] leading-[26px] tracking-[-0.025em] text-gray-300">
-              {book.author}
-            </span>
+            {book.author ? (
+              <span className="text-[17px] leading-[26px] tracking-[-0.025em] text-gray-300">
+                {book.author}
+              </span>
+            ) : null}
           </div>
-          <p className="mt-[18px] max-w-[268px] text-[20px] leading-[1.6] tracking-[-0.025em] text-gray-500">
-            {book.blurb}
-          </p>
+          {book.blurb ? (
+            <p className="mt-[18px] max-w-[268px] text-[20px] leading-[1.6] tracking-[-0.025em] text-gray-500">
+              {book.blurb}
+            </p>
+          ) : null}
         </div>
 
-        <p className="relative z-0 shrink-0 text-[18px] leading-[26px] tracking-[-0.025em] text-gray-300">
-          {book.meta}
-        </p>
+        {book.meta ? (
+          <p className="relative z-0 shrink-0 text-[18px] leading-[26px] tracking-[-0.025em] text-gray-300">
+            {book.meta}
+          </p>
+        ) : (
+          <span className="relative z-0 shrink-0" />
+        )}
       </button>
     </li>
   );

@@ -1,11 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
 import WebGnb from "../components/WebGnb";
-import bookCover1 from "../assets/mate/book-cover-1.jpg";
-import bookCover2 from "../assets/mate/book-cover-2.png";
-import bookCover3 from "../assets/mate/book-cover-3.png";
-import bookCover from "../assets/mate/book-cover.png";
 import iconBadge from "../assets/mate/icon-badge.svg";
 import iconCapsule from "../assets/mate/icon-capsule.svg";
 import MateBookSection from "../components/mate/MateBookSection";
@@ -16,6 +12,7 @@ import FocusTimerPopup, {
   loadFocusTimerSession,
 } from "../components/mate/FocusTimerPopup";
 import PickMateBookSheet from "../components/mate/PickMateBookSheet";
+import { formatLocalDate } from "../components/mate/streak";
 import {
   MATE_BOOK_LIMIT,
   type LibraryBook,
@@ -23,157 +20,113 @@ import {
   type MateBooks,
 } from "../components/mate/types";
 import {
-  loadLibraryBooks,
-  loadMateBooks,
-  saveMateBooks,
-} from "../data/bookShelfStore";
+  ApiError,
+  getActiveReadingSession,
+  getBookshelf,
+  getMateDashboard,
+  mapBookItemToLibraryBook,
+  pinMateBook,
+  unpinMateBook,
+  type Day,
+  type TargetMinutes,
+} from "../api";
 
 export type { MateBookItem, MateBooks };
-
-const MOCK_LIBRARY_BOOKS: LibraryBook[] = [
-  {
-    id: "lib-1",
-    title: "불안을 이기는 철학",
-    author: "브리지드 딜레이니",
-    genre: "장편소설",
-    publisher: "창비",
-    coverUrl: bookCover1,
-    status: "unread",
-  },
-  {
-    id: "lib-2",
-    title: "여름을 한 입 베어 물었더니",
-    author: "이꽃",
-    genre: "장편소설",
-    publisher: "문학동네",
-    coverUrl: bookCover2,
-    status: "reading",
-  },
-  {
-    id: "lib-3",
-    title: "일억 번째 여름",
-    author: "청예",
-    genre: "장편소설",
-    publisher: "창비",
-    coverUrl: bookCover3,
-    status: "finished",
-  },
-  {
-    id: "lib-4",
-    title: "몰입의 기술",
-    author: "미하이 칙센트미하이",
-    genre: "자기계발",
-    publisher: "책읽는수요일",
-    coverUrl: bookCover,
-    status: "reading",
-  },
-  {
-    id: "lib-5",
-    title: "마음의 직원",
-    author: "김하나",
-    genre: "에세이",
-    publisher: "위즈덤하우스",
-    coverUrl: bookCover1,
-    status: "unread",
-  },
-  {
-    id: "lib-6",
-    title: "고요할수록 밝아지는 것들",
-    author: "혜민",
-    genre: "에세이",
-    publisher: "수오서재",
-    coverUrl: bookCover2,
-    status: "finished",
-  },
-];
-
-/** 메이트에 이미 꺼내둔 책 (0~N, N≤5) — 데모용으로 1권 */
-const MOCK_MATE_BOOKS: MateBooks = [
-  {
-    id: "lib-1",
-    title: "불안을 이기는 철학",
-    coverUrl: bookCover1,
-    lastReadDaysAgo: 1,
-  },
-];
 
 const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 type WeekDay = {
   day: (typeof WEEK_DAYS)[number];
   date: number;
+  fullDate: string;
   status: "past" | "today" | "future";
 };
-
-const WEEK: WeekDay[] = [
-  { day: "일", date: 9, status: "past" },
-  { day: "월", date: 10, status: "past" },
-  { day: "화", date: 11, status: "today" },
-  { day: "수", date: 12, status: "future" },
-  { day: "목", date: 13, status: "future" },
-  { day: "금", date: 14, status: "future" },
-  { day: "토", date: 15, status: "future" },
-];
-
-/** 웹 가로 캘린더용 — 전후 요일을 더 보여 줌 */
-const WEEK_WEB: WeekDay[] = [
-  { day: "토", date: 8, status: "past" },
-  { day: "일", date: 9, status: "past" },
-  { day: "월", date: 10, status: "past" },
-  { day: "화", date: 11, status: "today" },
-  { day: "수", date: 12, status: "future" },
-  { day: "목", date: 13, status: "future" },
-  { day: "금", date: 14, status: "future" },
-  { day: "토", date: 15, status: "future" },
-  { day: "일", date: 16, status: "future" },
-  { day: "월", date: 17, status: "future" },
-  { day: "화", date: 18, status: "future" },
-];
 
 type MateLocationState = {
   openFocusTime?: boolean;
   mateBookId?: string;
 };
 
-type MatePageProps = {
-  books?: MateBooks;
-  libraryBooks?: LibraryBook[];
-};
-
-function mergeLibrary(
-  defaults: LibraryBook[],
-  stored: LibraryBook[],
-): LibraryBook[] {
-  const storedIds = new Set(stored.map((b) => b.id));
-  return [...stored, ...defaults.filter((book) => !storedIds.has(book.id))];
+function buildWeekDays(week: Day[]): WeekDay[] {
+  const today = formatLocalDate(new Date());
+  return week.map((item) => {
+    const d = new Date(`${item.date}T00:00:00`);
+    const dayIdx = Number.isNaN(d.getTime()) ? 0 : d.getDay();
+    let status: WeekDay["status"] = "future";
+    if (item.date === today) status = "today";
+    else if (item.date < today) status = "past";
+    return {
+      day: WEEK_DAYS[dayIdx],
+      date: Number.isNaN(d.getTime()) ? 0 : d.getDate(),
+      fullDate: item.date,
+      status,
+    };
+  });
 }
 
-function resolveMateBooks(
-  defaults: MateBooks,
-  stored: MateBookItem[],
+function buildWebWeekDays(week: WeekDay[]): WeekDay[] {
+  if (week.length === 0) return [];
+  const first = week[0];
+  const last = week[week.length - 1];
+  const padBefore: WeekDay[] = [];
+  const padAfter: WeekDay[] = [];
+
+  for (let i = 2; i >= 1; i -= 1) {
+    const d = new Date(`${first.fullDate}T00:00:00`);
+    d.setDate(d.getDate() - i);
+    padBefore.push({
+      day: WEEK_DAYS[d.getDay()],
+      date: d.getDate(),
+      fullDate: formatLocalDate(d),
+      status: "past",
+    });
+  }
+  for (let i = 1; i <= 2; i += 1) {
+    const d = new Date(`${last.fullDate}T00:00:00`);
+    d.setDate(d.getDate() + i);
+    padAfter.push({
+      day: WEEK_DAYS[d.getDay()],
+      date: d.getDate(),
+      fullDate: formatLocalDate(d),
+      status: "future",
+    });
+  }
+  return [...padBefore, ...week, ...padAfter];
+}
+
+function pinsToMateBooks(
+  pins: { userBookId: number; pinnedOrder: number }[],
+  libraryById: Map<string, LibraryBook>,
 ): MateBooks {
-  if (stored.length > 0) return stored;
-  return defaults;
+  return [...pins]
+    .sort((a, b) => a.pinnedOrder - b.pinnedOrder)
+    .map((pin) => {
+      const lib = libraryById.get(String(pin.userBookId));
+      return {
+        id: String(pin.userBookId),
+        title: lib?.title ?? "책",
+        coverUrl: lib?.coverUrl ?? "",
+        lastReadDaysAgo: 0,
+      };
+    });
 }
 
-export default function MatePage({
-  books: initialBooks = MOCK_MATE_BOOKS,
-  libraryBooks: initialLibrary = MOCK_LIBRARY_BOOKS,
-}: MatePageProps) {
+export default function MatePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<NavTab>("center");
-  const [selectedDate, setSelectedDate] = useState(11);
-  const [mateBooks, setMateBooks] = useState<MateBooks>(() =>
-    resolveMateBooks(initialBooks, loadMateBooks()),
-  );
-  const [libraryBooks, setLibraryBooks] = useState<LibraryBook[]>(() =>
-    mergeLibrary(initialLibrary, loadLibraryBooks()),
-  );
+  const [selectedDate, setSelectedDate] = useState(formatLocalDate(new Date()));
+  const [mateBooks, setMateBooks] = useState<MateBooks>([]);
+  const [libraryBooks, setLibraryBooks] = useState<LibraryBook[]>([]);
+  const [weekDays, setWeekDays] = useState<WeekDay[]>([]);
+  const [badgeCount, setBadgeCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [pickSheetOpen, setPickSheetOpen] = useState(false);
   const [focusModalOpen, setFocusModalOpen] = useState(false);
+  const [focusUserBookId, setFocusUserBookId] = useState<number | null>(null);
   const [timerOpen, setTimerOpen] = useState(false);
-  const [timerMinutes, setTimerMinutes] = useState(15);
+  const [timerMinutes, setTimerMinutes] = useState<TargetMinutes>(15);
+  const [timerSessionId, setTimerSessionId] = useState<number | undefined>();
   const [timerInitialRemaining, setTimerInitialRemaining] = useState<
     number | undefined
   >();
@@ -184,51 +137,148 @@ export default function MatePage({
 
   const selectedMateIds = mateBooks.map((book) => book.id);
   const canPick = libraryBooks.length > 0;
-  const showEmpty = mateBooks.length === 0 && libraryBooks.length === 0;
-  const showCarousel = !showEmpty;
+  const showEmpty = !loading && mateBooks.length === 0 && libraryBooks.length === 0;
+  const showCarousel = !loading && !showEmpty;
+  const weekWeb = useMemo(() => buildWebWeekDays(weekDays), [weekDays]);
+
+  const refreshDashboard = useCallback(async () => {
+    const [dashboard, shelf] = await Promise.all([
+      getMateDashboard(),
+      getBookshelf(),
+    ]);
+    const library = shelf.books.map(mapBookItemToLibraryBook);
+    const byId = new Map(library.map((b) => [b.id, b]));
+    const mates = pinsToMateBooks(dashboard.pins, byId);
+    const days = buildWeekDays(dashboard.week);
+    setLibraryBooks(library);
+    setMateBooks(mates);
+    setWeekDays(days);
+    setBadgeCount(dashboard.badgeCount);
+    const today = formatLocalDate(new Date());
+    const todayItem = days.find((d) => d.fullDate === today);
+    setSelectedDate(todayItem?.fullDate ?? days.find((d) => d.status !== "future")?.fullDate ?? today);
+    return { mates, library };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        await refreshDashboard();
+      } catch (err) {
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "메이트 정보를 불러오지 못했어요.";
+        alert(message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshDashboard]);
 
   useEffect(() => {
     const state = (location.state as MateLocationState | null) ?? null;
     if (!state?.openFocusTime) return;
-    setMateBooks(resolveMateBooks(initialBooks, loadMateBooks()));
-    setLibraryBooks(mergeLibrary(initialLibrary, loadLibraryBooks()));
-    setFocusModalOpen(true);
-    navigate(".", { replace: true, state: {} });
-  }, [initialBooks, initialLibrary, location.state, navigate]);
+
+    const openForBook = async () => {
+      try {
+        const { mates } = await refreshDashboard();
+        const mateId = state.mateBookId;
+        const target =
+          (mateId && mates.find((b) => b.id === mateId)) || mates[0];
+        if (target) {
+          setFocusUserBookId(Number(target.id));
+          setFocusModalOpen(true);
+        }
+      } catch {
+        /* ignore — 이미 로드 실패 alert 가능 */
+      }
+      navigate(".", { replace: true, state: {} });
+    };
+    void openForBook();
+  }, [location.state, navigate, refreshDashboard]);
 
   useEffect(() => {
-    const session = loadFocusTimerSession();
-    if (!session) return;
-    setTimerMinutes(session.minutes);
-    setTimerInitialRemaining(session.remainingSeconds);
-    setTimerInitialPaused(true);
-    setTimerOpen(true);
+    let cancelled = false;
+    (async () => {
+      const local = loadFocusTimerSession();
+      try {
+        const { session } = await getActiveReadingSession();
+        if (cancelled) return;
+        if (session) {
+          const minutes = (local?.minutes ?? 15) as TargetMinutes;
+          setFocusUserBookId(local?.userBookId ?? null);
+          setTimerSessionId(session.sessionId);
+          setTimerMinutes(minutes);
+          setTimerInitialRemaining(session.remainingSeconds);
+          setTimerInitialPaused(true);
+          setTimerOpen(true);
+          return;
+        }
+      } catch {
+        /* fall through to local cache */
+      }
+      if (cancelled || !local) return;
+      setFocusUserBookId(local.userBookId ?? null);
+      setTimerSessionId(local.sessionId);
+      setTimerMinutes(local.minutes as TargetMinutes);
+      setTimerInitialRemaining(local.remainingSeconds);
+      setTimerInitialPaused(true);
+      setTimerOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const closeTimer = useCallback(() => {
     clearFocusTimerSession();
     setTimerOpen(false);
+    setTimerSessionId(undefined);
     setTimerInitialRemaining(undefined);
     setTimerInitialPaused(undefined);
   }, []);
 
-  const handlePickConfirm = useCallback((selected: LibraryBook[]) => {
-    setMateBooks((prev) => {
-      const prevById = new Map(prev.map((book) => [book.id, book]));
-      const next = selected.slice(0, MATE_BOOK_LIMIT).map((book) => {
-        const existing = prevById.get(book.id);
-        return {
-          id: book.id,
-          title: book.title,
-          coverUrl: book.coverUrl,
-          lastReadDaysAgo: existing?.lastReadDaysAgo ?? 0,
-        };
-      });
-      saveMateBooks(next);
-      return next;
-    });
-    setPickSheetOpen(false);
-  }, []);
+  const handlePickConfirm = useCallback(
+    async (selected: LibraryBook[]) => {
+      const nextSelected = selected.slice(0, MATE_BOOK_LIMIT);
+      const nextIds = new Set(nextSelected.map((b) => b.id));
+      const prevIds = new Set(mateBooks.map((b) => b.id));
+      const toUnpin = [...prevIds].filter((id) => !nextIds.has(id));
+      const toPin = [...nextIds].filter((id) => !prevIds.has(id));
+
+      try {
+        await Promise.all([
+          ...toUnpin.map((id) => unpinMateBook(Number(id))),
+          ...toPin.map((id) => pinMateBook(Number(id))),
+        ]);
+        setMateBooks(
+          nextSelected.map((book) => {
+            const existing = mateBooks.find((m) => m.id === book.id);
+            return {
+              id: book.id,
+              title: book.title,
+              coverUrl: book.coverUrl,
+              lastReadDaysAgo: existing?.lastReadDaysAgo ?? 0,
+            };
+          }),
+        );
+        setPickSheetOpen(false);
+      } catch (err) {
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "메이트 책 저장에 실패했어요.";
+        alert(message);
+      }
+    },
+    [mateBooks],
+  );
 
   const handleEmptyCta = () => {
     if (canPick) {
@@ -238,7 +288,10 @@ export default function MatePage({
     navigate("/drawer");
   };
 
-  const badgeCount = 3;
+  const openFocusForBook = (book: MateBookItem) => {
+    setFocusUserBookId(Number(book.id));
+    setFocusModalOpen(true);
+  };
 
   return (
     <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-white min-[431px]:max-w-none min-[431px]:bg-[#fdfdff]">
@@ -304,9 +357,9 @@ export default function MatePage({
           aria-label="주간 날짜"
         >
           <div className="flex items-center justify-center rounded-t-[11px] bg-white px-2 pt-2">
-            {WEEK.map((item) => (
+            {weekDays.map((item) => (
               <div
-                key={item.day}
+                key={item.fullDate}
                 className="flex h-10 flex-1 items-center justify-center"
               >
                 <span className="text-body2 text-gray-500">{item.day}</span>
@@ -314,17 +367,17 @@ export default function MatePage({
             ))}
           </div>
           <div className="flex items-center justify-center rounded-b-[11px] bg-white px-2 pb-2">
-            {WEEK.map((item) => {
-              const selected = selectedDate === item.date;
+            {weekDays.map((item) => {
+              const selected = selectedDate === item.fullDate;
               const disabled = item.status === "future";
 
               return (
                 <button
-                  key={item.date}
+                  key={item.fullDate}
                   type="button"
                   disabled={disabled}
                   onClick={() => {
-                    if (!disabled) setSelectedDate(item.date);
+                    if (!disabled) setSelectedDate(item.fullDate);
                   }}
                   className={`relative flex h-10 flex-1 items-center justify-center ${
                     disabled ? "cursor-default" : "cursor-pointer"
@@ -358,18 +411,18 @@ export default function MatePage({
           aria-label="주간 날짜"
         >
           <div className="flex items-start justify-center gap-[54px] px-10 min-[1024px]:px-40">
-            {WEEK_WEB.map((item) => {
-              const selected = selectedDate === item.date;
+            {weekWeb.map((item) => {
+              const selected = selectedDate === item.fullDate;
               const disabled = item.status === "future";
               const faded = item.status === "past";
 
               return (
                 <button
-                  key={`${item.day}-${item.date}`}
+                  key={`${item.day}-${item.fullDate}`}
                   type="button"
                   disabled={disabled}
                   onClick={() => {
-                    if (!disabled) setSelectedDate(item.date);
+                    if (!disabled) setSelectedDate(item.fullDate);
                   }}
                   className={`flex flex-col items-center gap-3 ${
                     faded ? "opacity-75" : ""
@@ -420,13 +473,17 @@ export default function MatePage({
           />
         </section>
 
-        {showEmpty ? (
+        {loading ? (
+          <p className="mt-20 text-center text-body2 text-gray-400">
+            불러오는 중…
+          </p>
+        ) : showEmpty ? (
           <MateEmptySection onCta={handleEmptyCta} />
         ) : showCarousel ? (
           <MateBookSection
             books={mateBooks}
             canPick={canPick}
-            onStartFocus={() => setFocusModalOpen(true)}
+            onStartFocus={openFocusForBook}
             onPickBooks={() => setPickSheetOpen(true)}
           />
         ) : null}
@@ -440,10 +497,15 @@ export default function MatePage({
         open={focusModalOpen}
         onClose={() => setFocusModalOpen(false)}
         onSelect={(minutes) => {
+          if (focusUserBookId == null) {
+            alert("집중할 책을 먼저 선택해 주세요.");
+            return;
+          }
           clearFocusTimerSession();
+          setTimerSessionId(undefined);
           setTimerInitialRemaining(undefined);
           setTimerInitialPaused(undefined);
-          setTimerMinutes(minutes);
+          setTimerMinutes(minutes as TargetMinutes);
           setTimerStartKey((key) => key + 1);
           setTimerOpen(true);
         }}
@@ -452,12 +514,15 @@ export default function MatePage({
       <FocusTimerPopup
         open={timerOpen}
         minutes={timerMinutes}
+        userBookId={focusUserBookId ?? undefined}
+        sessionId={timerSessionId}
         initialRemaining={timerInitialRemaining}
         initialPaused={timerInitialPaused}
         startKey={timerStartKey}
         onClose={closeTimer}
         onComplete={() => {
           setTimerOpen(false);
+          setTimerSessionId(undefined);
           setTimerInitialRemaining(undefined);
           setTimerInitialPaused(undefined);
           navigate("/mate/goal", { replace: true });

@@ -10,12 +10,24 @@ import WebGnb from "../WebGnb";
 import { PauseReasonOptions } from "../ModalOptionList";
 import PauseDetailForm from "./PauseDetailForm";
 import { markDailyReadingComplete } from "../../data/dailyReadingStore";
-// markDailyReadingComplete = markMateCompletedToday (하루 1회 메이트 → 쉼터)
+import {
+  ApiError,
+  abandonReadingSession,
+  completeReadingSession,
+  heartbeatReadingSession,
+  recordInterruption,
+  resumeReadingSession,
+  startReadingSession,
+  type InterruptionReason,
+  type TargetMinutes,
+} from "../../api";
+import { saveLastSession } from "../../api/sessionDraft";
 
 const RING_MOBILE = { size: 272, stroke: 10, minSize: 180 } as const;
 const RING_WEB = { size: 350, stroke: 10, minSize: 200 } as const;
 /** 모바일 타이틀 헤더 최소 높이 */
 const HEADER_MOBILE = 74;
+const HEARTBEAT_INTERVAL_MS = 15_000;
 
 function ringMetrics(size: number, stroke: number) {
   const radius = (size - stroke) / 2;
@@ -54,11 +66,28 @@ export type FocusTimerSession = {
   minutes: number;
   remainingSeconds: number;
   paused: boolean;
+  sessionId?: number;
+  userBookId?: number;
 };
 
 export type FocusCompleteSession = {
   minutes: number;
 };
+
+function mapPauseReasonToApi(id?: string): InterruptionReason {
+  switch (id) {
+    case "wrong-book":
+      return "TASTE_MISMATCH";
+    case "notification":
+      return "NOTIFICATION";
+    case "ebook":
+      return "EBOOK_SWITCH";
+    case "other":
+      return "OTHER";
+    default:
+      return "UNAVOIDABLE";
+  }
+}
 
 export function loadFocusTimerSession(): FocusTimerSession | null {
   try {
@@ -112,6 +141,10 @@ export function clearFocusComplete() {
 type FocusTimerPopupProps = {
   open: boolean;
   minutes: number;
+  /** 독서 세션을 시작할 서재 책 id */
+  userBookId?: number;
+  /** 복구 시 API sessionId */
+  sessionId?: number;
   /** 복구 시 남은 초. 없으면 minutes 기준으로 새로 시작 */
   initialRemaining?: number;
   /** 복구 시 일시정지 여부 */
@@ -130,6 +163,8 @@ function pad2(n: number) {
 export default function FocusTimerPopup({
   open,
   minutes,
+  userBookId,
+  sessionId: sessionIdProp,
   initialRemaining,
   initialPaused = false,
   startKey = 0,
@@ -149,6 +184,8 @@ export default function FocusTimerPopup({
     "reason",
   );
   const [pauseReasonId, setPauseReasonId] = useState<string>();
+  const [pauseDetailText, setPauseDetailText] = useState("");
+  const [sessionReady, setSessionReady] = useState(false);
   const [ringSize, setRingSize] = useState<number>(
     isDesktop ? RING_WEB.size : RING_MOBILE.size,
   );
@@ -169,10 +206,14 @@ export default function FocusTimerPopup({
   const pausedRef = useRef(paused);
   const skipPopRef = useRef(false);
   const completedRef = useRef(false);
+  const sessionIdRef = useRef<number | undefined>(sessionIdProp);
+  const userBookIdRef = useRef(userBookId);
+  const pauseDetailRef = useRef("");
   const onCloseRef = useRef(onClose);
   const onCompleteRef = useRef(onComplete);
   onCloseRef.current = onClose;
   onCompleteRef.current = onComplete;
+  userBookIdRef.current = userBookId;
 
   useEffect(() => {
     if (!open) return;
@@ -197,9 +238,22 @@ export default function FocusTimerPopup({
     pausedRef.current = paused;
   }, [paused]);
 
+  const persistSession = (
+    next: Partial<FocusTimerSession> &
+      Pick<FocusTimerSession, "minutes" | "remainingSeconds" | "paused">,
+  ) => {
+    saveFocusTimerSession({
+      ...next,
+      sessionId: next.sessionId ?? sessionIdRef.current,
+      userBookId: next.userBookId ?? userBookIdRef.current,
+    });
+  };
+
   const openPauseReasonModal = () => {
     setPauseStep("reason");
     setPauseReasonId(undefined);
+    setPauseDetailText("");
+    pauseDetailRef.current = "";
     setPauseModalOpen(true);
   };
 
@@ -209,68 +263,167 @@ export default function FocusTimerPopup({
       setPauseModalOpen(false);
       setPauseStep("reason");
       setPauseReasonId(undefined);
+      setPauseDetailText("");
+      pauseDetailRef.current = "";
+      setSessionReady(false);
+      sessionIdRef.current = undefined;
     }
   }, [open]);
 
-  // 열릴 때 세션/인트로 초기화
+  // API 세션 시작 / 복구
   useEffect(() => {
-    if (!open) {
-      setIntroDone(false);
-      setRingTransition(false);
-      completedRef.current = false;
-      return;
-    }
+    if (!open) return;
+
+    let cancelled = false;
+    let introTimeoutId: number | undefined;
+    completedRef.current = false;
+    setSessionReady(false);
 
     const nextRemaining = initialRemaining ?? minutes * 60;
     setRemaining(nextRemaining);
-    completedRef.current = false;
 
-    if (isRestore) {
-      const nextPaused = initialPaused ?? true;
-      setPaused(nextPaused);
-      pausedRef.current = nextPaused;
-      setIntroDone(true);
-      setRingTransition(true);
-      saveFocusTimerSession({
-        minutes,
-        remainingSeconds: nextRemaining,
-        paused: nextPaused,
-      });
-      // 나갔다 들어와 멈춘 상태로 복구되면 사유 모달 표시
-      if (nextPaused) {
-        openPauseReasonModal();
+    const bootstrap = async () => {
+      try {
+        if (isRestore) {
+          if (sessionIdProp) {
+            sessionIdRef.current = sessionIdProp;
+            try {
+              const resumed = await resumeReadingSession(sessionIdProp);
+              if (cancelled) return;
+              const remainingSec = resumed.remainingSeconds || nextRemaining;
+              setRemaining(remainingSec);
+              remainingRef.current = remainingSec;
+            } catch {
+              if (cancelled) return;
+              /* resume 실패 시 로컬 remaining 유지 */
+            }
+          }
+
+          const nextPaused = initialPaused ?? true;
+          setPaused(nextPaused);
+          pausedRef.current = nextPaused;
+          setIntroDone(true);
+          setRingTransition(true);
+          persistSession({
+            minutes,
+            remainingSeconds: remainingRef.current,
+            paused: nextPaused,
+            sessionId: sessionIdRef.current ?? sessionIdProp,
+            userBookId,
+          });
+          setSessionReady(true);
+          if (nextPaused) openPauseReasonModal();
+          return;
+        }
+
+        if (!userBookId) {
+          alert("집중할 책을 찾을 수 없어요.");
+          onCloseRef.current();
+          return;
+        }
+
+        const started = await startReadingSession(
+          userBookId,
+          minutes as TargetMinutes,
+        );
+        if (cancelled) return;
+        sessionIdRef.current = started.sessionId;
+        setPaused(false);
+        pausedRef.current = false;
+        setIntroDone(false);
+        setRingTransition(false);
+        persistSession({
+          minutes,
+          remainingSeconds: nextRemaining,
+          paused: false,
+          sessionId: started.sessionId,
+          userBookId,
+        });
+        setSessionReady(true);
+
+        introTimeoutId = window.setTimeout(() => {
+          if (cancelled) return;
+          setIntroDone(true);
+          setRingTransition(true);
+        }, RING_INTRO_MS);
+      } catch (err) {
+        if (cancelled) return;
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "독서 세션을 시작하지 못했어요.";
+        alert(message);
+        clearFocusTimerSession();
+        onCloseRef.current();
       }
+    };
+
+    void bootstrap();
+
+    return () => {
+      cancelled = true;
+      if (introTimeoutId != null) window.clearTimeout(introTimeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, minutes, initialRemaining, initialPaused, isRestore, startKey, sessionIdProp, userBookId]);
+
+  // heartbeat
+  useEffect(() => {
+    if (!open || !sessionReady || paused || !introDone) return;
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+
+    const send = () => {
+      const elapsed = Math.max(0, totalSeconds - remainingRef.current);
+      void heartbeatReadingSession(sid, elapsed).catch(() => {
+        /* 네트워크 일시 실패는 무시 */
+      });
+    };
+
+    send();
+    const id = window.setInterval(send, HEARTBEAT_INTERVAL_MS);
+    return () => window.clearInterval(id);
+  }, [open, sessionReady, paused, introDone, totalSeconds]);
+
+  // 0초 완료 → API complete + 목표달성 이동
+  useEffect(() => {
+    if (
+      !open ||
+      !sessionReady ||
+      !introDone ||
+      remaining !== 0 ||
+      completedRef.current
+    ) {
       return;
     }
 
-    // 새 시작: CSS 인트로 재생 후 카운트다운
-    setPaused(false);
-    setIntroDone(false);
-    setRingTransition(false);
-    saveFocusTimerSession({
-      minutes,
-      remainingSeconds: nextRemaining,
-      paused: false,
-    });
-
-    const timeoutId = window.setTimeout(() => {
-      setIntroDone(true);
-      setRingTransition(true);
-    }, RING_INTRO_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [open, minutes, initialRemaining, initialPaused, isRestore, startKey]);
-
-  // 0초 완료 → 목표달성으로 자동 이동 (닫기/중도와 구분)
-  useEffect(() => {
-    if (!open || !introDone || remaining !== 0 || completedRef.current) return;
-
     completedRef.current = true;
+    const sid = sessionIdRef.current;
     clearFocusTimerSession();
-    markFocusComplete(minutes);
-    markDailyReadingComplete(minutes);
-    onCompleteRef.current?.(minutes);
-  }, [open, introDone, remaining, minutes]);
+
+    (async () => {
+      try {
+        if (sid) {
+          const result = await completeReadingSession(sid);
+          saveLastSession({
+            sessionId: sid,
+            aiQuestion: result.aiQuestion,
+            userBookId: userBookIdRef.current,
+          });
+        }
+        markFocusComplete(minutes);
+        markDailyReadingComplete(minutes);
+        onCompleteRef.current?.(minutes);
+      } catch (err) {
+        completedRef.current = false;
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : "세션 완료 처리에 실패했어요.";
+        alert(message);
+      }
+    })();
+  }, [open, sessionReady, introDone, remaining, minutes]);
 
   // body scroll lock
   useEffect(() => {
@@ -300,6 +453,10 @@ export default function FocusTimerPopup({
         skipPopRef.current = false;
         return;
       }
+      const sid = sessionIdRef.current;
+      if (sid && !completedRef.current) {
+        void abandonReadingSession(sid).catch(() => {});
+      }
       clearFocusTimerSession();
       onCloseRef.current();
     };
@@ -318,7 +475,7 @@ export default function FocusTimerPopup({
       if (document.visibilityState === "hidden") {
         setPaused(true);
         pausedRef.current = true;
-        saveFocusTimerSession({
+        persistSession({
           minutes,
           remainingSeconds: remainingRef.current,
           paused: true,
@@ -337,9 +494,9 @@ export default function FocusTimerPopup({
     };
   }, [open, minutes]);
 
-  // 카운트다운 (인트로 끝난 뒤에만)
+  // 카운트다운 (인트로·세션 준비 끝난 뒤에만)
   useEffect(() => {
-    if (!open || paused || !introDone || remaining <= 0) return;
+    if (!open || !sessionReady || paused || !introDone || remaining <= 0) return;
 
     const tickMs = 1000 / DEV_TIMER_SPEED;
     const id = window.setInterval(() => {
@@ -349,7 +506,7 @@ export default function FocusTimerPopup({
           return 0;
         }
         const next = prev - 1;
-        saveFocusTimerSession({
+        persistSession({
           minutes,
           remainingSeconds: next,
           paused: false,
@@ -359,9 +516,20 @@ export default function FocusTimerPopup({
     }, tickMs);
 
     return () => window.clearInterval(id);
-  }, [open, paused, minutes, introDone, remaining]);
+  }, [open, sessionReady, paused, minutes, introDone, remaining]);
+
+  const abandonIfNeeded = async () => {
+    const sid = sessionIdRef.current;
+    if (!sid || completedRef.current) return;
+    try {
+      await abandonReadingSession(sid);
+    } catch {
+      /* 이미 종료된 세션 등 — 무시 */
+    }
+  };
 
   const handleClose = () => {
+    void abandonIfNeeded();
     clearFocusTimerSession();
     const isOurState =
       typeof window.history.state === "object" &&
@@ -386,7 +554,7 @@ export default function FocusTimerPopup({
         setPauseStep("reason");
         setPauseReasonId(undefined);
       }
-      saveFocusTimerSession({
+      persistSession({
         minutes,
         remainingSeconds: remainingRef.current,
         paused: next,
@@ -399,6 +567,8 @@ export default function FocusTimerPopup({
     setPauseModalOpen(false);
     setPauseStep("reason");
     setPauseReasonId(undefined);
+    setPauseDetailText("");
+    pauseDetailRef.current = "";
   };
 
   const handleClosePauseModal = () => {
@@ -407,7 +577,6 @@ export default function FocusTimerPopup({
 
   const handleSelectPauseReason = (id: string) => {
     setPauseReasonId(id);
-    // 책 안 맞음 / 기타 → 상세 입력, 그 외 → 바로 복귀 안내
     if (id === "wrong-book" || id === "other") {
       setPauseStep("detail");
       return;
@@ -415,22 +584,64 @@ export default function FocusTimerPopup({
     setPauseStep("confirm");
   };
 
-  const handleSubmitPauseDetail = (_text: string) => {
-    // TODO: 사유(reasonId) + 상세(_text) API 연동
-    void pauseReasonId;
+  const handleSubmitPauseDetail = (text: string) => {
+    setPauseDetailText(text);
+    pauseDetailRef.current = text;
     setPauseStep("confirm");
   };
 
-  const handleStopReading = () => {
+  const handleStopReading = async () => {
+    const sid = sessionIdRef.current;
+    const reason = mapPauseReasonToApi(pauseReasonId);
+    const customText =
+      pauseReasonId === "wrong-book" || pauseReasonId === "other"
+        ? pauseDetailRef.current || pauseDetailText || undefined
+        : undefined;
+
+    try {
+      if (sid) {
+        await recordInterruption(sid, {
+          reason,
+          customText,
+          occurredAt: new Date().toISOString(),
+        });
+        await abandonReadingSession(sid);
+      }
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "세션 중단에 실패했어요.";
+      alert(message);
+    }
+
     resetPauseModal();
     handleClose();
   };
 
-  const handleResumeReading = () => {
+  const handleResumeReading = async () => {
+    const sid = sessionIdRef.current;
+    try {
+      if (sid) {
+        const resumed = await resumeReadingSession(sid);
+        if (typeof resumed.remainingSeconds === "number") {
+          setRemaining(resumed.remainingSeconds);
+          remainingRef.current = resumed.remainingSeconds;
+        }
+      }
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "세션 재개에 실패했어요.";
+      alert(message);
+      return;
+    }
+
     resetPauseModal();
     setPaused(false);
     pausedRef.current = false;
-    saveFocusTimerSession({
+    persistSession({
       minutes,
       remainingSeconds: remainingRef.current,
       paused: false,
@@ -598,7 +809,9 @@ export default function FocusTimerPopup({
             </div>
 
             <p className="mt-[-4px] max-w-[202px] text-center text-body2 text-gray-300 min-[431px]:mt-2 min-[431px]:max-w-[280px] min-[431px]:text-[16.8px]">
-              화면을 닫으면 타이머가 초기화됩니다.
+              {sessionReady
+                ? "화면을 닫으면 타이머가 초기화됩니다."
+                : "세션을 준비하는 중…"}
             </p>
           </div>
         </div>
@@ -606,7 +819,8 @@ export default function FocusTimerPopup({
         <button
           type="button"
           onClick={handleTogglePause}
-          className="flex shrink-0 items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5 min-[431px]:h-[55px] min-[431px]:rounded-[28.8px] min-[431px]:px-6 min-[431px]:py-3"
+          disabled={!sessionReady}
+          className="flex shrink-0 items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5 min-[431px]:h-[55px] min-[431px]:rounded-[28.8px] min-[431px]:px-6 min-[431px]:py-3 disabled:opacity-60"
         >
           <img
             src={paused ? iconPlay : iconPause}

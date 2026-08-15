@@ -1,23 +1,66 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import { getMe, updateMe, uploadProfileImage } from "../../api";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
-import avatarEdit from "../../assets/profile/avatar-edit.png";
+import defaultAvatarEdit from "../../assets/profile/avatar-edit.png";
 import iconCameraEdit from "../../assets/profile/icon-camera-edit.svg";
 import iconKakao from "../../assets/profile/icon-kakao.svg";
-
-const INITIAL_NICKNAME = "지훈";
 
 export default function ProfileEditPage() {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
-  const [nickname, setNickname] = useState(INITIAL_NICKNAME);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [nickname, setNickname] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(defaultAvatarEdit);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isDesktop) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        setNickname(me.nickname);
+        setAvatarUrl(me.profileImageUrl ?? defaultAvatarEdit);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDesktop]);
 
   // 웹에서는 프로필 홈 우측 패널이 수정 화면
   if (isDesktop) {
     return <Navigate to="/profile" replace />;
   }
+
+  const handleSave = async () => {
+    const trimmed = nickname.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      await updateMe(trimmed);
+      if (pendingFile) {
+        await uploadProfileImage(pendingFile);
+        setPendingFile(null);
+      }
+      navigate("/profile");
+    } catch (err) {
+      console.error(err);
+      alert(
+        err instanceof Error ? err.message : "프로필을 저장하지 못했습니다.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-white">
@@ -32,7 +75,7 @@ export default function ProfileEditPage() {
       <section className="mt-10 flex flex-col items-center">
         <div className="relative size-[122px]">
           <img
-            src={avatarEdit}
+            src={avatarUrl}
             alt=""
             className="size-full rounded-full object-cover"
           />
@@ -40,6 +83,7 @@ export default function ProfileEditPage() {
             type="button"
             aria-label="프로필 사진 변경"
             className="absolute -bottom-1 -right-1 size-[42px]"
+            onClick={() => fileInputRef.current?.click()}
           >
             <img
               src={iconCameraEdit}
@@ -47,6 +91,18 @@ export default function ProfileEditPage() {
               className="size-full object-contain"
             />
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setPendingFile(file);
+              setAvatarUrl(URL.createObjectURL(file));
+            }}
+          />
         </div>
       </section>
 
@@ -86,10 +142,12 @@ export default function ProfileEditPage() {
 
       <div className="mt-auto px-5 pb-[calc(32px+env(safe-area-inset-bottom))] pt-10">
         <Button
-          text="저장하기"
+          text={saving ? "저장 중…" : "저장하기"}
           variant="primary"
           className="h-[54px] w-full"
-          onClick={() => navigate("/profile")}
+          onClick={() => {
+            void handleSave();
+          }}
         />
       </div>
     </main>

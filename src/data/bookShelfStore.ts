@@ -1,6 +1,10 @@
 import type { LibraryBook, MateBookItem } from "../components/mate/types";
 import { MATE_BOOK_LIMIT } from "../components/mate/types";
 
+/**
+ * 로컬 캐시/추천 세션용.
+ * 서재·책장 목록은 API(`/api/bookshelf`)를 우선 사용한다.
+ */
 const LIBRARY_KEY = "sseudam-library-books";
 const MATE_KEY = "sseudam-mate-books";
 const RECOMMEND_SESSION_KEY = "sseudam-recommend-session";

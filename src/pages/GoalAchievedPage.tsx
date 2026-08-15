@@ -1,7 +1,11 @@
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import WebGnb from "../components/WebGnb";
 import { loadFocusComplete } from "../components/mate/FocusTimerPopup";
+import { formatLocalDate } from "../components/mate/streak";
+import { getStreaks, type Day } from "../api";
+import { loadLastSession } from "../api/sessionDraft";
 import goalImage from "../assets/mate/goal-image.png";
 import goalDayDone from "../assets/mate/goal-day-done.svg";
 import goalDayMiss from "../assets/mate/goal-day-miss.svg";
@@ -13,16 +17,33 @@ const WEEK_DAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 type DayStatus = "done" | "miss" | "today" | "dashed" | "future";
 
-/** 목데이터 — 화요일이 오늘 달성 */
-const WEEK: { day: (typeof WEEK_DAYS)[number]; status: DayStatus }[] = [
-  { day: "일", status: "done" },
-  { day: "월", status: "miss" },
-  { day: "화", status: "today" },
-  { day: "수", status: "dashed" },
-  { day: "목", status: "future" },
-  { day: "금", status: "future" },
-  { day: "토", status: "future" },
-];
+type WeekItem = {
+  day: (typeof WEEK_DAYS)[number];
+  status: DayStatus;
+  date: string;
+};
+
+function mapWeekToUi(week: Day[]): WeekItem[] {
+  const today = formatLocalDate(new Date());
+  const firstFuture = week
+    .map((w) => w.date)
+    .filter((date) => date > today)
+    .sort()[0];
+
+  return week.map((item) => {
+    const d = new Date(`${item.date}T00:00:00`);
+    const day = WEEK_DAYS[Number.isNaN(d.getTime()) ? 0 : d.getDay()];
+    let status: DayStatus;
+    if (item.date === today) {
+      status = "today";
+    } else if (item.date > today) {
+      status = item.date === firstFuture ? "dashed" : "future";
+    } else {
+      status = item.achieved ? "done" : "miss";
+    }
+    return { day, status, date: item.date };
+  });
+}
 
 function DayDot({ status }: { status: DayStatus }) {
   if (status === "today") {
@@ -49,10 +70,28 @@ function DayDot({ status }: { status: DayStatus }) {
 export default function GoalAchievedPage() {
   const navigate = useNavigate();
   const complete = loadFocusComplete();
+  const lastSession = loadLastSession();
+  const [week, setWeek] = useState<WeekItem[]>([]);
 
-  if (!complete) {
+  useEffect(() => {
+    let cancelled = false;
+    getStreaks()
+      .then((data) => {
+        if (!cancelled) setWeek(mapWeekToUi(data.week));
+      })
+      .catch(() => {
+        /* 주간 UI는 선택적 — 실패해도 페이지는 유지 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!complete && !lastSession) {
     return <Navigate to="/mate" replace />;
   }
+
+  const minutes = complete?.minutes ?? 15;
 
   return (
     <main className="relative flex h-dvh w-full flex-col overflow-hidden bg-white">
@@ -70,7 +109,7 @@ export default function GoalAchievedPage() {
                   오늘의 목표 달성!
                 </h1>
                 <p className="mt-1 text-center text-body1 text-gray-400">
-                  훌륭해요! {complete.minutes}분간 깊게 몰입했습니다.
+                  훌륭해요! {minutes}분간 깊게 몰입했습니다.
                 </p>
 
                 <div className="relative mt-7 flex h-[154px] w-full items-end justify-center">
@@ -91,9 +130,9 @@ export default function GoalAchievedPage() {
                 aria-label="주간 달성"
               >
                 <div className="flex items-center justify-center rounded-t-[11px] bg-white px-2 pt-2">
-                  {WEEK.map((item) => (
+                  {week.map((item) => (
                     <div
-                      key={item.day}
+                      key={item.date}
                       className="flex h-9 flex-1 items-center justify-center"
                     >
                       <span
@@ -112,9 +151,9 @@ export default function GoalAchievedPage() {
                   ))}
                 </div>
                 <div className="flex items-center justify-center rounded-b-[11px] bg-white px-2 pb-2">
-                  {WEEK.map((item) => (
+                  {week.map((item) => (
                     <div
-                      key={`${item.day}-dot`}
+                      key={`${item.date}-dot`}
                       className="flex h-9 flex-1 items-center justify-center"
                     >
                       <DayDot status={item.status} />

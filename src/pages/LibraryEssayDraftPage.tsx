@@ -1,25 +1,131 @@
-import { useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import WebGnb from "../components/WebGnb";
 import {
-  MOCK_ESSAY_DRAFT,
-  MOCK_LIBRARY_REASONS,
-  REASON_GOAL,
-} from "../data/libraryMock";
+  downloadEssayPdf,
+  getEssay,
+  getEssayDraft,
+  getEssayJobStatus,
+  publishEssay,
+  type EssayChapter as ApiEssayChapter,
+} from "../api";
+import type { EssayDraft } from "../data/library";
 import essayCover from "../assets/library/essay-cover.png";
 import essayCoverMark from "../assets/library/essay-cover-mark.svg";
 import essayHero from "../assets/library/essay-hero.png";
 import iconBack from "../assets/library/icon-back.svg";
 
+const POLL_MS = 1500;
+
+function mapDraft(
+  chapters: ApiEssayChapter[],
+  author: string,
+  title: string | null,
+): EssayDraft {
+  const mapped = chapters.map((ch) => ({
+    chapter: ch.chapterNo,
+    title: ch.title,
+    pages: Math.max(1, ch.reflections?.length ?? 1),
+  }));
+  const first = chapters[0];
+  return {
+    title: title?.trim() || first?.title || "나의 에세이",
+    author,
+    chapters: mapped,
+    previewHeading: first
+      ? `제${first.chapterNo}장. ${first.title}`
+      : "제1장",
+    body: first?.reflections?.length
+      ? first.reflections
+      : ["아직 미리볼 본문이 없습니다."],
+  };
+}
+
+async function waitUntilReady(essayId: number) {
+  for (;;) {
+    const { status } = await getEssayJobStatus(essayId);
+    if (status === "COMPLETED") return;
+    if (status === "FAILED" || status === "CANCELED") {
+      throw new Error("에세이 초안을 불러오지 못했습니다.");
+    }
+    await new Promise((r) => window.setTimeout(r, POLL_MS));
+  }
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /** 에세이 초안 미리보기 (모바일 본문보기 749:7320 / 웹 718:7353) */
 export default function LibraryEssayDraftPage() {
   const navigate = useNavigate();
-  const draft = MOCK_ESSAY_DRAFT;
-  const [title, setTitle] = useState(draft.title);
+  const { essayId: essayIdParam } = useParams();
+  const essayId = Number(essayIdParam);
   const bodyRefWeb = useRef<HTMLDivElement>(null);
 
-  if (MOCK_LIBRARY_REASONS.length < REASON_GOAL) {
+  const [draft, setDraft] = useState<EssayDraft | null>(null);
+  const [title, setTitle] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    if (!essayId || Number.isNaN(essayId)) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await waitUntilReady(essayId);
+        const [essay, draftData] = await Promise.all([
+          getEssay(essayId),
+          getEssayDraft(essayId),
+        ]);
+        if (cancelled) return;
+        const next = mapDraft(
+          draftData.chapters,
+          essay.authorName,
+          essay.title,
+        );
+        setDraft(next);
+        setTitle(next.title);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+        alert(
+          err instanceof Error
+            ? err.message
+            : "에세이 초안을 불러오지 못했습니다.",
+        );
+        setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [essayId]);
+
+  if (!essayIdParam || Number.isNaN(essayId) || loadError) {
     return <Navigate to="/library" replace />;
+  }
+
+  if (loading || !draft) {
+    return (
+      <main className="mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center bg-[#fdfdff] min-[431px]:max-w-none">
+        <p className="text-body2 text-gray-400">에세이 초안을 준비하는 중...</p>
+      </main>
+    );
   }
 
   const titleLines = title.trim() || draft.title;
@@ -27,6 +133,24 @@ export default function LibraryEssayDraftPage() {
 
   const scrollToBody = () => {
     bodyRefWeb.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handlePublishAndDownload = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const publishTitle = title.trim() || draft.title;
+      await publishEssay(essayId, publishTitle);
+      const blob = await downloadEssayPdf(essayId);
+      triggerBlobDownload(blob, `${publishTitle}.pdf`);
+      navigate(`/library/essay/${essayId}/complete`, { replace: true });
+    } catch (err) {
+      console.error(err);
+      alert(
+        err instanceof Error ? err.message : "PDF 생성에 실패했습니다.",
+      );
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -109,7 +233,6 @@ export default function LibraryEssayDraftPage() {
               ))}
             </ul>
 
-            {/* 1장만 미리보기 */}
             <div className="mt-6 space-y-0 pb-8">
               <p className="text-[18px] font-medium leading-[1.6] tracking-[-0.025em] text-gray-600">
                 {draft.previewHeading}
@@ -132,10 +255,11 @@ export default function LibraryEssayDraftPage() {
         <div className="absolute inset-x-0 bottom-0 z-30 px-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
           <button
             type="button"
-            onClick={() => navigate("/library/essay/complete")}
-            className="flex h-[54px] w-full items-center justify-center rounded-2xl bg-primary-500 text-button1 font-semibold text-white"
+            disabled={submitting}
+            onClick={() => void handlePublishAndDownload()}
+            className="flex h-[54px] w-full items-center justify-center rounded-2xl bg-primary-500 text-button1 font-semibold text-white disabled:opacity-60"
           >
-            PDF 파일에서 전체보기
+            {submitting ? "PDF 생성 중..." : "PDF 파일에서 전체보기"}
           </button>
         </div>
       </main>
@@ -144,7 +268,6 @@ export default function LibraryEssayDraftPage() {
       <main className="relative hidden h-dvh w-full flex-col overflow-hidden bg-[#fdfdff] min-[431px]:flex">
         <WebGnb active="library" />
         <div className="flex min-h-0 flex-1">
-          {/* Left hero — 헤더(76px) 제외 뷰포트 높이 고정 */}
           <aside className="relative hidden h-[calc(100dvh-76px)] w-[min(46vw,666px)] shrink-0 overflow-hidden rounded-br-[60px] rounded-tr-[60px] lg:block">
             <img
               src={essayHero}
@@ -173,7 +296,6 @@ export default function LibraryEssayDraftPage() {
             </div>
           </aside>
 
-          {/* Right panel */}
           <div className="relative flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-10 pb-[120px] pt-[calc(177px-76px)] lg:px-16">
               <div className="relative mx-auto flex h-[58px] w-full max-w-[465px] items-center justify-center px-[26px]">
@@ -194,7 +316,6 @@ export default function LibraryEssayDraftPage() {
                 </h1>
               </div>
 
-              {/* Mobile/tablet: show cover inline when left aside hidden */}
               <div className="mx-auto mt-8 flex w-full max-w-[465px] justify-center lg:hidden">
                 <EssayCover
                   author={draft.author}
@@ -261,15 +382,15 @@ export default function LibraryEssayDraftPage() {
               </div>
             </div>
 
-            {/* Figma 718:8165 — 우측 컬럼 하단 465×71 */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#fdfdff] from-[55%] via-[#fdfdff]/90 to-transparent pt-10">
               <div className="pointer-events-auto mx-auto flex w-full max-w-[465px] justify-center px-10 pb-8 lg:px-0">
                 <button
                   type="button"
-                  onClick={() => navigate("/library/essay/complete")}
-                  className="flex h-[71px] w-full items-center justify-center rounded-2xl bg-primary-500 text-[21px] font-semibold leading-[1.6] tracking-[-0.025em] text-white"
+                  disabled={submitting}
+                  onClick={() => void handlePublishAndDownload()}
+                  className="flex h-[71px] w-full items-center justify-center rounded-2xl bg-primary-500 text-[21px] font-semibold leading-[1.6] tracking-[-0.025em] text-white disabled:opacity-60"
                 >
-                  PDF 파일로 다운로드하기
+                  {submitting ? "PDF 생성 중..." : "PDF 파일로 다운로드하기"}
                 </button>
               </div>
             </div>
@@ -326,7 +447,7 @@ function EssayCover({
             web ? "left-[calc(50%+36px)] top-[29px]" : "left-[93px] top-4"
           }`}
         >
-          {toVerticalChars(line1 || "무너져도").map((ch, i) => (
+          {toVerticalChars(line1 || "나의").map((ch, i) => (
             <p
               key={`t1-${i}`}
               className={`mb-0 font-light ${
@@ -344,7 +465,7 @@ function EssayCover({
             web ? "left-[calc(50%+76px)] top-[97px]" : "left-[115px] top-[54px]"
           }`}
         >
-          {toVerticalChars(line2 || "괜찮은 밤").map((ch, i) => (
+          {toVerticalChars(line2 || "에세이").map((ch, i) => (
             <p
               key={`t2-${i}`}
               className={`mb-0 whitespace-pre font-light ${

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ApiError, login } from "../api";
 import Input from "../components/Input";
 import webBg from "../assets/common/web-bg.png";
 import logoDark from "../assets/common/logo-dark.svg";
@@ -16,13 +17,29 @@ export default function LoginEmailPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const emailInvalid = email.length > 0 && !EMAIL_RE.test(email);
-  const canSubmit = EMAIL_RE.test(email.trim()) && password.length > 0;
+  const canSubmit =
+    EMAIL_RE.test(email.trim()) && password.length > 0 && !submitting;
 
-  const submit = () => {
+  const submit = async () => {
     if (!canSubmit) return;
-    navigate("/mate", { replace: true });
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await login(email.trim(), password);
+      navigate("/mate", { replace: true });
+    } catch (err) {
+      setFormError(
+        err instanceof ApiError
+          ? err.message
+          : "로그인에 실패했습니다. 다시 시도해주세요.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -79,6 +96,14 @@ export default function LoginEmailPage() {
               올바른 이메일 형식을 입력해주세요.
             </p>
           ) : null}
+          {formError ? (
+            <p
+              role="alert"
+              className="mt-1 text-[12px] leading-[18px] tracking-[-0.025em] text-error"
+            >
+              {formError}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -86,14 +111,14 @@ export default function LoginEmailPage() {
         <button
           type="button"
           disabled={!canSubmit}
-          onClick={submit}
+          onClick={() => void submit()}
           className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 font-semibold ${
             canSubmit
               ? "bg-primary-500 text-white"
               : "bg-gray-100 text-gray-400"
           }`}
         >
-          로그인
+          {submitting ? "로그인 중…" : "로그인"}
         </button>
         <p className="mt-3 text-center text-body2 text-gray-500">
           아직 회원이 아니신가요?{" "}
@@ -134,7 +159,7 @@ export default function LoginEmailPage() {
           />
         </div>
 
-        {emailInvalid ? (
+        {emailInvalid || formError ? (
           <div
             role="alert"
             className="mt-[31px] flex h-[54px] w-full shrink-0 items-center gap-3 rounded-2xl bg-[rgba(241,201,210,0.71)] px-5"
@@ -146,7 +171,7 @@ export default function LoginEmailPage() {
               !
             </span>
             <p className="text-body1 text-[#da4263]">
-              올바른 이메일 형식을 입력해주세요.
+              {formError ?? "올바른 이메일 형식을 입력해주세요."}
             </p>
           </div>
         ) : null}
@@ -155,14 +180,14 @@ export default function LoginEmailPage() {
           <button
             type="button"
             disabled={!canSubmit}
-            onClick={submit}
+            onClick={() => void submit()}
             className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 font-semibold ${
               canSubmit
                 ? "bg-primary-500 text-white"
                 : "bg-gray-100 text-gray-400"
             }`}
           >
-            로그인
+            {submitting ? "로그인 중…" : "로그인"}
           </button>
           <p className="mt-3 text-center text-body2 text-gray-500">
             아직 회원이 아니신가요?{" "}

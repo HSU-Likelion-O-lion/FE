@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getMe } from "../../api";
 import ProfileSubLayout from "../../components/profile/ProfileSubLayout";
 import Toggle from "../../components/Toggle";
 import NotificationTimeModal, {
@@ -6,7 +7,6 @@ import NotificationTimeModal, {
   type NotificationTimeValue,
 } from "../../components/profile/NotificationTimeModal";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
-import { PROFILE_MOCK_USER } from "../../components/profile/ProfileWebShell";
 
 type PushItem = {
   id: string;
@@ -45,6 +45,24 @@ export default function PushNotificationPage() {
   const isDesktop = useIsDesktop();
   const [items, setItems] = useState(INITIAL_ITEMS);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [nickname, setNickname] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        setNickname(me.nickname);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const editingItem = items.find((item) => item.id === editingId) ?? null;
 
@@ -57,7 +75,7 @@ export default function PushNotificationPage() {
             : "px-5 pt-5 text-body2 leading-[23px] text-gray-300"
         }
       >
-        {PROFILE_MOCK_USER.name}님이 선택한 알림을 보내드릴게요.
+        {nickname ? `${nickname}님이` : "회원님이"} 선택한 알림을 보내드릴게요.
         {isDesktop ? " " : <br />}
         마케팅 알림을 꺼도 받을 수 있어요.
       </p>

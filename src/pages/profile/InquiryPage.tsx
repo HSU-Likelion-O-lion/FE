@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getPublicPages } from "../../api";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import ProfileSubLayout from "../../components/profile/ProfileSubLayout";
@@ -24,6 +25,24 @@ export default function InquiryPage() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [notify, setNotify] = useState(false);
+  const [supportUrl, setSupportUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const pages = await getPublicPages();
+        if (cancelled) return;
+        setSupportUrl(pages.supportUrl || null);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const typeSelect = (
     <div className={`relative z-10 ${isDesktop ? "h-[54px]" : "h-[54px]"}`}>
@@ -119,6 +138,19 @@ export default function InquiryPage() {
             쓰담을 사용하시며 불편했던 점이나
             <br />
             추가되었으면 하는 기능을 편하게 알려주세요.
+            {supportUrl ? (
+              <>
+                <br />
+                <a
+                  href={supportUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-block text-primary-500 underline"
+                >
+                  고객센터 바로가기
+                </a>
+              </>
+            ) : null}
           </p>
 
           <div className="relative z-0 mt-5">
@@ -161,6 +193,19 @@ export default function InquiryPage() {
           쓰담을 사용하시며 불편했던 점이나
           <br />
           추가되었으면 하는 기능을 편하게 알려주세요.
+          {supportUrl ? (
+            <>
+              <br />
+              <a
+                href={supportUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-block text-primary-500 underline"
+              >
+                고객센터 바로가기
+              </a>
+            </>
+          ) : null}
         </p>
 
         <div className="relative z-0">

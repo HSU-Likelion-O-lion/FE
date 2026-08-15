@@ -1,14 +1,26 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
 import WebGnb from "../components/WebGnb";
 import StreakBadgeOverlay from "../components/mate/StreakBadgeOverlay";
-import { hasSevenDayStreak } from "../components/mate/streak";
+import {
+  achievedDatesFromWeek,
+  hasSevenDayStreak,
+} from "../components/mate/streak";
 import {
   clearFocusComplete,
   loadFocusComplete,
 } from "../components/mate/FocusTimerPopup";
+import {
+  ApiError,
+  createReflection,
+  getStreaks,
+} from "../api";
+import {
+  clearLastSession,
+  loadLastSession,
+} from "../api/sessionDraft";
 import iconInfo from "../assets/mate/icon-info.svg";
 import iconInfoWeb from "../assets/mate/reflect/icon-info-web.svg";
 import iconShareCheck from "../assets/mate/reflect/icon-share-check.svg";
@@ -20,25 +32,40 @@ const MAX_LENGTH = 300;
 const TEXTAREA_MIN_HEIGHT = 55;
 const TEXTAREA_MIN_HEIGHT_WEB = 128;
 
-const MOCK_PROMPT = {
-  before: "책을 읽으며 '불안'에 대해 생각해보셨나요?\n당신을 가장 ",
-  beforeWeb: "책을 읽으며 '불안'에 대해 생각해보셨나요? 당신을 가장 ",
-  highlight: "위로하는 작은 행동",
-  after: "은\n무엇인가요?",
-  afterWeb: "은 무엇인가요?",
-};
-
 type ShareStep = "share" | "private-done" | "shelter-done";
 
 export default function ReflectPage() {
   const navigate = useNavigate();
   const complete = loadFocusComplete();
+  const lastSession = loadLastSession();
   const [text, setText] = useState("");
   const [shareToShelter, setShareToShelter] = useState(true);
   const [shareStep, setShareStep] = useState<ShareStep | null>(null);
   const [streakOpen, setStreakOpen] = useState(false);
+  const [streakDates, setStreakDates] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaWebRef = useRef<HTMLTextAreaElement>(null);
+
+  const aiQuestion =
+    lastSession?.aiQuestion?.trim() ||
+    "책을 읽으며 떠오른 생각을 자유롭게 적어보세요.";
+
+  useEffect(() => {
+    let cancelled = false;
+    getStreaks()
+      .then((data) => {
+        if (!cancelled) {
+          setStreakDates(achievedDatesFromWeek(data.week));
+        }
+      })
+      .catch(() => {
+        /* streak 배지는 선택적 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const syncHeight = (el: HTMLTextAreaElement | null, min: number) => {
@@ -50,12 +77,13 @@ export default function ReflectPage() {
     syncHeight(textareaWebRef.current, TEXTAREA_MIN_HEIGHT_WEB);
   }, [text]);
 
-  if (!complete) {
+  if (!complete && !lastSession) {
     return <Navigate to="/mate" replace />;
   }
 
   const leaveFlow = () => {
     clearFocusComplete();
+    clearLastSession();
     setShareStep(null);
     setStreakOpen(false);
     navigate("/mate", { replace: true });
@@ -64,14 +92,40 @@ export default function ReflectPage() {
   /** 결과 모달 계속하기 — 7일 연속이면 배지 오버레이, 아니면 메이트로 */
   const handleContinueAfterSave = () => {
     setShareStep(null);
-    if (hasSevenDayStreak()) {
+    if (hasSevenDayStreak(streakDates)) {
       setStreakOpen(true);
       return;
     }
     leaveFlow();
   };
 
-  const canSubmit = text.trim().length > 0;
+  const canSubmit = text.trim().length > 0 && !submitting;
+
+  const submitReflection = async (nextStep: ShareStep) => {
+    if (!canSubmit) return;
+    const session = loadLastSession();
+    if (!session?.sessionId) {
+      alert("세션 정보를 찾을 수 없어요. 메이트에서 다시 시작해 주세요.");
+      navigate("/mate", { replace: true });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await createReflection(session.sessionId, text.trim());
+      clearLastSession();
+      clearFocusComplete();
+      setShareStep(nextStep);
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "생각 기록 저장에 실패했어요.";
+      alert(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleSubmitMobile = () => {
     if (!canSubmit) return;
@@ -79,8 +133,7 @@ export default function ReflectPage() {
   };
 
   const handleSubmitWeb = () => {
-    if (!canSubmit) return;
-    setShareStep(shareToShelter ? "shelter-done" : "private-done");
+    void submitReflection(shareToShelter ? "shelter-done" : "private-done");
   };
 
   return (
@@ -98,9 +151,7 @@ export default function ReflectPage() {
           </div>
 
           <h1 className="mt-5 whitespace-pre-wrap text-h2 text-gray-900">
-            {MOCK_PROMPT.before}
-            <span className="text-primary-400">{MOCK_PROMPT.highlight}</span>
-            {MOCK_PROMPT.after}
+            {aiQuestion}
           </h1>
 
           <p className="mt-1.5 text-body1 text-gray-500">
@@ -186,12 +237,8 @@ export default function ReflectPage() {
 
             <div aria-hidden className="mt-8 h-px w-full bg-gray-100" />
 
-            <h1 className="mt-6 text-[16px] font-medium leading-[1.5] tracking-[-0.025em] text-gray-900">
-              {MOCK_PROMPT.beforeWeb}
-              <span className="font-semibold text-primary-400">
-                {MOCK_PROMPT.highlight}
-              </span>
-              {MOCK_PROMPT.afterWeb}
+            <h1 className="mt-6 whitespace-pre-wrap text-[16px] font-medium leading-[1.5] tracking-[-0.025em] text-gray-900">
+              {aiQuestion}
             </h1>
 
             <p className="mt-2 text-body2 text-gray-400">
@@ -276,12 +323,16 @@ export default function ReflectPage() {
           {
             label: "나만 보기",
             variant: "outline",
-            onClick: () => setShareStep("private-done"),
+            onClick: () => {
+              void submitReflection("private-done");
+            },
           },
           {
             label: "쉼터에 남기기",
             variant: "primary",
-            onClick: () => setShareStep("shelter-done"),
+            onClick: () => {
+              void submitReflection("shelter-done");
+            },
           },
         ]}
       />

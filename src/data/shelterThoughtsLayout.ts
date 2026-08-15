@@ -1,4 +1,5 @@
 import type { PostItVariant } from "../components/shelter/PostIt";
+import type { CommunityPost } from "../api/types";
 
 /** 보드에 올라가는 포스트잇 (empty는 빈 화면 전용) */
 export type BoardPostItVariant = Exclude<PostItVariant, "empty">;
@@ -13,6 +14,9 @@ export type ThoughtNote = {
   date: string;
   /** API에서 오면 비워두고 레이아웃 단계에서 시드로 부여 */
   variant?: Exclude<PostItVariant, "featured" | "empty">;
+  isMine?: boolean;
+  isHearted?: boolean;
+  heartCount?: number | null;
 };
 
 export type PlacedThoughtNote = Omit<ThoughtNote, "variant"> & {
@@ -107,73 +111,6 @@ const WEB_WORLD = {
   maxX: 2200,
   maxY: 1800,
 } as const;
-
-const TEXTS = [
-  "완벽해야 한다는\n부담이 오히려\n불안을 키운다는...",
-  "미래를 지나치게\n걱정하기보다 지금\n할 수 있는 일에 .....",
-  "철학은 어렵고\n멀게만\n느껴졌는데...",
-  "어제보다 더 나은 하루를 보냈다는 사실만으로도\n충분히 의미가 있어요. 앞으로도 이 책을 읽고\n난 후의 마음가짐으로....",
-  "철학은 어렵고 멀게만\n느껴졌는데, 일상의\n고민을 해결하는....",
-  "미래를 지나치게\n생각하는,,것? 지금\n할 수 있는 일에 .....",
-  "작은 선택을\n반복하는 일이\n나를 바꾼다....",
-  "불안은 신호가\n될 수 있어요.\n멈추라는 뜻이 아니라...",
-  "남과 비교하기보다\n어제의 나와\n이야기해보기....",
-  "책을 덮은 뒤에도\n한 문장이\n남아 있다면....",
-  "완벽하지 않아도\n앞으로 가는 건\n충분해요.",
-  "오늘의 한 줄이\n내일의 용기가\n되기도 해요.",
-  "모르는 걸\n인정하는 순간\n공부가 시작돼요.",
-  "천천히 읽어도\n괜찮아요.\n이해하는 속도로.",
-  "마음이 복잡할 때\n문장 하나가\n길을 밝혀줘요.",
-  "실패해도\n배움이 남으면\n그건 낭비 아니에요.",
-  "조용한 저녁에\n적어 둔 생각이\n가장 솔직해요.",
-  "질문이 생기면\n이미 한 걸음\n나아가 있는 거예요.",
-  "같은 책도\n시기에 따라\n다르게 읽혀요.",
-  "나를 위한 사유는\n누구에게도\n설명하지 않아도 돼요.",
-];
-
-const BODIES = [
-  "모든 것을 잘 해내야 한다는 강박이 스스로를\n더 지치게 만들었던 것 같아요.\n책을 읽으며 내가 통제할 수 없는 일들은\n흘려보내도 괜찮다는 사실을 깨달았습니다.\n\n모든 결과를 내 힘으로 바꾸려 하기보다,\n지금 내가 할 수 있는 일에 집중하는 것이\n더 중요하다는 생각이 들었습니다.",
-  "미래를 너무 멀리까지 그리려다 보면\n지금 할 수 있는 일이 흐려지더라고요.\n오늘은 오늘만의 속도로 가도 괜찮다는\n문장이 오래 남았습니다.",
-  "철학이 어렵게만 느껴졌는데,\n일상 속 고민을 비추는 거울처럼\n다가오니 조금 덜 낯설어졌어요.",
-  "어제보다 조금 더 나아진 하루라면\n그걸로도 충분히 의미가 있어요.\n책을 덮은 뒤의 마음가짐을\n오래 간직하고 싶습니다.",
-  "멀게만 느껴지던 철학이\n일상의 작은 선택을 설명해주는\n언어가 되어 주었습니다.",
-  "걱정은 줄이고, 할 수 있는 일에\n손을 올려보는 연습.\n이 책이 그 연습을 도와준 것 같아요.",
-  "거창한 결심보다\n작은 선택을 반복하는 일이\n나를 더 많이 바꿨어요.",
-  "불안은 나를 멈추라는 신호가 아니라\n돌봐달라는 신호일 수 있어요.\n그 생각을 하니 조금 덜 무서워졌습니다.",
-  "남과 비교하는 습관 대신\n어제의 나와 이야기해 보기로 했어요.\n그게 훨씬 다정하더라고요.",
-  "책을 덮은 뒤에도 남는 한 문장이\n오늘의 나를 붙들어 줍니다.",
-  "완벽하지 않아도 앞으로 가는 길.\n그 길 위에 있어도 괜찮다는 걸\n배웠어요.",
-  "오늘의 한 줄이 내일의 용기가 되기도 해요.\n그래서 기록을 남겨 둡니다.",
-  "모르는 걸 인정하는 순간부터\n공부가 시작된다는 말이\n마음에 와닿았어요.",
-  "이해하는 속도로 천천히 읽어도\n괜찮다는 허락을 스스로에게 줬습니다.",
-  "마음이 복잡할 때\n문장 하나가 길을 밝혀줄 때가 있어요.",
-  "실패해도 배움이 남으면\n그건 낭비가 아니에요.\n그 문장을 붙들고 갑니다.",
-  "조용한 저녁에 적어 둔 생각이\n가장 솔직한 기록인 것 같아요.",
-  "질문이 생긴다는 건\n이미 한 걸음 나아가 있다는 뜻이에요.",
-  "같은 책도 시기에 따라 다르게 읽혀요.\n지금의 나에게 필요한 문장을 만났습니다.",
-  "나를 위한 사유는\n누구에게도 설명하지 않아도 돼요.\n그래도 여기 남겨 봅니다.",
-];
-
-const AUTHORS = [
-  "비내리는 숲속",
-  "고요한 창가",
-  "늦은 밤 서재",
-  "천천히 걷는 사람",
-  "별빛 메모",
-  "따뜻한 찻잔",
-  "구름 위 산책",
-  "조용한 연필",
-];
-
-function buildMockNote(i: number): ThoughtNote {
-  return {
-    id: `thought-${i + 1}`,
-    content: TEXTS[i % TEXTS.length]!,
-    body: BODIES[i % BODIES.length]!,
-    authorName: AUTHORS[i % AUTHORS.length]!,
-    date: `2026.06.${String((i % 28) + 1).padStart(2, "0")}`,
-  };
-}
 
 type Box = { x: number; y: number; width: number; height: number };
 
@@ -355,6 +292,47 @@ const WEB_LAYOUT_CONFIG: BoardLayoutConfig = {
   overlay: WEB_OVERLAY,
 };
 
+/** 보드 미리보기용 짧은 텍스트 */
+export function toBoardPreview(content: string): string {
+  const lines = content
+    .trim()
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length >= 2) {
+    return lines
+      .slice(0, 3)
+      .map((line) => (line.length > 18 ? `${line.slice(0, 18)}...` : line))
+      .join("\n");
+  }
+
+  const text = content.trim().replace(/\s+/g, " ");
+  if (text.length <= 40) return text;
+
+  const chunk = 14;
+  const parts: string[] = [];
+  for (let i = 0; i < text.length && parts.length < 3; i += chunk) {
+    const slice = text.slice(i, i + chunk);
+    const isLast = parts.length === 2 || i + chunk >= text.length;
+    parts.push(isLast && i + chunk < text.length ? `${slice}...` : slice);
+  }
+  return parts.join("\n");
+}
+
+export function communityPostToThoughtNote(post: CommunityPost): ThoughtNote {
+  return {
+    id: String(post.postId),
+    content: toBoardPreview(post.content),
+    body: post.content,
+    authorName: post.anonymousNickname,
+    date: "",
+    isMine: post.isMine,
+    isHearted: post.isHearted,
+    heartCount: post.heartCount,
+  };
+}
+
 /** API 응답처럼 content만 있는 목록 → 화면용 배치 */
 export function layoutThoughtNotes(
   notes: ThoughtNote[],
@@ -445,18 +423,6 @@ export function layoutThoughtNotes(
   }
 
   return placed;
-}
-
-export function createMockThoughtNotes(count = 20): ThoughtNote[] {
-  return Array.from({ length: count }, (_, i) => buildMockNote(i));
-}
-
-export function getThoughtById(id: string): ThoughtNote | undefined {
-  const match = /^thought-(\d+)$/.exec(id);
-  if (!match) return undefined;
-  const index = Number(match[1]) - 1;
-  if (index < 0) return undefined;
-  return buildMockNote(index);
 }
 
 export const BOARD = {

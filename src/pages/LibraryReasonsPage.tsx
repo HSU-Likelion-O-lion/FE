@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MOCK_LIBRARY_REASONS, REASON_GOAL } from "../data/libraryMock";
+import { formatReflectionDate, getMe, getReflections } from "../api";
+import { REASON_GOAL, type LibraryReason } from "../data/library";
 import iconBack from "../assets/library/icon-back.svg";
 import iconTip from "../assets/library/icon-tip.svg";
 import reasonsEllipse from "../assets/library/reasons-ellipse.svg";
@@ -7,8 +9,38 @@ import reasonsEllipse from "../assets/library/reasons-ellipse.svg";
 /** 모든 사유 기록 (Figma 543:2669) */
 export default function LibraryReasonsPage() {
   const navigate = useNavigate();
-  const reasons = MOCK_LIBRARY_REASONS;
+  const [reasons, setReasons] = useState<LibraryReason[]>([]);
+  const [userName, setUserName] = useState("");
   const isComplete = reasons.length >= REASON_GOAL;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [me, data] = await Promise.all([getMe(), getReflections()]);
+        if (cancelled) return;
+        setUserName(me.nickname);
+        setReasons(
+          data.reflections.map((r) => ({
+            id: String(r.reflectionId),
+            dateLabel: formatReflectionDate(r.createdAt),
+            excerpt: r.content,
+          })),
+        );
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+        alert(
+          err instanceof Error
+            ? err.message
+            : "사유 기록을 불러오지 못했습니다.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff]">
@@ -27,10 +59,6 @@ export default function LibraryReasonsPage() {
             backgroundSize: "22px 22px",
           }}
         />
-        {/*
-          Figma Ellipse 2467: 433×614 @ (-20, -230).
-          상단 글로우가 화면을 덮도록 Figma 비율 유지한 채 확대 (기존 object-cover bg에 눌려 작아 보임).
-        */}
         <img
           src={reasonsEllipse}
           alt=""
@@ -88,20 +116,24 @@ export default function LibraryReasonsPage() {
                       bookId: reason.id,
                       body: reason.excerpt,
                       date: reason.dateLabel,
-                      authorName: "지훈",
+                      authorName: userName || "나",
                     },
                   })
                 }
                 className="w-full rounded-xl bg-[#fdfdff] px-5 py-3 text-left shadow-[0_0_2px_rgba(29,29,32,0.11)]"
               >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <p className="text-[15px] font-medium tracking-[-0.025em] text-gray-900">
-                    {reason.bookTitle}
-                  </p>
-                  <span
-                    aria-hidden
-                    className="size-1 shrink-0 rounded-full bg-gray-300"
-                  />
+                  {reason.bookTitle ? (
+                    <p className="text-[15px] font-medium tracking-[-0.025em] text-gray-900">
+                      {reason.bookTitle}
+                    </p>
+                  ) : null}
+                  {reason.bookTitle ? (
+                    <span
+                      aria-hidden
+                      className="size-1 shrink-0 rounded-full bg-gray-300"
+                    />
+                  ) : null}
                   <p className="text-caption text-gray-300">{reason.dateLabel}</p>
                 </div>
                 <p className="mt-1.5 text-[13px] leading-[23px] tracking-[-0.025em] text-gray-500">

@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { getMe, updatePlan, type Plan as ApiPlan } from "../../api";
 import Button from "../../components/Button";
 import ProfileSubLayout from "../../components/profile/ProfileSubLayout";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
@@ -11,6 +12,17 @@ import iconCover from "../../assets/profile/icon-membership-cover.svg";
 
 type PlanId = "standard" | "plus" | "premium";
 
+const UI_TO_API: Record<PlanId, ApiPlan> = {
+  standard: "BASIC",
+  plus: "PLUS",
+  premium: "PRO",
+};
+
+const API_TO_UI: Record<ApiPlan, PlanId> = {
+  BASIC: "standard",
+  PLUS: "plus",
+  PRO: "premium",
+};
 type PlanBenefit = {
   icon: string;
   iconSize?: "sm" | "md";
@@ -94,16 +106,45 @@ const PLANS: Plan[] = [
 export default function MembershipPage() {
   const isDesktop = useIsDesktop();
   const [selected, setSelected] = useState<PlanId>("standard");
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    // TODO: 결제/구독 API 연동
-    window.alert(
-      selected === "standard"
-        ? "쓰담 Standard로 저장되었습니다."
-        : selected === "plus"
-          ? "쓰담 plus로 업그레이드 요청이 준비되었습니다."
-          : "쓰담 Premium으로 업그레이드 요청이 준비되었습니다.",
-    );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        setSelected(API_TO_UI[me.plan] ?? "standard");
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updatePlan(UI_TO_API[selected]);
+      window.alert(
+        selected === "standard"
+          ? "쓰담 Standard로 저장되었습니다."
+          : selected === "plus"
+            ? "쓰담 plus로 변경되었습니다."
+            : "쓰담 Premium으로 변경되었습니다.",
+      );
+    } catch (err) {
+      console.error(err);
+      alert(
+        err instanceof Error ? err.message : "멤버십을 변경하지 못했습니다.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -120,7 +161,13 @@ export default function MembershipPage() {
         >
           <div className="pointer-events-auto w-full max-w-[465px]">
             <Button
-              text={isDesktop ? "저장하기" : "업그레이드 하기"}
+              text={
+                saving
+                  ? "저장 중…"
+                  : isDesktop
+                    ? "저장하기"
+                    : "업그레이드 하기"
+              }
               variant="primary"
               size={
                 isDesktop
@@ -128,7 +175,9 @@ export default function MembershipPage() {
                   : "h-[54px] w-full rounded-[16px] px-5 py-3 text-body1 font-semibold"
               }
               className="shadow-none"
-              onClick={handleSave}
+              onClick={() => {
+                void handleSave();
+              }}
             />
           </div>
         </div>

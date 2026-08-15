@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import { BOARD } from "../data/shelterThoughtsMock";
+import { BOARD } from "../data/shelterThoughtsLayout";
 
 export type BoardConfig = {
   home: { width: number; height: number };

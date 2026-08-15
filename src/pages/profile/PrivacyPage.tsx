@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { getPublicPages } from "../../api";
 import ProfileSubLayout from "../../components/profile/ProfileSubLayout";
 
 const SECTIONS = [
@@ -15,8 +17,30 @@ const SECTIONS = [
 ] as const;
 
 export default function PrivacyPage() {
+  const [privacyUrl, setPrivacyUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const pages = await getPublicPages();
+        if (cancelled) return;
+        setPrivacyUrl(pages.privacyPolicyUrl || null);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
-    <ProfileSubLayout title="개인정보처리방침" contentClassName="px-5 pt-5 pb-8 min-[431px]:px-8 min-[431px]:pt-6">
+    <ProfileSubLayout
+      title="개인정보처리방침"
+      contentClassName="px-5 pt-5 pb-8 min-[431px]:px-8 min-[431px]:pt-6"
+    >
       <div className="mx-auto flex w-full max-w-[641px] flex-col gap-8 min-[431px]:gap-[38px]">
         {SECTIONS.map((section) => (
           <section key={section.title}>
@@ -33,6 +57,19 @@ export default function PrivacyPage() {
           이용약관과 관련하여 궁금하신 사항은 고객센터로 문의하거나
           <br />
           1:1 문의하기를 이용해 주시기 바랍니다.
+          {privacyUrl ? (
+            <>
+              <br />
+              <a
+                href={privacyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-primary-500 underline"
+              >
+                전체 개인정보처리방침 보기
+              </a>
+            </>
+          ) : null}
         </p>
       </div>
     </ProfileSubLayout>

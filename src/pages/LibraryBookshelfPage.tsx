@@ -1,16 +1,22 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import BookStatusBadge from "../components/mate/BookStatusBadge";
 import type { BookStatus } from "../components/mate/types";
 import { useIsDesktop } from "../hooks/useIsDesktop";
 import {
-  MOCK_SHELF_BOOKS,
+  getBookshelf,
+  mapBookItemToLibraryBook,
+  mapUiStatusToApi,
+  removeFromBookshelf,
+  updateBookshelfStatus,
+} from "../api";
+import {
   SHELF_FILTERS,
   filterShelfBooks,
   shelfFilterCountLabel,
   type LibraryShelfBook,
   type ShelfFilter,
-} from "../data/libraryMock";
+} from "../data/library";
 import iconBack from "../assets/library/icon-back.svg";
 import iconCalendar from "../assets/library/icon-calendar.svg";
 import promoBook from "../assets/library/promo-book.png";
@@ -19,11 +25,34 @@ import promoBook from "../assets/library/promo-book.png";
 export default function LibraryBookshelfPage() {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop();
-  const [books, setBooks] = useState(MOCK_SHELF_BOOKS);
+  const [books, setBooks] = useState<LibraryShelfBook[]>([]);
   const [filter, setFilter] = useState<ShelfFilter>("finished");
   const [statusTarget, setStatusTarget] = useState<LibraryShelfBook | null>(
     null,
   );
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const shelf = await getBookshelf();
+        if (cancelled) return;
+        setBooks(shelf.books.map((item) => mapBookItemToLibraryBook(item)));
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+        alert(
+          err instanceof Error
+            ? err.message
+            : "책장을 불러오지 못했습니다.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filtered = useMemo(
     () => filterShelfBooks(books, filter),
@@ -31,11 +60,43 @@ export default function LibraryBookshelfPage() {
   );
   const { label, count } = shelfFilterCountLabel(filter, filtered.length);
 
-  const updateStatus = (bookId: string, status: BookStatus) => {
-    setBooks((prev) =>
-      prev.map((b) => (b.id === bookId ? { ...b, status } : b)),
-    );
-    setStatusTarget(null);
+  const updateStatus = async (book: LibraryShelfBook, status: BookStatus) => {
+    const userBookId = book.userBookId ?? Number(book.id);
+    if (!userBookId || Number.isNaN(userBookId)) return;
+    setBusy(true);
+    try {
+      await updateBookshelfStatus(userBookId, mapUiStatusToApi(status));
+      setBooks((prev) =>
+        prev.map((b) => (b.id === book.id ? { ...b, status } : b)),
+      );
+      setStatusTarget(null);
+    } catch (err) {
+      console.error(err);
+      alert(
+        err instanceof Error ? err.message : "상태 변경에 실패했습니다.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeBook = async (book: LibraryShelfBook) => {
+    const userBookId = book.userBookId ?? Number(book.id);
+    if (!userBookId || Number.isNaN(userBookId)) return;
+    if (!window.confirm("이 책을 책장에서 삭제할까요?")) return;
+    setBusy(true);
+    try {
+      await removeFromBookshelf(userBookId);
+      setBooks((prev) => prev.filter((b) => b.id !== book.id));
+      setStatusTarget(null);
+    } catch (err) {
+      console.error(err);
+      alert(
+        err instanceof Error ? err.message : "삭제에 실패했습니다.",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (isDesktop) {
@@ -163,8 +224,10 @@ export default function LibraryBookshelfPage() {
       {statusTarget ? (
         <StatusSheet
           book={statusTarget}
+          busy={busy}
           onClose={() => setStatusTarget(null)}
-          onSelect={(status) => updateStatus(statusTarget.id, status)}
+          onSelect={(status) => updateStatus(statusTarget, status)}
+          onRemove={() => removeBook(statusTarget)}
         />
       ) : null}
     </main>
@@ -173,12 +236,16 @@ export default function LibraryBookshelfPage() {
 
 function StatusSheet({
   book,
+  busy,
   onClose,
   onSelect,
+  onRemove,
 }: {
   book: LibraryShelfBook;
+  busy: boolean;
   onClose: () => void;
   onSelect: (status: BookStatus) => void;
+  onRemove: () => void;
 }) {
   const options: { status: BookStatus; label: string }[] = [
     { status: "unread", label: "읽지 않은 책" },
@@ -212,8 +279,9 @@ function StatusSheet({
               <button
                 key={opt.status}
                 type="button"
+                disabled={busy}
                 onClick={() => onSelect(opt.status)}
-                className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 ${
+                className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 disabled:opacity-60 ${
                   selected
                     ? "bg-primary-10 text-gray-900 shadow-[0_0_2px_#5d6bc4]"
                     : "bg-[#f5f6fa] text-gray-400"
@@ -223,6 +291,14 @@ function StatusSheet({
               </button>
             );
           })}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onRemove}
+            className="flex h-[54px] w-full items-center justify-center rounded-2xl bg-[#f5f6fa] text-button1 text-red-500 disabled:opacity-60"
+          >
+            책장에서 삭제
+          </button>
         </div>
       </div>
     </div>

@@ -1,13 +1,31 @@
-import { useMemo, useRef, useState, type CSSProperties } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import {
+  useNavigate,
+  useParams,
+  useLocation,
+  useSearchParams,
+} from "react-router-dom";
+import {
+  ApiError,
+  getRoomPosts,
+  heartPost,
+  reportPost,
+  unheartPost,
+  type CommunityPost,
+} from "../api";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
 import WebGnb from "../components/WebGnb";
 import {
-  createMockThoughtNotes,
-  getThoughtById,
+  communityPostToThoughtNote,
   type ThoughtNote,
-} from "../data/shelterThoughtsMock";
+} from "../data/shelterThoughtsLayout";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
 import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
@@ -23,12 +41,13 @@ import ShelterTopGlow from "../components/shelter/ShelterTopGlow";
 
 type DetailLocationState = {
   title?: string;
-  bookId?: string;
+  bookId?: number | string;
+  roomId?: number;
+  posts?: CommunityPost[];
 };
 
-/** 보드(MOCK_THOUGHT_COUNT)와 동일 — 다 읽음 판정용 */
-const DETAIL_THOUGHT_COUNT = 20;
 const SWIPE_THRESHOLD = 48;
+const LONG_PRESS_MS = 550;
 
 const CARD_GRADIENT =
   "linear-gradient(-43deg, rgba(225,231,255,0.96) 2%, rgba(223,229,255,0.96) 96%)";
@@ -40,10 +59,7 @@ const WEB_CARD_OFFSET = "min(508px, calc((100dvh - 260px) * 508 / 558))";
 const WEB_SIDE_TOP = "min(49px, calc((100dvh - 260px) * 49 / 558))";
 const WEB_TAPE_PAD = "min(30px, calc((100dvh - 260px) * 30 / 558))";
 
-function resolveThoughtIndex(
-  thoughts: ReturnType<typeof createMockThoughtNotes>,
-  thoughtId: string,
-) {
+function resolveThoughtIndex(thoughts: ThoughtNote[], thoughtId: string) {
   const index = thoughts.findIndex((item) => item.id === thoughtId);
   return index >= 0 ? index : 0;
 }
@@ -52,12 +68,18 @@ function WebThoughtCard({
   thought,
   active,
   tapeSrc,
+  isHearted = false,
+  onTapeClick,
+  onReport,
   className = "",
   style,
 }: {
   thought: ThoughtNote;
   active: boolean;
   tapeSrc: string;
+  isHearted?: boolean;
+  onTapeClick?: () => void;
+  onReport?: () => void;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -65,15 +87,39 @@ function WebThoughtCard({
     <div
       className={`absolute -translate-x-1/2 ${active ? "z-20" : "z-10 opacity-[0.48]"} ${className}`}
       style={{ width: WEB_CARD_W, ...style }}
+      onContextMenu={(e) => {
+        if (!active || !onReport) return;
+        e.preventDefault();
+        onReport();
+      }}
     >
-      <img
-        src={tapeSrc}
-        alt=""
-        aria-hidden
-        className={`pointer-events-none absolute left-1/2 z-30 h-[clamp(36px,7vh,58px)] w-[clamp(60px,12vh,98px)] -translate-x-1/2 object-contain ${
-          active ? "top-[-30px]" : "top-[-24px] opacity-80"
-        }`}
-      />
+      {active && onTapeClick ? (
+        <button
+          type="button"
+          aria-label={isHearted ? "공감 취소" : "공감하기"}
+          aria-pressed={isHearted}
+          onClick={onTapeClick}
+          className="absolute left-1/2 z-30 -translate-x-1/2"
+          style={{ top: -30 }}
+        >
+          <img
+            src={tapeSrc}
+            alt=""
+            className={`pointer-events-none h-[clamp(36px,7vh,58px)] w-[clamp(60px,12vh,98px)] object-contain transition-opacity ${
+              isHearted ? "opacity-100" : "opacity-70"
+            }`}
+          />
+        </button>
+      ) : (
+        <img
+          src={tapeSrc}
+          alt=""
+          aria-hidden
+          className={`pointer-events-none absolute left-1/2 z-30 h-[clamp(36px,7vh,58px)] w-[clamp(60px,12vh,98px)] -translate-x-1/2 object-contain ${
+            active ? "top-[-30px]" : "top-[-24px] opacity-80"
+          }`}
+        />
+      )}
       <article
         className="flex w-full flex-col items-center gap-[clamp(14px,3vh,28px)] overflow-hidden px-[clamp(20px,3vw,38px)] py-[clamp(24px,5vh,49px)]"
         style={{
@@ -92,9 +138,11 @@ function WebThoughtCard({
           <p className="mt-[clamp(8px,1.2vh,12px)] text-center text-[clamp(18px,3.2vh,26px)] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
             {thought.authorName}
           </p>
-          <p className="mt-0.5 text-center text-[clamp(14px,2.4vh,20px)] leading-[1.5] tracking-[-0.025em] text-gray-400">
-            {thought.date}
-          </p>
+          {thought.date ? (
+            <p className="mt-0.5 text-center text-[clamp(14px,2.4vh,20px)] leading-[1.5] tracking-[-0.025em] text-gray-400">
+              {thought.date}
+            </p>
+          ) : null}
         </div>
         <p
           className={`min-h-0 w-full flex-1 overflow-y-auto whitespace-pre-wrap text-[clamp(14px,2.2vh,19px)] leading-[1.6] tracking-[-0.025em] text-gray-800 ${
@@ -152,41 +200,162 @@ export default function ShelterThoughtDetailPage() {
   const navigate = useNavigate();
   const { thoughtId = "" } = useParams();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = (location.state as DetailLocationState | null) ?? null;
-  const bookTitle = state?.title ?? "불안을 이기는 철학";
-  const thoughts = useMemo(
-    () => createMockThoughtNotes(DETAIL_THOUGHT_COUNT),
-    [],
-  );
-  const startIndexRef = useRef(resolveThoughtIndex(thoughts, thoughtId));
-  /** 시작 사유부터의 이동 깊이 (1 = 시작 사유). 이전으로 시작점 이전은 불가 */
-  const [readCount, setReadCount] = useState(1);
-  /** 실제로 본 고유 사유 — 전부 다 본 뒤에만 ‘다 읽음’ 모달 */
-  const [visitedIds, setVisitedIds] = useState(() => {
-    const start = thoughts[startIndexRef.current];
-    return new Set(start ? [start.id] : []);
+  const bookTitle = state?.title ?? "쉼터";
+  const roomId =
+    (typeof state?.roomId === "number" && state.roomId > 0
+      ? state.roomId
+      : null) ??
+    (() => {
+      const q = Number(searchParams.get("roomId"));
+      return Number.isFinite(q) && q > 0 ? q : null;
+    })();
+
+  const [posts, setPosts] = useState<CommunityPost[]>(state?.posts ?? []);
+  const [loading, setLoading] = useState(!state?.posts?.length);
+  const [heartedIds, setHeartedIds] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const post of state?.posts ?? []) {
+      if (post.isHearted) initial.add(String(post.postId));
+    }
+    return initial;
   });
+  const [heartBusy, setHeartBusy] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportDoneOpen, setReportDoneOpen] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
+
+  const thoughts = useMemo(
+    () => posts.map(communityPostToThoughtNote),
+    [posts],
+  );
+
+  const startIndexRef = useRef(0);
+  const [readCount, setReadCount] = useState(1);
+  const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set());
   const [slideDirection, setSlideDirection] = useState<"prev" | "next" | null>(
     null,
   );
   const [suggestWriteOpen, setSuggestWriteOpen] = useState(false);
   const dragStartX = useRef<number | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (state?.posts?.length) {
+      setPosts(state.posts);
+      setLoading(false);
+      return;
+    }
+    if (roomId == null) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    getRoomPosts(roomId)
+      .then((data) => {
+        if (cancelled) return;
+        setPosts(data.posts);
+        setHeartedIds(() => {
+          const next = new Set<string>();
+          for (const post of data.posts) {
+            if (post.isHearted) next.add(String(post.postId));
+          }
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setPosts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId, state?.posts]);
+
+  useEffect(() => {
+    if (loading || thoughts.length === 0 || initializedRef.current) return;
+    const start = resolveThoughtIndex(thoughts, thoughtId);
+    startIndexRef.current = start;
+    const startThought = thoughts[start];
+    setReadCount(1);
+    setVisitedIds(new Set(startThought ? [startThought.id] : []));
+    initializedRef.current = true;
+  }, [loading, thoughts, thoughtId]);
 
   const total = thoughts.length;
   const currentIndex =
     total === 0 ? 0 : (startIndexRef.current + readCount - 1 + total) % total;
-  const thought = thoughts[currentIndex] ?? getThoughtById(thoughtId);
+  const thought = thoughts[currentIndex];
   const prevThought =
     total > 0 ? thoughts[(currentIndex - 1 + total) % total] : undefined;
   const nextThought =
     total > 0 ? thoughts[(currentIndex + 1) % total] : undefined;
   const canGoPrev = readCount > 1;
   const hasReadAll = total > 0 && visitedIds.size >= total;
+  const isHearted = thought ? heartedIds.has(thought.id) : false;
+
+  const navBase = {
+    title: bookTitle,
+    bookId: state?.bookId,
+    roomId: roomId ?? undefined,
+    posts,
+  };
 
   const openWritePage = () => {
-    navigate("/shelter/thoughts/write", {
-      state: { title: bookTitle, bookId: state?.bookId },
-    });
+    const query = roomId != null ? `?roomId=${roomId}` : "";
+    navigate(`/shelter/thoughts/write${query}`, { state: navBase });
+  };
+
+  const toggleHeart = async () => {
+    if (!thought || heartBusy || thought.isMine) return;
+    const postId = Number(thought.id);
+    if (!Number.isFinite(postId)) return;
+
+    setHeartBusy(true);
+    try {
+      if (isHearted) {
+        await unheartPost(postId);
+        setHeartedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(thought.id);
+          return next;
+        });
+      } else {
+        await heartPost(postId);
+        setHeartedIds((prev) => new Set(prev).add(thought.id));
+      }
+    } catch {
+      // 실패 시 UI 유지
+    } finally {
+      setHeartBusy(false);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!thought || reportBusy) return;
+    const postId = Number(thought.id);
+    if (!Number.isFinite(postId)) return;
+
+    setReportBusy(true);
+    try {
+      await reportPost(postId);
+      setReportOpen(false);
+      setReportDoneOpen(true);
+    } catch (error) {
+      setReportOpen(false);
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      }
+    } finally {
+      setReportBusy(false);
+    }
   };
 
   const moveSlide = (direction: "prev" | "next") => {
@@ -197,7 +366,6 @@ export default function ShelterThoughtDetailPage() {
       return;
     }
 
-    // 고유 사유를 전부 다 본 뒤에 한 번 더 넘길 때만 작성 유도
     if (hasReadAll) {
       setSuggestWriteOpen(true);
       return;
@@ -216,11 +384,24 @@ export default function ShelterThoughtDetailPage() {
     }
   };
 
+  const clearLongPress = () => {
+    if (longPressTimer.current != null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   const handlePointerDown = (event: React.PointerEvent<HTMLElement>) => {
     dragStartX.current = event.clientX;
+    clearLongPress();
+    longPressTimer.current = window.setTimeout(() => {
+      setReportOpen(true);
+      dragStartX.current = null;
+    }, LONG_PRESS_MS);
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    clearLongPress();
     if (dragStartX.current == null) return;
     const deltaX = event.clientX - dragStartX.current;
     dragStartX.current = null;
@@ -231,8 +412,17 @@ export default function ShelterThoughtDetailPage() {
   };
 
   const handlePointerCancel = () => {
+    clearLongPress();
     dragStartX.current = null;
   };
+
+  if (loading) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center bg-[#f7f8fc] px-5">
+        <p className="text-body1 text-gray-600">사유를 불러오는 중…</p>
+      </main>
+    );
+  }
 
   if (!thought) {
     return (
@@ -300,11 +490,25 @@ export default function ShelterThoughtDetailPage() {
 
           <div className="absolute inset-x-0 top-[64px] bottom-[120px] z-20 flex items-center justify-center overflow-hidden px-5">
             <div className="relative flex max-h-full min-h-0 w-[353px] flex-col items-center overflow-hidden pt-[38px]">
-              <img
-                src={detailTape}
-                alt=""
-                className="pointer-events-none absolute left-1/2 top-0 z-30 h-[45px] w-[81px] -translate-x-1/2 object-contain"
-              />
+              <button
+                type="button"
+                aria-label={isHearted ? "공감 취소" : "공감하기"}
+                aria-pressed={isHearted}
+                disabled={heartBusy || thought.isMine}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void toggleHeart();
+                }}
+                className="absolute left-1/2 top-0 z-30 -translate-x-1/2"
+              >
+                <img
+                  src={detailTape}
+                  alt=""
+                  className={`pointer-events-none h-[45px] w-[81px] object-contain transition-opacity ${
+                    isHearted ? "opacity-100" : "opacity-70"
+                  }`}
+                />
+              </button>
 
               <article
                 className="relative z-20 flex min-h-0 w-full max-h-[calc(100%-38px)] cursor-grab flex-col items-center gap-[23px] overflow-y-auto overscroll-contain px-8 py-[41px] touch-pan-y active:cursor-grabbing"
@@ -330,9 +534,11 @@ export default function ShelterThoughtDetailPage() {
                     <p className="mt-3 text-center text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
                       {thought.authorName}
                     </p>
-                    <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
-                      {thought.date}
-                    </p>
+                    {thought.date ? (
+                      <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
+                        {thought.date}
+                      </p>
+                    ) : null}
                   </div>
 
                   <p className="w-full whitespace-pre-wrap text-body1 leading-[1.6] text-gray-800">
@@ -444,6 +650,13 @@ export default function ShelterThoughtDetailPage() {
               thought={thought}
               active
               tapeSrc={detailTapeCenter}
+              isHearted={isHearted}
+              onTapeClick={
+                thought.isMine || heartBusy
+                  ? undefined
+                  : () => void toggleHeart()
+              }
+              onReport={() => setReportOpen(true)}
               className=""
               style={{
                 left: "50%",
@@ -489,7 +702,7 @@ export default function ShelterThoughtDetailPage() {
         variant="alert"
         status="info"
         title="모든 사유를 다 읽었습니다."
-        description="지훈님의 여운도 이곳에 남겨보는건 어떤가요?"
+        description="당신의 여운도 이곳에 남겨보는건 어떤가요?"
         onClose={() => setSuggestWriteOpen(false)}
         actions={[
           {
@@ -500,6 +713,41 @@ export default function ShelterThoughtDetailPage() {
           {
             label: "사유 남기기",
             onClick: openWritePage,
+          },
+        ]}
+      />
+
+      <Modal
+        open={reportOpen}
+        variant="alert"
+        status="warning"
+        title="이 사유를 신고할까요?"
+        description="부적절한 내용은 검토 후 조치됩니다."
+        onClose={() => setReportOpen(false)}
+        actions={[
+          {
+            label: "취소",
+            variant: "outline",
+            onClick: () => setReportOpen(false),
+          },
+          {
+            label: reportBusy ? "신고 중…" : "신고하기",
+            onClick: () => void submitReport(),
+          },
+        ]}
+      />
+
+      <Modal
+        open={reportDoneOpen}
+        variant="alert"
+        status="success"
+        title="신고가 접수되었어요."
+        description="검토가 완료되면 조치됩니다."
+        onClose={() => setReportDoneOpen(false)}
+        actions={[
+          {
+            label: "확인",
+            onClick: () => setReportDoneOpen(false),
           },
         ]}
       />

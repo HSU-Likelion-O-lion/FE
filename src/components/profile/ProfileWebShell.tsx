@@ -1,7 +1,8 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import type { ReactNode } from "react";
+import { getMe, type UserMe } from "../../api";
 import WebGnb from "../WebGnb";
-import avatar from "../../assets/profile/avatar.png";
+import defaultAvatar from "../../assets/profile/avatar.png";
 import iconNotification from "../../assets/profile/icon-notification.svg";
 import iconAnnouncement from "../../assets/profile/icon-announcement.svg";
 import iconInquiry from "../../assets/profile/icon-inquiry.svg";
@@ -12,12 +13,6 @@ import iconMembership from "../../assets/profile/icon-membership.svg";
 import iconArrowRight from "../../assets/mate/icon-arrow-right.svg";
 
 const APP_VERSION = "1.0.0";
-
-export const PROFILE_MOCK_USER = {
-  name: "지훈",
-  email: "test@naver.com",
-  avatarUrl: avatar,
-};
 
 type WebMenuItem = {
   id: string;
@@ -77,14 +72,57 @@ export const PROFILE_WEB_MENU: WebMenuItem[] = [
   },
 ];
 
-type ProfileWebShellProps = {
-  children: ReactNode;
+export type ProfileUserView = {
+  nickname: string;
+  email: string;
+  avatarUrl: string;
 };
 
+type ProfileWebShellProps = {
+  children: ReactNode;
+  /** 전달 시 셸 내부 fetch 대신 사용 */
+  user?: ProfileUserView | null;
+};
+
+function toProfileUserView(me: UserMe): ProfileUserView {
+  return {
+    nickname: me.nickname,
+    email: me.email,
+    avatarUrl: me.profileImageUrl ?? defaultAvatar,
+  };
+}
+
 /** 웹 프로필 공통 셸 — GNB + 좌측 사이드바 + 우측 콘텐츠 (Figma 714:4815) */
-export default function ProfileWebShell({ children }: ProfileWebShellProps) {
+export default function ProfileWebShell({
+  children,
+  user: userProp,
+}: ProfileWebShellProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const [fetchedUser, setFetchedUser] = useState<ProfileUserView | null>(null);
+
+  useEffect(() => {
+    if (userProp !== undefined) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        setFetchedUser(toProfileUserView(me));
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userProp]);
+
+  const user = userProp === undefined ? fetchedUser : userProp;
+  const nickname = user?.nickname ?? "";
+  const email = user?.email ?? "";
+  const avatarUrl = user?.avatarUrl ?? defaultAvatar;
 
   return (
     <main className="relative mx-auto hidden h-dvh w-full flex-col overflow-hidden bg-[#fdfdff] min-[431px]:flex">
@@ -100,20 +138,22 @@ export default function ProfileWebShell({ children }: ProfileWebShellProps) {
             onClick={() => navigate("/profile")}
             className="relative mb-0 flex w-full items-center gap-3.5 border-b border-gray-100 px-5 pb-5 pt-[19px] text-left"
             aria-label="프로필 수정"
-            aria-current={pathname === "/profile" || pathname === "/profile/edit" ? "page" : undefined}
+            aria-current={
+              pathname === "/profile" || pathname === "/profile/edit"
+                ? "page"
+                : undefined
+            }
           >
             <img
-              src={PROFILE_MOCK_USER.avatarUrl}
+              src={avatarUrl}
               alt=""
               className="size-[60px] shrink-0 rounded-full object-cover"
             />
             <div className="min-w-0 flex-1">
               <p className="text-[18px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-900">
-                {PROFILE_MOCK_USER.name}님
+                {nickname ? `${nickname}님` : " "}
               </p>
-              <p className="mt-0.5 truncate text-body1 text-gray-500">
-                {PROFILE_MOCK_USER.email}
-              </p>
+              <p className="mt-0.5 truncate text-body1 text-gray-500">{email}</p>
             </div>
             <span className="flex size-6 shrink-0 items-center justify-center">
               <img

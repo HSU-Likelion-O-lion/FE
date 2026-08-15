@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import guide1Phone from "../assets/onboarding/guide1-phone.png";
 import guide2Phone from "../assets/onboarding/guide2-phone.png";
 import guide3Book from "../assets/onboarding/guide3-book.png";
-import { completeOnboarding, isOnboardingDone } from "../lib/onboarding";
+import { completeOnboarding } from "../lib/onboarding";
 
 const SLIDES = [
   {
@@ -24,10 +24,6 @@ const SLIDES = [
 export default function OnboardingGuidePage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
-
-  if (isOnboardingDone()) {
-    return <Navigate to="/login" replace />;
-  }
 
   const finish = () => {
     completeOnboarding();

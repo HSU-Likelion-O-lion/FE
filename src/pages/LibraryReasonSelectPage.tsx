@@ -4,10 +4,12 @@ import WebGnb from "../components/WebGnb";
 import LibraryProgressCard from "../components/library/LibraryProgressCard";
 import LibrarySectionToggle from "../components/library/LibrarySectionToggle";
 import {
-  MOCK_LIBRARY_REASONS,
-  REASON_GOAL,
-  type LibraryReason,
-} from "../data/libraryMock";
+  createEssay,
+  formatReflectionDate,
+  getEssayJobStatus,
+  getPublishableReflections,
+} from "../api";
+import { REASON_GOAL, type LibraryReason } from "../data/library";
 import iconBack from "../assets/library/icon-back.svg";
 import iconCheckSelected from "../assets/library/icon-check-selected.svg";
 import iconCheckWeb from "../assets/library/icon-check-web.svg";
@@ -18,15 +20,62 @@ import publishOwl from "../assets/library/publish-owl.png";
 import loadingRing from "../assets/drawer/diagnosis/loading-ring.png";
 import reasonsEllipse from "../assets/library/reasons-ellipse.svg";
 
-const LOADING_MS = 2800;
+const POLL_MS = 1500;
+
+async function waitForEssayJob(essayId: number) {
+  for (;;) {
+    const { status } = await getEssayJobStatus(essayId);
+    if (status === "COMPLETED") return;
+    if (status === "FAILED" || status === "CANCELED") {
+      throw new Error(
+        status === "FAILED"
+          ? "에세이 생성에 실패했습니다."
+          : "에세이 생성이 취소되었습니다.",
+      );
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, POLL_MS));
+  }
+}
 
 /** 사유 선택 모드 (모바일 Figma 530:3197 + 웹 716:6585) */
 export default function LibraryReasonSelectPage() {
   const navigate = useNavigate();
-  const reasons = MOCK_LIBRARY_REASONS;
-  const isComplete = reasons.length >= REASON_GOAL;
+  const [reasons, setReasons] = useState<LibraryReason[]>([]);
+  const [ready, setReady] = useState(false);
+  const [canPublish, setCanPublish] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getPublishableReflections();
+        if (cancelled) return;
+        setCanPublish(data.canPublish);
+        const list = (data.reflections ?? []).map((r) => ({
+          id: String(r.reflectionId),
+          dateLabel: formatReflectionDate(r.createdAt),
+          excerpt: r.content,
+        }));
+        setReasons(list);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+        alert(
+          err instanceof Error
+            ? err.message
+            : "출판 가능한 사유를 불러오지 못했습니다.",
+        );
+        setCanPublish(false);
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectedCount = selectedIds.size;
   const allSelected = reasons.length > 0 && selectedCount === reasons.length;
@@ -38,16 +87,38 @@ export default function LibraryReasonSelectPage() {
     Math.round((reasons.length / REASON_GOAL) * 100),
   );
 
-  useEffect(() => {
-    if (!isLoading) return;
-    const timer = window.setTimeout(() => {
-      navigate("/library/essay", { replace: true });
-    }, LOADING_MS);
-    return () => window.clearTimeout(timer);
-  }, [isLoading, navigate]);
+  const createAndNavigate = async () => {
+    if (isLoading || !canProceed) return;
+    setIsLoading(true);
+    try {
+      const reflectionIds = Array.from(selectedIds).map((id) => Number(id));
+      const { essayId, jobStatus } = await createEssay(reflectionIds);
+      if (jobStatus === "FAILED" || jobStatus === "CANCELED") {
+        throw new Error("에세이 생성에 실패했습니다.");
+      }
+      if (jobStatus !== "COMPLETED") {
+        await waitForEssayJob(essayId);
+      }
+      navigate(`/library/essay/${essayId}`, { replace: true });
+    } catch (err) {
+      console.error(err);
+      alert(
+        err instanceof Error ? err.message : "에세이 생성에 실패했습니다.",
+      );
+      setIsLoading(false);
+    }
+  };
 
-  if (!isComplete) {
+  if (ready && !canPublish) {
     return <Navigate to="/library" replace />;
+  }
+
+  if (!ready) {
+    return (
+      <main className="mx-auto flex min-h-dvh w-full max-w-[430px] items-center justify-center bg-[#fdfdff]">
+        <p className="text-body2 text-gray-400">불러오는 중...</p>
+      </main>
+    );
   }
 
   const toggleReason = (id: string) => {
@@ -163,7 +234,7 @@ export default function LibraryReasonSelectPage() {
           <button
             type="button"
             disabled={!canProceed || isLoading}
-            onClick={() => setIsLoading(true)}
+            onClick={() => void createAndNavigate()}
             className={`flex h-[54px] w-full items-center justify-center rounded-2xl text-button1 font-semibold ${
               canProceed && !isLoading
                 ? "bg-primary-500 text-white"
@@ -258,13 +329,12 @@ export default function LibraryReasonSelectPage() {
                   ))}
                 </ul>
 
-                {/* Figma 718:7039 — 우측 컬럼 하단, 465×71 */}
                 <div className="pointer-events-none sticky bottom-0 z-20 -mb-8 bg-gradient-to-t from-[#fdfdff] from-[55%] via-[#fdfdff]/90 to-transparent pt-10">
                   <div className="pointer-events-auto flex justify-center px-[26px] py-[13px]">
                     <button
                       type="button"
                       disabled={!canProceed || isLoading}
-                      onClick={() => setIsLoading(true)}
+                      onClick={() => void createAndNavigate()}
                       className={`flex h-[71px] w-full max-w-[465px] items-center justify-center rounded-[21px] text-[21px] font-semibold leading-[1.6] tracking-[-0.025em] ${
                         canProceed && !isLoading
                           ? "bg-primary-500 text-white"
@@ -324,23 +394,27 @@ function ReasonSelectItem({
       >
         <div className={`min-w-0 flex-1 ${isWeb ? "pr-10" : "pr-8"}`}>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <p
-              className={
-                isWeb
-                  ? "text-[21.6px] font-medium tracking-[-0.025em] text-gray-900"
-                  : "text-[15px] font-medium tracking-[-0.025em] text-gray-900"
-              }
-            >
-              {reason.bookTitle}
-            </p>
-            {isWeb ? (
-              <img src={iconDot} alt="" className="size-1.5 object-contain" />
-            ) : (
-              <span
-                aria-hidden
-                className="size-1 shrink-0 rounded-full bg-gray-300"
-              />
-            )}
+            {reason.bookTitle ? (
+              <p
+                className={
+                  isWeb
+                    ? "text-[21.6px] font-medium tracking-[-0.025em] text-gray-900"
+                    : "text-[15px] font-medium tracking-[-0.025em] text-gray-900"
+                }
+              >
+                {reason.bookTitle}
+              </p>
+            ) : null}
+            {reason.bookTitle ? (
+              isWeb ? (
+                <img src={iconDot} alt="" className="size-1.5 object-contain" />
+              ) : (
+                <span
+                  aria-hidden
+                  className="size-1 shrink-0 rounded-full bg-gray-300"
+                />
+              )
+            ) : null}
             <p
               className={
                 isWeb

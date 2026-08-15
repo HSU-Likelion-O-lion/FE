@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { ApiError, createCommunityPost } from "../api";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
 import WebGnb from "../components/WebGnb";
@@ -7,10 +8,6 @@ import {
   containsBadWord,
   splitBadWordParts,
 } from "../utils/badWords";
-import {
-  isThoughtWriteRateLimited,
-  recordThoughtWrite,
-} from "../data/shelterThoughtWriteStore";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
 import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import iconPencil from "../assets/shelter/thoughts/write-icon-pencil.svg";
@@ -37,23 +34,47 @@ const LAYOUT = {
 
 type WriteLocationState = {
   title?: string;
-  bookId?: string;
+  bookId?: number | string;
+  roomId?: number;
   body?: string;
+  reflectionId?: number;
 };
+
+function todayLabel() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}.${m}.${d}`;
+}
 
 /** 내 사유 작성 — 모바일 320:7996 / 웹 726:5412·5536·5608 */
 export default function ShelterThoughtWritePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = (location.state as WriteLocationState | null) ?? null;
-  const bookTitle = state?.title ?? "불안을 이기는 철학";
-  const bookId = state?.bookId ?? "default";
+  const bookTitle = state?.title ?? "쉼터";
+  const bookId = state?.bookId;
+  const roomId =
+    (typeof state?.roomId === "number" && state.roomId > 0
+      ? state.roomId
+      : null) ??
+    (() => {
+      const q = Number(searchParams.get("roomId"));
+      return Number.isFinite(q) && q > 0 ? q : null;
+    })();
 
   const [text, setText] = useState(state?.body ?? "");
   const [highlightBadWords, setHighlightBadWords] = useState(false);
   const [badWordOpen, setBadWordOpen] = useState(false);
   const [rateLimitOpen, setRateLimitOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [created, setCreated] = useState<{
+    postId: number;
+    anonymousNickname: string;
+  } | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [visibleHeight, setVisibleHeight] = useState(
     () => window.visualViewport?.height ?? window.innerHeight,
@@ -61,10 +82,11 @@ export default function ShelterThoughtWritePage() {
   const mobileTextareaRef = useRef<HTMLTextAreaElement>(null);
   const webTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const today = "2026.06.25";
-  const canSubmit = text.trim().length > 0;
+  const today = todayLabel();
+  const canSubmit = text.trim().length > 0 && roomId != null && !submitting;
   const highlightParts = highlightBadWords ? splitBadWordParts(text) : null;
   const pos = keyboardOpen ? LAYOUT.typing : LAYOUT.idle;
+  const displayName = created?.anonymousNickname ?? "나";
 
   useEffect(() => {
     const html = document.documentElement;
@@ -83,7 +105,6 @@ export default function ShelterThoughtWritePage() {
       bodyLeft: body.style.left,
     };
 
-    // iOS Safari 키보드 흰 여백/스크롤 점프 방지 (모바일)
     const isMobile = window.matchMedia("(max-width: 430px)").matches;
     if (!isMobile) return;
 
@@ -161,7 +182,6 @@ export default function ShelterThoughtWritePage() {
       mobileEl.style.overflowY = scrollH > maxH ? "auto" : "hidden";
     }
 
-    // 웹: 포스트잇 내부 스크롤 — 높이 자동 확장하지 않음
     const webEl = webTextareaRef.current;
     if (webEl) {
       webEl.style.height = "100%";
@@ -175,20 +195,17 @@ export default function ShelterThoughtWritePage() {
       state: {
         title: bookTitle,
         bookId,
+        roomId: roomId ?? undefined,
+        postId: created?.postId,
         body: text,
         date: today,
-        authorName: "지훈",
+        authorName: created?.anonymousNickname ?? displayName,
       },
     });
   };
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
-
-    if (isThoughtWriteRateLimited()) {
-      setRateLimitOpen(true);
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!canSubmit || roomId == null) return;
 
     if (containsBadWord(text)) {
       setHighlightBadWords(true);
@@ -197,8 +214,31 @@ export default function ShelterThoughtWritePage() {
     }
 
     setHighlightBadWords(false);
-    recordThoughtWrite();
-    setSavedOpen(true);
+    setSubmitting(true);
+    try {
+      const result = await createCommunityPost({
+        roomId,
+        content: text.trim(),
+        reflectionId: state?.reflectionId,
+      });
+      setCreated(result);
+      setSavedOpen(true);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.httpStatus === 429 ||
+          /rate|limit|많|제한|너무/i.test(error.message) ||
+          /RATE|LIMIT|TOO_MANY/i.test(error.code))
+      ) {
+        setRateLimitOpen(true);
+      } else if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("사유를 남기지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleTextChange = (value: string) => {
@@ -217,7 +257,6 @@ export default function ShelterThoughtWritePage() {
 
   return (
     <>
-      {/* —— Mobile (Figma 320:7996 / 320:6633) —— */}
       <main className="fixed inset-x-0 top-0 z-50 mx-auto h-dvh w-full max-w-[430px] overflow-hidden bg-[#f7f8fc] min-[431px]:hidden">
         <div className="relative z-10 mx-auto h-full w-full">
           <div
@@ -294,7 +333,7 @@ export default function ShelterThoughtWritePage() {
                   className="size-[77px] rounded-full object-cover"
                 />
                 <p className="mt-3 text-center text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
-                  지훈
+                  {displayName}
                 </p>
                 <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
                   {today}
@@ -350,12 +389,12 @@ export default function ShelterThoughtWritePage() {
 
               <div className="absolute inset-x-0 bottom-[33px] z-40 flex justify-center px-5">
                 <Button
-                  text="띄우기"
+                  text={submitting ? "띄우는 중…" : "띄우기"}
                   variant="primary"
                   size="h-[54px] w-[353px] rounded-[16px] px-5 py-3"
                   className="shadow-none"
                   disabled={!canSubmit}
-                  onClick={handleSubmit}
+                  onClick={() => void handleSubmit()}
                 />
               </div>
             </>
@@ -363,7 +402,6 @@ export default function ShelterThoughtWritePage() {
         </div>
       </main>
 
-      {/* —— Web (Figma 726:5412 / 5536 / 5608) —— */}
       <main className="relative hidden h-dvh w-full overflow-hidden bg-[#f7f8fc] min-[431px]:block">
         <div
           aria-hidden
@@ -414,7 +452,6 @@ export default function ShelterThoughtWritePage() {
           </header>
         </div>
 
-        {/* 테이프 여유 top 219 — 바깥 스크롤 없음, 포스트잇 내부만 스크롤 */}
         <div className="absolute inset-x-0 top-[219px] bottom-[110px] z-30 flex flex-col overflow-hidden">
           <div className="relative mx-auto flex min-h-0 w-full max-w-[660px] flex-1 flex-col px-4 pt-[30px]">
             <img
@@ -435,7 +472,7 @@ export default function ShelterThoughtWritePage() {
                   className="size-[92px] rounded-full object-cover"
                 />
                 <p className="mt-3 text-center text-[28px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
-                  지훈
+                  {displayName}
                 </p>
                 <p className="mt-1 text-center text-[20px] leading-[33px] tracking-[-0.025em] text-gray-400">
                   {today}
@@ -479,12 +516,12 @@ export default function ShelterThoughtWritePage() {
 
         <div className="absolute inset-x-0 bottom-8 z-40 flex justify-center px-8">
           <Button
-            text="계속하기"
+            text={submitting ? "올리는 중…" : "계속하기"}
             variant="primary"
             size="h-[65px] w-full max-w-[424px] rounded-[16px] px-5 py-3 text-[19.2px]"
             className="shadow-none"
             disabled={!canSubmit}
-            onClick={handleSubmit}
+            onClick={() => void handleSubmit()}
           />
         </div>
       </main>

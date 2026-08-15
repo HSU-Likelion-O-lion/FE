@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { getPublicPages } from "../../api";
 import ProfileSubLayout from "../../components/profile/ProfileSubLayout";
 
 const SECTIONS = [
@@ -13,6 +15,25 @@ const SECTIONS = [
 ] as const;
 
 export default function TermsPage() {
+  const [termsUrl, setTermsUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const pages = await getPublicPages();
+        if (cancelled) return;
+        setTermsUrl(pages.termsUrl || null);
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <ProfileSubLayout
       title="서비스 이용약관"
@@ -34,6 +55,19 @@ export default function TermsPage() {
           이용약관과 관련하여 궁금하신 사항은 고객센터로 문의하거나
           <br />
           1:1 문의하기를 이용해 주시기 바랍니다.
+          {termsUrl ? (
+            <>
+              <br />
+              <a
+                href={termsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-primary-500 underline"
+              >
+                전체 이용약관 보기
+              </a>
+            </>
+          ) : null}
         </p>
       </div>
     </ProfileSubLayout>

@@ -1,28 +1,90 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import owlGlasses from "../assets/drawer/owl-glasses.png";
 import Button from "../components/Button";
+import { addToBookshelf, pinMateBook } from "../api";
 
 type MateSetState = {
-  bookId?: string;
+  bookId?: number | string;
   coverUrl?: string;
   title?: string;
 };
+
+type Phase = "working" | "done" | "error";
 
 /** 메이트 지정 완료 — Figma 479:3319 → 타이머 CTA로 메이트(시간 선택) 이동 */
 export default function DrawerMateSetPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = (location.state as MateSetState | null) ?? null;
+  const bookId = Number(state?.bookId);
+
+  const [phase, setPhase] = useState<Phase>("working");
+  const [userBookId, setUserBookId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!Number.isFinite(bookId) || bookId <= 0) {
+      setPhase("error");
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const added = await addToBookshelf(bookId);
+        await pinMateBook(added.userBookId);
+        if (cancelled) return;
+        setUserBookId(added.userBookId);
+        setPhase("done");
+      } catch {
+        if (cancelled) return;
+        setPhase("error");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId]);
 
   const goMateWithTimer = () => {
     navigate("/mate", {
       replace: true,
       state: {
         openFocusTime: true,
-        mateBookId: state?.bookId,
+        mateBookId:
+          userBookId != null ? String(userBookId) : state?.bookId != null
+            ? String(state.bookId)
+            : undefined,
       },
     });
   };
+
+  if (phase === "working") {
+    return (
+      <main className="relative mx-auto flex h-dvh min-h-dvh w-full max-w-[430px] flex-col items-center justify-center overflow-hidden bg-[#fdfdff] px-5">
+        <p className="text-body1 text-gray-500">메이트로 지정하는 중...</p>
+      </main>
+    );
+  }
+
+  if (phase === "error") {
+    return (
+      <main className="relative mx-auto flex h-dvh min-h-dvh w-full max-w-[430px] flex-col items-center justify-center overflow-hidden bg-[#fdfdff] px-5">
+        <p className="text-center text-body1 text-gray-600">
+          메이트 지정에 실패했어요.
+        </p>
+        <button
+          type="button"
+          className="mt-4 text-button1 text-primary-500"
+          onClick={() => navigate("/drawer/recommend", { replace: true })}
+        >
+          추천으로 돌아가기
+        </button>
+      </main>
+    );
+  }
 
   return (
     <main className="relative mx-auto flex h-dvh min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff]">

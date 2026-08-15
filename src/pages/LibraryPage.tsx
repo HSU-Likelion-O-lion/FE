@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import NavigationBar, { type NavTab } from "../components/NavigationBar";
 import WebGnb from "../components/WebGnb";
@@ -8,12 +8,22 @@ import LibrarySectionToggle, {
   type LibrarySection,
 } from "../components/library/LibrarySectionToggle";
 import {
-  MOCK_LIBRARY_REASONS,
-  MOCK_LIBRARY_STATS,
-  MOCK_SHELF_BOOKS,
+  getBookshelf,
+  getMe,
+  getReadingStatistics,
+  getReflections,
+  getStreaks,
+  countStreakDays,
+  formatReflectionDate,
+  mapBookItemToLibraryBook,
+  sumFocusedMinutes,
+} from "../api";
+import {
   REASON_GOAL,
   type LibraryReason,
-} from "../data/libraryMock";
+  type LibraryShelfBook,
+  type LibraryStats,
+} from "../data/library";
 import glowEllipse from "../assets/library/glow-ellipse.svg";
 import iconDot from "../assets/library/icon-dot.svg";
 import iconMegaphone from "../assets/library/icon-megaphone.svg";
@@ -21,6 +31,14 @@ import iconMegaphone from "../assets/library/icon-megaphone.svg";
 function parseSection(raw: string | null): LibrarySection {
   return raw === "growth" ? "growth" : "reasons";
 }
+
+const EMPTY_STATS: LibraryStats = {
+  userName: "",
+  finishedCount: 0,
+  totalHours: 0,
+  totalMinutes: 0,
+  streakDays: 0,
+};
 
 /** 서재 홈 — 나의 사유록 / 독서 성장 기록 (모바일 + 웹 Figma 715:5878, 716:6404, 716:6207) */
 export default function LibraryPage() {
@@ -34,13 +52,71 @@ export default function LibraryPage() {
     });
   };
 
-  const reasons = MOCK_LIBRARY_REASONS;
-  const stats = MOCK_LIBRARY_STATS;
+  const [reasons, setReasons] = useState<LibraryReason[]>([]);
+  const [stats, setStats] = useState<LibraryStats>(EMPTY_STATS);
+  const [shelfBooks, setShelfBooks] = useState<LibraryShelfBook[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [me, shelf, reflections, readingStats, streaks] =
+          await Promise.all([
+            getMe(),
+            getBookshelf(),
+            getReflections(),
+            getReadingStatistics(),
+            getStreaks(),
+          ]);
+        if (cancelled) return;
+
+        const books = shelf.books.map((item) =>
+          mapBookItemToLibraryBook(item),
+        );
+        const finishedCount = shelf.books.filter(
+          (b) => b.status === "DONE",
+        ).length;
+        const focused = sumFocusedMinutes(readingStats);
+        const totalHours = Math.floor(focused / 60);
+        const totalMinutes = focused % 60;
+
+        setShelfBooks(books);
+        setReasons(
+          reflections.reflections.map((r) => ({
+            id: String(r.reflectionId),
+            dateLabel: formatReflectionDate(r.createdAt),
+            excerpt: r.content,
+          })),
+        );
+        setStats({
+          userName: me.nickname,
+          finishedCount,
+          totalHours,
+          totalMinutes,
+          streakDays: countStreakDays(streaks.week),
+        });
+      } catch (err) {
+        if (cancelled) return;
+        console.error(err);
+        alert(
+          err instanceof Error
+            ? err.message
+            : "서재 정보를 불러오지 못했습니다.",
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const shelfPreview = useMemo(
-    () => MOCK_SHELF_BOOKS.filter((b) => b.status === "finished").slice(0, 3),
-    [],
+    () => shelfBooks.filter((b) => b.status === "finished").slice(0, 3),
+    [shelfBooks],
   );
-  const shelfGrid = useMemo(() => MOCK_SHELF_BOOKS.slice(0, 9), []);
+  const shelfGrid = useMemo(() => shelfBooks.slice(0, 9), [shelfBooks]);
 
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff] min-[431px]:max-w-none min-[431px]:overflow-visible">
@@ -90,7 +166,7 @@ export default function LibraryPage() {
                     bookId: reason.id,
                     body: reason.excerpt,
                     date: reason.dateLabel,
-                    authorName: "지훈",
+                    authorName: stats.userName || "나",
                   },
                 })
               }
@@ -103,7 +179,7 @@ export default function LibraryPage() {
           ) : (
             <GrowthSection
               stats={stats}
-              shelfCount={MOCK_SHELF_BOOKS.length}
+              shelfCount={shelfBooks.length}
               shelfPreview={shelfPreview}
               onViewAll={() => navigate("/library/bookshelf")}
             />
@@ -145,7 +221,7 @@ export default function LibraryPage() {
                         bookId: reason.id,
                         body: reason.excerpt,
                         date: reason.dateLabel,
-                        authorName: "지훈",
+                        authorName: stats.userName || "나",
                       },
                     })
                   }
@@ -154,7 +230,7 @@ export default function LibraryPage() {
             ) : (
               <GrowthWeb
                 stats={stats}
-                shelfCount={MOCK_SHELF_BOOKS.length}
+                shelfCount={shelfBooks.length}
                 shelfGrid={shelfGrid}
               />
             )}
@@ -257,14 +333,18 @@ function ReasonsWeb({
                 className="w-full rounded-[17px] bg-[#fdfdff] px-8 py-3.5 text-left shadow-[0_0_2.88px_rgba(29,29,32,0.11)]"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[21.6px] font-medium tracking-[-0.025em] text-gray-900">
-                    {reason.bookTitle}
-                  </p>
-                  <img
-                    src={iconDot}
-                    alt=""
-                    className="size-1.5 object-contain"
-                  />
+                  {reason.bookTitle ? (
+                    <p className="text-[21.6px] font-medium tracking-[-0.025em] text-gray-900">
+                      {reason.bookTitle}
+                    </p>
+                  ) : null}
+                  {reason.bookTitle ? (
+                    <img
+                      src={iconDot}
+                      alt=""
+                      className="size-1.5 object-contain"
+                    />
+                  ) : null}
                   <p className="text-[17.3px] tracking-[-0.025em] text-gray-300">
                     {reason.dateLabel}
                   </p>
@@ -286,7 +366,7 @@ function GrowthWeb({
   shelfCount,
   shelfGrid,
 }: {
-  stats: typeof MOCK_LIBRARY_STATS;
+  stats: LibraryStats;
   shelfCount: number;
   shelfGrid: { id: string; coverUrl: string; title: string }[];
 }) {
@@ -308,7 +388,7 @@ function GrowthWeb({
 
         <div className="relative z-10">
           <p className="text-[34px] font-medium leading-[1.5] tracking-[-0.025em] text-gray-700">
-            {stats.userName}님, 오늘도
+            {stats.userName || "회원"}님, 오늘도
             <br />
             멋진 기록을 남겨봐요!
           </p>
@@ -475,9 +555,11 @@ function ReasonsSection({
               className="w-full rounded-xl bg-[#fdfdff] px-5 py-3 text-left shadow-[0_0_2px_rgba(29,29,32,0.11)]"
             >
               <div className="flex items-baseline gap-2">
-                <p className="text-[15px] tracking-[-0.025em] text-gray-900">
-                  {reason.bookTitle}
-                </p>
+                {reason.bookTitle ? (
+                  <p className="text-[15px] tracking-[-0.025em] text-gray-900">
+                    {reason.bookTitle}
+                  </p>
+                ) : null}
                 <p className="text-caption text-gray-300">{reason.dateLabel}</p>
               </div>
               <p className="mt-1 line-clamp-1 text-[13px] leading-[23px] tracking-[-0.025em] text-gray-500">
@@ -498,7 +580,7 @@ function GrowthStatDial({
   stats,
   size = "mobile",
 }: {
-  stats: typeof MOCK_LIBRARY_STATS;
+  stats: LibraryStats;
   size?: "mobile" | "web";
 }) {
   const [active, setActive] = useState<GrowthMetric>("books");
@@ -598,7 +680,7 @@ function GrowthSection({
   shelfPreview,
   onViewAll,
 }: {
-  stats: typeof MOCK_LIBRARY_STATS;
+  stats: LibraryStats;
   shelfCount: number;
   shelfPreview: { id: string; coverUrl: string; title: string }[];
   onViewAll: () => void;
@@ -618,7 +700,7 @@ function GrowthSection({
 
       <div className="relative z-10">
         <p className="text-[28px] font-medium leading-[1.5] tracking-[-0.025em] text-gray-700">
-          {stats.userName}님, 오늘도
+          {stats.userName || "회원"}님, 오늘도
           <br />
           멋진 기록을 남겨봐요!
         </p>

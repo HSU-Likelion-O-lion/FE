@@ -1,5 +1,11 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  ApiError,
+  createShareImage,
+  getShareStatus,
+  getShareThemes,
+} from "../api";
 import Button from "../components/Button";
 import ThoughtShareSheet from "../components/shelter/ThoughtShareSheet";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
@@ -16,24 +22,21 @@ import tapeBlue from "../assets/shelter/thoughts/share/tape-blue.svg";
 import tapeGreen from "../assets/shelter/thoughts/share/tape-green.svg";
 import tapeYellow from "../assets/shelter/thoughts/share/tape-yellow.svg";
 
-type ThemeId = "pink" | "blue" | "green" | "yellow";
-
-const THEMES: {
-  id: ThemeId;
+type ThemeVisual = {
   swatch: string;
   cardStyle: CSSProperties;
   glow: string;
   tape: string;
-}[] = [
+};
+
+const THEME_VISUALS: ThemeVisual[] = [
   {
-    id: "pink",
     swatch: "#F59ACA",
     cardStyle: { backgroundColor: "rgba(255, 203, 231, 0.58)" },
     glow: glowPink,
     tape: tapePink,
   },
   {
-    id: "blue",
     swatch: "#ADB9F2",
     cardStyle: {
       backgroundImage:
@@ -43,14 +46,12 @@ const THEMES: {
     tape: tapeBlue,
   },
   {
-    id: "green",
     swatch: "#93E467",
     cardStyle: { backgroundColor: "rgba(190, 246, 160, 0.58)" },
     glow: glowGreen,
     tape: tapeGreen,
   },
   {
-    id: "yellow",
     swatch: "#F6E36A",
     cardStyle: { backgroundColor: "rgba(255, 242, 156, 0.58)" },
     glow: glowYellow,
@@ -58,8 +59,23 @@ const THEMES: {
   },
 ];
 
-const DEFAULT_BODY =
-  "원래 저 같은 경우에는 모든 일을 완벽하게 해내야 한다는 생각이 강해서 작은 실수에도 스스로를 많이 몰아붙이곤 했어요. 하지만 이 책을 읽으며 내가 통제할 수 없는 일들은 흘려보내도 괜찮다는 사실을 깨달았어요. 모든 결과를 내 힘으로 바꾸려 하기보다, 지금 내가 할 수 있는 일에 집중하는 것이 더 중요하다는 생각이 들었어요.";
+type ShareThemeOption = {
+  themeId: number;
+  name: string;
+  previewUrl: string;
+  visual: ThemeVisual;
+};
+
+async function pollShareImage(shareId: number, maxAttempts = 30) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const status = await getShareStatus(shareId);
+    if (status.status === "COMPLETED" && status.imageUrl) {
+      return status.imageUrl;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1000));
+  }
+  throw new Error("SHARE_TIMEOUT");
+}
 
 /** 나의 사유록 공유하기(테마 선택) — 모바일 Figma 814:3756 / 829:4269 / 4347 / 4425 */
 export default function ShelterThoughtSharePage() {
@@ -67,26 +83,111 @@ export default function ShelterThoughtSharePage() {
   const location = useLocation();
   const state = (location.state as MyThoughtLocationState | null) ?? null;
 
-  const bookTitle = state?.title ?? "불안을 이기는 철학";
-  const bookId = state?.bookId ?? "default";
-  const body = state?.body?.trim() ? state.body : DEFAULT_BODY;
-  const date = state?.date ?? "2026.06.25";
-  const authorName = state?.authorName ?? "지훈";
+  const bookTitle = state?.title ?? "쉼터";
+  const bookId = state?.bookId;
+  const roomId = state?.roomId;
+  const postId = state?.postId;
+  const body = state?.body?.trim() ? state.body : "";
+  const date = state?.date ?? "";
+  const authorName = state?.authorName ?? "나";
 
-  const [theme, setTheme] = useState<ThemeId>("pink");
+  const [themes, setThemes] = useState<ShareThemeOption[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | undefined>();
+  const [sharing, setSharing] = useState(false);
 
-  const activeTheme = THEMES.find((t) => t.id === theme) ?? THEMES[0];
+  useEffect(() => {
+    let cancelled = false;
+    getShareThemes()
+      .then((data) => {
+        if (cancelled) return;
+        const mapped = data.themes.map((theme, index) => ({
+          themeId: theme.themeId,
+          name: theme.name,
+          previewUrl: theme.previewUrl,
+          visual: THEME_VISUALS[index % THEME_VISUALS.length]!,
+        }));
+        setThemes(
+          mapped.length > 0
+            ? mapped
+            : THEME_VISUALS.map((visual, index) => ({
+                themeId: index + 1,
+                name: `theme-${index + 1}`,
+                previewUrl: "",
+                visual,
+              })),
+        );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setThemes(
+          THEME_VISUALS.map((visual, index) => ({
+            themeId: index + 1,
+            name: `theme-${index + 1}`,
+            previewUrl: "",
+            visual,
+          })),
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeTheme = themes[selectedIndex] ?? themes[0];
+  const visual = activeTheme?.visual ?? THEME_VISUALS[0]!;
 
   const shareText = useMemo(
-    () => `[${bookTitle}]\n${authorName} · ${date}\n\n${body}`,
+    () =>
+      `[${bookTitle}]\n${authorName}${date ? ` · ${date}` : ""}\n\n${body}`,
     [authorName, body, bookTitle, date],
   );
 
   const goEdit = () => {
-    navigate("/shelter/thoughts/write", {
-      state: { title: bookTitle, bookId, body },
+    const query = roomId != null ? `?roomId=${roomId}` : "";
+    navigate(`/shelter/thoughts/write${query}`, {
+      state: {
+        title: bookTitle,
+        bookId,
+        roomId,
+        postId,
+        body,
+        date,
+        authorName,
+      },
     });
+  };
+
+  const handleShare = async () => {
+    if (!activeTheme) {
+      setSheetOpen(true);
+      return;
+    }
+    if (postId == null) {
+      setShareUrl(undefined);
+      setSheetOpen(true);
+      return;
+    }
+
+    setSharing(true);
+    try {
+      const job = await createShareImage(postId, activeTheme.themeId);
+      const imageUrl =
+        job.status === "COMPLETED"
+          ? (await getShareStatus(job.shareId)).imageUrl
+          : await pollShareImage(job.shareId);
+      setShareUrl(imageUrl);
+      setSheetOpen(true);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("공유 이미지를 만들지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
@@ -99,7 +200,7 @@ export default function ShelterThoughtSharePage() {
             style={SHELTER_BOARD_GRID_STYLE}
           />
           <img
-            src={activeTheme.glow}
+            src={visual.glow}
             alt=""
             className="pointer-events-none absolute left-1/2 top-[-320px] z-0 h-[860px] w-[620px] max-w-none -translate-x-1/2"
           />
@@ -133,7 +234,7 @@ export default function ShelterThoughtSharePage() {
           </header>
 
           <img
-            src={activeTheme.tape}
+            src={visual.tape}
             alt=""
             className="pointer-events-none absolute left-1/2 top-[153px] z-30 h-[40px] w-[72px] -translate-x-1/2 object-contain"
           />
@@ -141,7 +242,7 @@ export default function ShelterThoughtSharePage() {
           <div className="absolute left-1/2 top-[176px] z-20 w-[317px] -translate-x-1/2">
             <article
               className="flex h-[415px] w-full flex-col items-center gap-[21px] overflow-y-auto overscroll-contain px-[29px] py-[37px]"
-              style={activeTheme.cardStyle}
+              style={visual.cardStyle}
             >
               <div className="relative flex w-full shrink-0 flex-col items-center">
                 <img
@@ -152,9 +253,11 @@ export default function ShelterThoughtSharePage() {
                 <p className="mt-[11px] text-center text-[20px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
                   {authorName}
                 </p>
-                <p className="mt-0.5 text-center text-[15px] leading-[25px] tracking-[-0.025em] text-gray-400">
-                  {date}
-                </p>
+                {date ? (
+                  <p className="mt-0.5 text-center text-[15px] leading-[25px] tracking-[-0.025em] text-gray-400">
+                    {date}
+                  </p>
+                ) : null}
               </div>
               <p className="w-full whitespace-pre-wrap text-left text-[14.4px] leading-[1.6] tracking-[-0.025em] text-gray-800">
                 {body}
@@ -162,20 +265,26 @@ export default function ShelterThoughtSharePage() {
             </article>
           </div>
 
-          {/* 하단 테마 선택 패널 — Figma 패널 225px / 버튼은 스와치 아래 */}
           <div className="absolute inset-x-0 bottom-0 z-40 flex flex-col items-center rounded-t-[24px] bg-[#fdfdff] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-7 shadow-[0_-4px_4px_rgba(38,39,43,0.07)]">
             <div className="mb-6 flex items-center justify-center gap-[25px]">
-              {THEMES.map((item) => {
-                const selected = theme === item.id;
+              {themes.map((item, index) => {
+                const selected = selectedIndex === index;
                 return (
                   <button
-                    key={item.id}
+                    key={item.themeId}
                     type="button"
-                    aria-label={`${item.id} 테마`}
+                    aria-label={`${item.name} 테마`}
                     aria-pressed={selected}
-                    onClick={() => setTheme(item.id)}
-                    className="relative size-14 shrink-0 rounded-full"
-                    style={{ backgroundColor: item.swatch }}
+                    onClick={() => setSelectedIndex(index)}
+                    className="relative size-14 shrink-0 overflow-hidden rounded-full"
+                    style={{
+                      backgroundColor: item.visual.swatch,
+                      backgroundImage: item.previewUrl
+                        ? `url(${item.previewUrl})`
+                        : undefined,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }}
                   >
                     {selected ? (
                       <svg
@@ -199,11 +308,12 @@ export default function ShelterThoughtSharePage() {
             </div>
 
             <Button
-              text="사유록 공유하기"
+              text={sharing ? "이미지 만드는 중…" : "사유록 공유하기"}
               variant="primary"
               size="h-[54px] w-full max-w-[353px] rounded-[16px] px-5 py-3"
               className="shadow-none"
-              onClick={() => setSheetOpen(true)}
+              disabled={sharing || !body.trim()}
+              onClick={() => void handleShare()}
             />
           </div>
         </div>
@@ -212,6 +322,7 @@ export default function ShelterThoughtSharePage() {
       <ThoughtShareSheet
         open={sheetOpen}
         shareText={shareText}
+        shareUrl={shareUrl}
         onClose={() => setSheetOpen(false)}
       />
     </>
