@@ -56,6 +56,7 @@ export type Pin = {
 export type ReflectionItem = {
   reflectionId: number;
   content: string;
+  bookTitle: string;
   createdAt: string;
 };
 

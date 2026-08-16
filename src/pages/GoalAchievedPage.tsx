@@ -22,29 +22,53 @@ type WeekItem = {
   date: string;
 };
 
-/**
- * 점선(miss) = 지나간 + 안 읽은 날
- * 회색(future) = 다가올 날
- * 채움(done) = 지나간 + 읽은 날
- * 채움+체크(today) = 오늘이면서 읽음
- */
-function mapWeekToUi(week: Day[]): WeekItem[] {
-  const today = formatLocalDate(new Date());
+function normalizeApiDate(raw: string) {
+  return raw.slice(0, 10);
+}
 
-  return week.map((item) => {
-    const d = new Date(`${item.date}T00:00:00`);
-    const day = WEEK_DAYS[Number.isNaN(d.getTime()) ? 0 : d.getDay()];
+/** 메이트 메인과 동일 — 이번 주 일요일 시작 */
+function startOfSundayWeek(base = new Date()) {
+  const d = new Date(base);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+
+/**
+ * 일~토 고정 주간.
+ * 점선(miss) = 지나간 + 안 읽음
+ * 회색(future) = 다가올 날
+ * 채움(done) = 지나간 + 읽음
+ * 채움+체크(today) = 오늘(목표 달성 화면이므로 항상 체크)
+ */
+function buildGoalWeek(apiWeek: Day[] = []): WeekItem[] {
+  const today = formatLocalDate(new Date());
+  const achievedByDate = new Map(
+    apiWeek.map((d) => [normalizeApiDate(d.date), Boolean(d.achieved)]),
+  );
+
+  const weekStart = startOfSundayWeek();
+  const items: WeekItem[] = [];
+
+  for (let i = 0; i < 7; i += 1) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const fullDate = formatLocalDate(d);
+    const day = WEEK_DAYS[d.getDay()];
+
     let status: DayStatus;
-    if (item.date > today) {
+    if (fullDate > today) {
       status = "future";
-    } else if (item.date === today) {
-      // 목표 달성 화면이므로 오늘은 읽음+체크로 표시
+    } else if (fullDate === today) {
       status = "today";
     } else {
-      status = item.achieved ? "done" : "miss";
+      status = achievedByDate.get(fullDate) ? "done" : "miss";
     }
-    return { day, status, date: item.date };
-  });
+
+    items.push({ day, status, date: fullDate });
+  }
+
+  return items;
 }
 
 function DayDot({ status }: { status: DayStatus }) {
@@ -71,16 +95,17 @@ export default function GoalAchievedPage() {
   const navigate = useNavigate();
   const complete = loadFocusComplete();
   const lastSession = loadLastSession();
-  const [week, setWeek] = useState<WeekItem[]>([]);
+  // API 실패/지연이어도 일~토 + 오늘 체크는 바로 보이게
+  const [week, setWeek] = useState<WeekItem[]>(() => buildGoalWeek());
 
   useEffect(() => {
     let cancelled = false;
     getStreaks()
       .then((data) => {
-        if (!cancelled) setWeek(mapWeekToUi(data.week));
+        if (!cancelled) setWeek(buildGoalWeek(data.week ?? []));
       })
       .catch(() => {
-        /* 주간 UI는 선택적 — 실패해도 페이지는 유지 */
+        if (!cancelled) setWeek(buildGoalWeek());
       });
     return () => {
       cancelled = true;

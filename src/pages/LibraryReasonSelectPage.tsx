@@ -55,6 +55,7 @@ export default function LibraryReasonSelectPage() {
         setCanPublish(data.canPublish);
         const list = (data.reflections ?? []).map((r) => ({
           id: String(r.reflectionId),
+          bookTitle: r.bookTitle,
           dateLabel: formatReflectionDate(r.createdAt),
           excerpt: r.content,
         }));

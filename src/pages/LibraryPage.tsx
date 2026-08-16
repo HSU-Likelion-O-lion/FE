@@ -85,6 +85,7 @@ export default function LibraryPage() {
         setReasons(
           reflections.reflections.map((r) => ({
             id: String(r.reflectionId),
+            bookTitle: r.bookTitle,
             dateLabel: formatReflectionDate(r.createdAt),
             excerpt: r.content,
           })),
