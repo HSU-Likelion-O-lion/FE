@@ -292,32 +292,11 @@ const WEB_LAYOUT_CONFIG: BoardLayoutConfig = {
   overlay: WEB_OVERLAY,
 };
 
-/** 보드 미리보기용 짧은 텍스트 */
+/** 보드 미리보기용 짧은 텍스트 — 최대 20자 + 말줄임 */
 export function toBoardPreview(content: string): string {
-  const lines = content
-    .trim()
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  if (lines.length >= 2) {
-    return lines
-      .slice(0, 3)
-      .map((line) => (line.length > 18 ? `${line.slice(0, 18)}...` : line))
-      .join("\n");
-  }
-
   const text = content.trim().replace(/\s+/g, " ");
-  if (text.length <= 40) return text;
-
-  const chunk = 14;
-  const parts: string[] = [];
-  for (let i = 0; i < text.length && parts.length < 3; i += chunk) {
-    const slice = text.slice(i, i + chunk);
-    const isLast = parts.length === 2 || i + chunk >= text.length;
-    parts.push(isLast && i + chunk < text.length ? `${slice}...` : slice);
-  }
-  return parts.join("\n");
+  if (text.length <= 20) return text;
+  return `${text.slice(0, 20)}...`;
 }
 
 export function communityPostToThoughtNote(post: CommunityPost): ThoughtNote {
