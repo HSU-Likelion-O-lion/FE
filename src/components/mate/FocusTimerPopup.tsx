@@ -17,10 +17,12 @@ import {
   heartbeatReadingSession,
   recordInterruption,
   resumeReadingSession,
+  skipReadingSession,
   startReadingSession,
   type InterruptionReason,
   type TargetMinutes,
 } from "../../api";
+import { getStoredUser } from "../../api/authStorage";
 import { saveLastSession } from "../../api/sessionDraft";
 
 const RING_MOBILE = { size: 272, stroke: 10, minSize: 180 } as const;
@@ -28,6 +30,13 @@ const RING_WEB = { size: 350, stroke: 10, minSize: 200 } as const;
 /** 모바일 타이틀 헤더 최소 높이 */
 const HEADER_MOBILE = 74;
 const HEARTBEAT_INTERVAL_MS = 15_000;
+/** 타이머 스킵 API 허용 테스트 계정 */
+const TIMER_SKIP_EMAIL = "test1234@gmail.com";
+
+function canUseTimerSkip() {
+  const email = getStoredUser()?.email?.trim().toLowerCase();
+  return email === TIMER_SKIP_EMAIL;
+}
 
 function ringMetrics(size: number, stroke: number) {
   const radius = (size - stroke) / 2;
@@ -205,6 +214,8 @@ export default function FocusTimerPopup({
   const [pauseReasonId, setPauseReasonId] = useState<string>();
   const [pauseDetailText, setPauseDetailText] = useState("");
   const [sessionReady, setSessionReady] = useState(false);
+  const [skipping, setSkipping] = useState(false);
+  const showSkipButton = canUseTimerSkip();
   const [ringSize, setRingSize] = useState<number>(
     isDesktop ? RING_WEB.size : RING_MOBILE.size,
   );
@@ -582,6 +593,44 @@ export default function FocusTimerPopup({
     });
   };
 
+  /** 테스트 계정 전용 — 타이머 즉시 완료 */
+  const handleSkipTimer = async () => {
+    if (!showSkipButton || !sessionReady || skipping || completedRef.current) {
+      return;
+    }
+    const sid = sessionIdRef.current;
+    if (!sid) {
+      alert("세션을 찾을 수 없어요.");
+      return;
+    }
+
+    setSkipping(true);
+    completedRef.current = true;
+    setPaused(true);
+    pausedRef.current = true;
+    clearFocusTimerSession();
+
+    try {
+      const result = await skipReadingSession(sid);
+      saveLastSession({
+        sessionId: sid,
+        aiQuestion: result.aiQuestion,
+        userBookId: userBookIdRef.current,
+      });
+      markFocusComplete(minutes);
+      markDailyReadingComplete(minutes);
+      onCompleteRef.current?.(minutes);
+    } catch (err) {
+      completedRef.current = false;
+      setSkipping(false);
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "타이머 스킵에 실패했어요.";
+      alert(message);
+    }
+  };
+
   const resetPauseModal = () => {
     setPauseModalOpen(false);
     setPauseStep("reason");
@@ -851,21 +900,34 @@ export default function FocusTimerPopup({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleTogglePause}
-          disabled={!sessionReady}
-          className="flex shrink-0 items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5 min-[431px]:h-[55px] min-[431px]:rounded-[28.8px] min-[431px]:px-6 min-[431px]:py-3 disabled:opacity-60"
-        >
-          <img
-            src={paused ? iconPlay : iconPause}
-            alt=""
-            className="size-6 object-contain min-[431px]:size-[28.8px]"
-          />
-          <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-100 min-[431px]:text-[19.2px]">
-            {paused ? "일시 정지됨" : "잠시 멈추기"}
-          </span>
-        </button>
+        <div className="flex shrink-0 flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={handleTogglePause}
+            disabled={!sessionReady || skipping}
+            className="flex items-center gap-1.5 rounded-[24px] bg-primary-500 px-5 py-2.5 min-[431px]:h-[55px] min-[431px]:rounded-[28.8px] min-[431px]:px-6 min-[431px]:py-3 disabled:opacity-60"
+          >
+            <img
+              src={paused ? iconPlay : iconPause}
+              alt=""
+              className="size-6 object-contain min-[431px]:size-[28.8px]"
+            />
+            <span className="text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-gray-100 min-[431px]:text-[19.2px]">
+              {paused ? "일시 정지됨" : "잠시 멈추기"}
+            </span>
+          </button>
+
+          {showSkipButton ? (
+            <button
+              type="button"
+              onClick={() => void handleSkipTimer()}
+              disabled={!sessionReady || skipping}
+              className="rounded-full border border-white/40 bg-white/10 px-4 py-2 text-[13px] font-medium tracking-[-0.025em] text-white/90 backdrop-blur-sm disabled:opacity-50 min-[431px]:text-[15px]"
+            >
+              {skipping ? "스킵 중…" : "타이머 스킵 (테스트)"}
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <Modal

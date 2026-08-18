@@ -36,6 +36,14 @@ export async function completeReadingSession(sessionId: number) {
   );
 }
 
+/** 테스트 계정 전용 — 목표 시간과 무관하게 세션 즉시 완료 */
+export async function skipReadingSession(sessionId: number) {
+  return apiRequest<{ status: string; aiQuestion: string }>(
+    `/api/reading-sessions/${sessionId}/skip`,
+    { method: "PATCH" },
+  );
+}
+
 export async function abandonReadingSession(sessionId: number) {
   return apiRequest<{ status: string }>(
     `/api/reading-sessions/${sessionId}/abandon`,
