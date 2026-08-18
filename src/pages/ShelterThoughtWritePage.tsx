@@ -190,7 +190,11 @@ export default function ShelterThoughtWritePage() {
   }, [text, cardMaxHeight, visibleHeight]);
 
   const goToMyThought = () => {
-    navigate("/shelter/thoughts/mine", {
+    const query = new URLSearchParams();
+    if (created?.postId != null) query.set("postId", String(created.postId));
+    if (roomId != null) query.set("roomId", String(roomId));
+    const qs = query.toString();
+    navigate(`/shelter/thoughts/mine${qs ? `?${qs}` : ""}`, {
       replace: true,
       state: {
         title: bookTitle,

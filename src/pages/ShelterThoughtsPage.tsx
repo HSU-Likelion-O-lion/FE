@@ -102,7 +102,9 @@ export default function ShelterThoughtsPage() {
   const onNoteClick = (thoughtId: string) => {
     const post = posts.find((item) => String(item.postId) === thoughtId);
     if (post?.isMine) {
-      navigate("/shelter/thoughts/mine", {
+      const query = new URLSearchParams({ postId: String(post.postId) });
+      if (roomId != null) query.set("roomId", String(roomId));
+      navigate(`/shelter/thoughts/mine?${query.toString()}`, {
         state: {
           ...navState,
           postId: post.postId,

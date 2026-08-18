@@ -114,7 +114,7 @@ export default function LibraryReasonsPage() {
                   navigate("/shelter/thoughts/mine", {
                     state: {
                       title: reason.bookTitle,
-                      bookId: reason.id,
+                      reflectionId: Number(reason.id),
                       body: reason.excerpt,
                       date: reason.dateLabel,
                       authorName: userName || "나",

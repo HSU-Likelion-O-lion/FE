@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { getRoomPosts } from "../api";
+import {
+  ApiError,
+  createCommunityPost,
+  getCommunityRooms,
+  getRoomPosts,
+} from "../api";
 import Button from "../components/Button";
 import WebGnb from "../components/WebGnb";
 import ThoughtShareSheet from "../components/shelter/ThoughtShareSheet";
@@ -21,11 +26,18 @@ const MAX_LENGTH = 200;
 const CARD_GRADIENT =
   "linear-gradient(-23deg, rgba(225,231,255,0.96) 2%, rgba(223,229,255,0.96) 96%)";
 
+function readPositiveInt(raw: string | null): number | null {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export type MyThoughtLocationState = {
   title?: string;
   bookId?: number | string;
   roomId?: number;
   postId?: number;
+  /** 서재 사유 ID — postId와 다름 */
+  reflectionId?: number;
   body?: string;
   date?: string;
   authorName?: string;
@@ -35,64 +47,131 @@ export type MyThoughtLocationState = {
 export default function ShelterMyThoughtPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isDesktop = useIsDesktop();
   const state = (location.state as MyThoughtLocationState | null) ?? null;
 
   const bookTitle = state?.title ?? "쉼터";
   const bookId = state?.bookId;
+  const reflectionId =
+    typeof state?.reflectionId === "number" && state.reflectionId > 0
+      ? state.reflectionId
+      : undefined;
+  const roomIdFromQuery = readPositiveInt(searchParams.get("roomId"));
+  const postIdFromQuery = readPositiveInt(searchParams.get("postId"));
   const roomId =
     (typeof state?.roomId === "number" && state.roomId > 0
       ? state.roomId
-      : null) ??
-    (() => {
-      const q = Number(searchParams.get("roomId"));
-      return Number.isFinite(q) && q > 0 ? q : null;
-    })();
+      : null) ?? roomIdFromQuery;
+  const initialPostId =
+    (typeof state?.postId === "number" && state.postId > 0
+      ? state.postId
+      : null) ?? postIdFromQuery;
 
   const [body, setBody] = useState(state?.body?.trim() ? state.body : "");
   const [authorName, setAuthorName] = useState(state?.authorName ?? "");
-  const [postId, setPostId] = useState<number | undefined>(state?.postId);
+  const [postId, setPostId] = useState<number | undefined>(
+    initialPostId ?? undefined,
+  );
+  const [resolvedRoomId, setResolvedRoomId] = useState<number | null>(roomId);
   const [loading, setLoading] = useState(!state?.body?.trim());
+  const [resolvingPostId, setResolvingPostId] = useState(initialPostId == null);
+  const [postingToShelter, setPostingToShelter] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const date = state?.date ?? "";
 
   useEffect(() => {
-    if (state?.body?.trim()) {
-      setLoading(false);
-      return;
+    if (initialPostId != null) {
+      setPostId(initialPostId);
+      setResolvingPostId(false);
     }
-    if (roomId == null) {
+
+    const hasBody = Boolean(state?.body?.trim());
+    // body·postId 모두 있으면 본문 조회 불필요. postId만 없을 때는 쉼터에서 조회.
+    if (hasBody && initialPostId != null) {
       setLoading(false);
       return;
     }
 
     let cancelled = false;
-    setLoading(true);
-    getRoomPosts(roomId)
-      .then((data) => {
+    if (!hasBody) setLoading(true);
+    if (initialPostId == null) setResolvingPostId(true);
+
+    const resolve = async () => {
+      let nextRoomId = roomId;
+
+      if (nextRoomId == null && bookTitle && bookTitle !== "쉼터") {
+        try {
+          const { rooms } = await getCommunityRooms();
+          const matched = rooms.find((room) => room.bookTitle === bookTitle);
+          if (matched) nextRoomId = matched.roomId;
+        } catch {
+          /* rooms 조회 실패 시 아래 roomId 없음 처리 */
+        }
+      }
+
+      if (cancelled) return;
+
+      if (nextRoomId != null) {
+        setResolvedRoomId(nextRoomId);
+        const data = await getRoomPosts(nextRoomId);
         if (cancelled) return;
+
+        const bodyText = state?.body?.trim() ?? "";
         const mine =
-          (state?.postId != null
-            ? data.posts.find((p) => p.postId === state.postId && p.isMine)
-            : undefined) ?? data.posts.find((p) => p.isMine);
+          (initialPostId != null
+            ? data.posts.find(
+                (p) => p.postId === initialPostId && p.isMine,
+              )
+            : undefined) ??
+          // 서재에서 온 경우: 같은 내용의 내 글만 postId로 인정
+          (bodyText
+            ? data.posts.find(
+                (p) => p.isMine && p.content.trim() === bodyText,
+              )
+            : undefined) ??
+          (!hasBody ? data.posts.find((p) => p.isMine) : undefined);
+
         if (mine) {
           setPostId(mine.postId);
-          setBody(mine.content);
-          setAuthorName(mine.anonymousNickname);
+          if (!hasBody) {
+            setBody(mine.content);
+            setAuthorName(mine.anonymousNickname);
+          }
         }
-      })
+      }
+    };
+
+    resolve()
       .catch(() => {
         /* keep empty */
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (cancelled) return;
+        setLoading(false);
+        setResolvingPostId(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [roomId, state?.body, state?.postId]);
+  }, [bookTitle, initialPostId, roomId, state?.body]);
+
+  // 조회된 postId·roomId를 URL에 반영 (값이 바뀔 때만 — setSearchParams 루프 방지)
+  useEffect(() => {
+    if (postId == null) return;
+
+    const room = resolvedRoomId ?? roomId;
+    const samePost = searchParams.get("postId") === String(postId);
+    const sameRoom =
+      room == null || searchParams.get("roomId") === String(room);
+    if (samePost && sameRoom) return;
+
+    const next = new URLSearchParams(searchParams);
+    next.set("postId", String(postId));
+    if (room != null) next.set("roomId", String(room));
+    setSearchParams(next, { replace: true });
+  }, [postId, resolvedRoomId, roomId, searchParams, setSearchParams]);
 
   const shareText = useMemo(
     () =>
@@ -100,29 +179,94 @@ export default function ShelterMyThoughtPage() {
     [authorName, body, bookTitle, date],
   );
 
+  const effectiveRoomId = resolvedRoomId ?? roomId;
+  const isOnShelter = postId != null;
+
   const navState = {
     title: bookTitle,
     bookId,
-    roomId: roomId ?? undefined,
+    roomId: effectiveRoomId ?? undefined,
     postId,
+    reflectionId,
     body,
     date,
     authorName,
   };
 
   const goEdit = () => {
-    const query = roomId != null ? `?roomId=${roomId}` : "";
+    const query = effectiveRoomId != null ? `?roomId=${effectiveRoomId}` : "";
     navigate(`/shelter/thoughts/write${query}`, {
       state: navState,
     });
   };
 
-  const handleShare = () => {
+  /** 이미 쉼터에 올린 글 → 이미지 저장 화면 */
+  const handleSave = () => {
     if (!isDesktop) {
-      navigate("/shelter/thoughts/mine/share", { state: navState });
+      if (postId == null) return;
+      const query = new URLSearchParams({ postId: String(postId) });
+      if (effectiveRoomId != null) {
+        query.set("roomId", String(effectiveRoomId));
+      }
+      navigate(`/shelter/thoughts/mine/share?${query.toString()}`, {
+        state: navState,
+      });
       return;
     }
     setSheetOpen(true);
+  };
+
+  /** 서재 사유만 있고 쉼터 미게시 → 쉼터에 올리기 */
+  const handlePostToShelter = async () => {
+    if (!body.trim() || postingToShelter) return;
+
+    setPostingToShelter(true);
+    try {
+      let nextRoomId = effectiveRoomId;
+      if (nextRoomId == null) {
+        const { rooms } = await getCommunityRooms();
+        const matched = rooms.find((room) => room.bookTitle === bookTitle);
+        nextRoomId = matched?.roomId ?? null;
+      }
+      if (nextRoomId == null) {
+        window.alert(
+          "이 책의 쉼터 방을 찾지 못했어요. 서재에 책이 담겨 있는지 확인해 주세요.",
+        );
+        return;
+      }
+
+      const created = await createCommunityPost({
+        roomId: nextRoomId,
+        content: body.trim(),
+        reflectionId,
+      });
+      setResolvedRoomId(nextRoomId);
+      setPostId(created.postId);
+      setAuthorName(created.anonymousNickname);
+      window.alert("사유를 쉼터에 남겨뒀어요.");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        window.alert(error.message);
+      } else {
+        window.alert("쉼터에 남기지 못했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    } finally {
+      setPostingToShelter(false);
+    }
+  };
+
+  const ctaBusy = resolvingPostId || postingToShelter;
+  const ctaText = resolvingPostId
+    ? "확인 중…"
+    : postingToShelter
+      ? "쉼터에 남기는 중…"
+      : isOnShelter
+        ? "사유록 저장하기"
+        : "쉼터에 공유하기";
+
+  const handleCta = () => {
+    if (isOnShelter) handleSave();
+    else void handlePostToShelter();
   };
 
   if (loading) {
@@ -199,39 +343,42 @@ export default function ShelterMyThoughtPage() {
             </div>
           </header>
 
-          <img
-            src={detailTape}
-            alt=""
-            className="pointer-events-none absolute left-1/2 top-[195px] z-30 h-[45px] w-[81px] -translate-x-1/2 object-contain"
-          />
+          {/* 헤더~하단 CTA — 테이프를 카드에 붙여 함께 배치 */}
+          <div className="absolute inset-x-0 top-[64px] bottom-[120px] z-20 flex items-center justify-center overflow-hidden px-5">
+            <div className="relative flex max-h-full min-h-0 w-[353px] flex-col items-center pt-[38px]">
+              <img
+                src={detailTape}
+                alt=""
+                className="pointer-events-none absolute left-1/2 top-0 z-30 h-[45px] w-[81px] -translate-x-1/2 object-contain"
+              />
 
-          <div className="absolute left-1/2 top-[233px] z-20 w-[353px] -translate-x-1/2">
-            <article
-              className="flex max-h-[calc(100dvh-233px-120px)] w-full flex-col items-center gap-[23px] overflow-y-auto overscroll-contain px-8 py-[41px]"
-              style={{ backgroundImage: CARD_GRADIENT }}
-            >
-              <div className="relative flex w-full shrink-0 flex-col items-center">
-                <img
-                  src={detailAvatar}
-                  alt=""
-                  className="size-[77px] rounded-full object-cover"
-                />
-                <p className="mt-3 text-center text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
-                  {authorName || "나"}
-                </p>
-                {date ? (
-                  <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
-                    {date}
+              <article
+                className="relative z-20 flex min-h-0 w-full max-h-[calc(100%-38px)] flex-col items-center gap-[23px] overflow-y-auto overscroll-contain px-8 py-[41px]"
+                style={{ backgroundImage: CARD_GRADIENT }}
+              >
+                <div className="relative flex w-full shrink-0 flex-col items-center">
+                  <img
+                    src={detailAvatar}
+                    alt=""
+                    className="size-[77px] rounded-full object-cover"
+                  />
+                  <p className="mt-3 text-center text-[22px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
+                    {authorName || "나"}
                   </p>
-                ) : null}
-              </div>
-              <p className="w-full whitespace-pre-wrap text-center text-body1 leading-[1.6] text-gray-800">
-                {body}
+                  {date ? (
+                    <p className="mt-1 text-center text-[16.8px] leading-[27.6px] tracking-[-0.025em] text-gray-400">
+                      {date}
+                    </p>
+                  ) : null}
+                </div>
+                <p className="w-full whitespace-pre-wrap text-center text-body1 leading-[1.6] text-gray-800">
+                  {body}
+                </p>
+              </article>
+              <p className="mt-2 w-full text-right text-caption text-gray-600">
+                ({body.length}/{MAX_LENGTH})
               </p>
-            </article>
-            <p className="mt-2 text-right text-caption text-gray-600">
-              ({body.length}/{MAX_LENGTH})
-            </p>
+            </div>
           </div>
 
           <div
@@ -240,11 +387,12 @@ export default function ShelterMyThoughtPage() {
           />
           <div className="absolute inset-x-0 bottom-[33px] z-40 flex justify-center px-5">
             <Button
-              text="사유록 공유하기"
+              text={ctaText}
               variant="primary"
               size="h-[54px] w-[353px] rounded-[16px] px-5 py-3"
               className="shadow-none"
-              onClick={handleShare}
+              disabled={ctaBusy}
+              onClick={handleCta}
             />
           </div>
         </div>
@@ -344,11 +492,12 @@ export default function ShelterMyThoughtPage() {
 
         <div className="absolute inset-x-0 bottom-8 z-40 flex justify-center px-8">
           <Button
-            text="사유록 공유하기"
+            text={ctaText}
             variant="primary"
             size="h-[65px] w-full max-w-[424px] rounded-[16px] px-5 py-3 text-[19.2px]"
             className="shadow-none"
-            onClick={handleShare}
+            disabled={ctaBusy}
+            onClick={handleCta}
           />
         </div>
       </main>

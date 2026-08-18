@@ -162,7 +162,7 @@ export default function LibraryPage() {
                 navigate("/shelter/thoughts/mine", {
                   state: {
                     title: reason.bookTitle,
-                    bookId: reason.id,
+                    reflectionId: Number(reason.id),
                     body: reason.excerpt,
                     date: reason.dateLabel,
                     authorName: stats.userName || "나",
@@ -217,7 +217,7 @@ export default function LibraryPage() {
                     navigate("/shelter/thoughts/mine", {
                       state: {
                         title: reason.bookTitle,
-                        bookId: reason.id,
+                        reflectionId: Number(reason.id),
                         body: reason.excerpt,
                         date: reason.dateLabel,
                         authorName: stats.userName || "나",

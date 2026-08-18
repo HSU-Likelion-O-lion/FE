@@ -14,7 +14,10 @@ import {
 } from "../components/mate/FocusTimerPopup";
 import {
   ApiError,
+  createCommunityPost,
   createReflection,
+  getBookshelf,
+  getCommunityRooms,
   getStreaks,
 } from "../api";
 import {
@@ -33,6 +36,35 @@ const TEXTAREA_MIN_HEIGHT = 55;
 const TEXTAREA_MIN_HEIGHT_WEB = 128;
 
 type ShareStep = "share" | "private-done" | "shelter-done";
+
+/** 사유를 해당 책의 쉼터 방에 익명 게시 */
+async function postReflectionToShelter(opts: {
+  content: string;
+  reflectionId: number;
+  userBookId?: number;
+}) {
+  if (opts.userBookId == null) {
+    throw new Error("NO_USER_BOOK");
+  }
+
+  const { books } = await getBookshelf();
+  const item = books.find((b) => b.userBookId === opts.userBookId);
+  if (!item) {
+    throw new Error("NO_BOOK");
+  }
+
+  const { rooms } = await getCommunityRooms();
+  const room = rooms.find((r) => r.bookId === item.book.bookId);
+  if (!room) {
+    throw new Error("NO_ROOM");
+  }
+
+  return createCommunityPost({
+    roomId: room.roomId,
+    content: opts.content,
+    reflectionId: opts.reflectionId,
+  });
+}
 
 export default function ReflectPage() {
   const navigate = useNavigate();
@@ -112,7 +144,33 @@ export default function ReflectPage() {
 
     setSubmitting(true);
     try {
-      await createReflection(session.sessionId, text.trim());
+      const created = await createReflection(session.sessionId, text.trim());
+
+      if (nextStep === "shelter-done") {
+        try {
+          await postReflectionToShelter({
+            content: text.trim(),
+            reflectionId: created.reflectionId,
+            userBookId: session.userBookId,
+          });
+        } catch (shelterErr) {
+          const message =
+            shelterErr instanceof ApiError
+              ? shelterErr.message
+              : shelterErr instanceof Error &&
+                  (shelterErr.message === "NO_USER_BOOK" ||
+                    shelterErr.message === "NO_BOOK" ||
+                    shelterErr.message === "NO_ROOM")
+                ? "서재에는 저장했지만, 쉼터 방을 찾지 못했어요. 쉼터에서 다시 남겨 주세요."
+                : "서재에는 저장했지만, 쉼터에 남기지 못했어요.";
+          alert(message);
+          clearLastSession();
+          clearFocusComplete();
+          setShareStep("private-done");
+          return;
+        }
+      }
+
       clearLastSession();
       clearFocusComplete();
       setShareStep(nextStep);
