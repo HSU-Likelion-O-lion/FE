@@ -33,7 +33,7 @@ export function mapBookItemToLibraryBook(item: BookItem) {
     title: item.book.title,
     author: item.book.author,
     genre: "",
-    publisher: "",
+    publisher: item.book.publisher?.trim() ?? "",
     coverUrl: item.book.coverImageUrl ?? "",
     status: mapApiStatusToUi(item.status),
   };

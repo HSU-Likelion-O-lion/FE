@@ -35,8 +35,7 @@ type IntroBook = {
 };
 
 function formatMeta(book: BookDetail) {
-  const parts = [book.publisher, book.provider].filter(Boolean);
-  return parts.join(" ㅣ ");
+  return book.publisher?.trim() ?? "";
 }
 
 function leaveIntro(navigate: ReturnType<typeof useNavigate>) {
@@ -208,77 +207,83 @@ export default function DrawerBookIntroPage() {
     <>
       {/* —— Mobile —— */}
       <main className="relative mx-auto flex h-dvh min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff] min-[431px]:hidden">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[360px] overflow-hidden"
-        >
-          {book.coverUrl ? (
-            <img
-              src={book.coverUrl}
-              alt=""
-              className="absolute inset-0 size-full scale-110 object-cover blur-[7px]"
-            />
-          ) : null}
-          <div className="absolute inset-0 bg-[rgba(43,65,106,0.74)]" />
-        </div>
-
-        <header className="relative z-20 shrink-0 px-5 pt-5">
-          <div className="relative flex h-11 w-full items-center">
-            <button
-              type="button"
-              aria-label="뒤로가기"
-              onClick={handleBack}
-              className="flex size-6 items-center justify-center"
+        <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div className="relative min-h-full pb-[calc(100px+env(safe-area-inset-bottom))]">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-[min(520px,70%)] overflow-hidden"
             >
-              <img
-                src={iconBack}
-                alt=""
-                className="size-6 object-contain brightness-0 invert"
-              />
-            </button>
-          </div>
-        </header>
-
-        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-          <section className="relative shrink-0 px-9 pb-[120px] pt-2">
-            <h1 className="text-[28px] font-bold leading-[1.5] tracking-[-0.025em] text-[#fdfdff]">
-              {book.title}
-            </h1>
-            <p className="mt-1 text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-200">
-              {book.author}
-            </p>
-            {book.meta ? (
-              <p className="mt-10 text-body2 text-gray-300">{book.meta}</p>
-            ) : (
-              <div className="mt-10" />
-            )}
-
-            <div className="absolute right-5 top-[52px] h-[215px] w-[146px] overflow-hidden rounded-[6px] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
               {book.coverUrl ? (
                 <img
                   src={book.coverUrl}
                   alt=""
-                  className="size-full object-cover"
+                  className="absolute inset-0 size-full scale-110 object-cover blur-[7px]"
                 />
-              ) : (
-                <div className="size-full bg-gray-200" />
-              )}
+              ) : null}
+              <div className="absolute inset-0 bg-[rgba(43,65,106,0.74)]" />
             </div>
-          </section>
 
-          <section className="relative z-10 -mt-[88px] flex min-h-0 flex-1 flex-col rounded-t-[24px] bg-white px-5 pb-[calc(100px+env(safe-area-inset-bottom))] pt-6">
-            <span className="inline-flex w-fit items-center rounded-[15px] bg-primary-10 px-[13px] py-1.5 text-caption text-primary-500">
-              다미의 책 소개
-            </span>
-            <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              <p className="whitespace-pre-wrap text-body1 leading-[1.6] text-gray-700">
-                {book.intro || "아직 소개글이 준비되지 않았어요."}
-              </p>
+            <header className="relative z-20 px-5 pt-5">
+              <div className="relative flex h-11 w-full items-center">
+                <button
+                  type="button"
+                  aria-label="뒤로가기"
+                  onClick={handleBack}
+                  className="flex size-6 items-center justify-center"
+                >
+                  <img
+                    src={iconBack}
+                    alt=""
+                    className="size-6 object-contain brightness-0 invert"
+                  />
+                </button>
+              </div>
+            </header>
+
+            {/* 제목 — 왼쪽만 사용, 길면 흰 박스가 아래로 밀림 */}
+            <section className="relative z-10 px-9 pt-2">
+              <div className="max-w-[calc(100%-158px)]">
+                <h1 className="break-words text-[28px] font-bold leading-[1.5] tracking-[-0.025em] text-[#fdfdff]">
+                  {book.title}
+                </h1>
+                <p className="mt-1 break-words text-[18px] leading-[1.6] tracking-[-0.025em] text-gray-200">
+                  {book.author}
+                </p>
+                {book.meta ? (
+                  <p className="mt-4 break-words text-body2 text-gray-300">
+                    {book.meta}
+                  </p>
+                ) : null}
+              </div>
+            </section>
+
+            {/* 흰 박스 기준 표지 배치 (Figma: top -168px) */}
+            <div className="relative z-10 mt-8">
+              <div className="absolute right-5 top-[-168px] z-20 h-[215px] w-[146px] overflow-hidden rounded-[6px] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+                {book.coverUrl ? (
+                  <img
+                    src={book.coverUrl}
+                    alt=""
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <div className="size-full bg-gray-200" />
+                )}
+              </div>
+
+              <section className="relative z-10 rounded-t-[24px] bg-white px-5 pb-8 pt-6">
+                <span className="inline-flex w-fit items-center rounded-[15px] bg-primary-10 px-[13px] py-1.5 text-caption text-primary-500">
+                  다미의 책 소개
+                </span>
+                <p className="mt-4 whitespace-pre-wrap text-body1 leading-[1.6] text-gray-700">
+                  {book.intro || "아직 소개글이 준비되지 않았어요."}
+                </p>
+              </section>
             </div>
-          </section>
+          </div>
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-[430px] gap-2.5 bg-[#fdfdff] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
+        <div className="relative z-30 flex shrink-0 gap-2.5 bg-[#fdfdff] px-5 pb-[calc(24px+env(safe-area-inset-bottom))] pt-3">
           <button
             type="button"
             disabled={busy}

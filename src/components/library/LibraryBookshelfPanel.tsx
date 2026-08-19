@@ -171,9 +171,11 @@ export default function LibraryBookshelfPanel({
                   <p className="mt-1 text-body2 leading-[23px] text-[#5c5950] min-[431px]:text-[18.5px] min-[431px]:leading-[30px]">
                     {book.author}
                   </p>
-                  <p className="text-body2 leading-[23px] text-[#5c5950] min-[431px]:text-[18.5px] min-[431px]:leading-[30px]">
-                    {book.genre} ㅣ {book.publisher}
-                  </p>
+                  {book.publisher ? (
+                    <p className="text-body2 leading-[23px] text-[#5c5950] min-[431px]:text-[18.5px] min-[431px]:leading-[30px]">
+                      {book.publisher}
+                    </p>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <BookStatusBadge status={book.status} />
                     {book.finishedAt ? (

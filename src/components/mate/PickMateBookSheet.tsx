@@ -183,9 +183,11 @@ export default function PickMateBookSheet({
                         <p className="mt-0.5 text-body2 text-gray-500">
                           {book.author}
                         </p>
-                        <p className="text-body2 text-gray-500">
-                          {book.genre} ㅣ {book.publisher}
-                        </p>
+                        {book.publisher ? (
+                          <p className="text-body2 text-gray-500">
+                            {book.publisher}
+                          </p>
+                        ) : null}
                         <div className="mt-2">
                           <BookStatusBadge status={book.status} />
                         </div>

@@ -278,7 +278,7 @@ function WebBookCard({
       <button
         type="button"
         onClick={onSelect}
-        className="relative flex h-[437px] w-full flex-col items-center justify-between gap-[18px] rounded-[24px] bg-[#fdfdff] px-8 pt-[155px] pb-8 text-center shadow-[0_0_10px_rgba(102,106,128,0.21)] transition hover:ring-2 hover:ring-primary-300"
+        className="relative flex min-h-[437px] w-full flex-col items-center gap-[18px] rounded-[24px] bg-[#fdfdff] px-8 pt-[155px] pb-8 text-center shadow-[0_0_10px_rgba(102,106,128,0.21)] transition hover:ring-2 hover:ring-primary-300"
       >
         <div className="pointer-events-none absolute top-[-85px] left-1/2 z-10 h-[228px] w-[154px] -translate-x-1/2 overflow-hidden rounded-[6px] border-[3px] border-[#e9ecf8]">
           {book.coverUrl ? (
@@ -288,7 +288,7 @@ function WebBookCard({
           )}
         </div>
 
-        <div className="relative z-0 flex flex-col items-center">
+        <div className="relative z-0 flex w-full flex-col items-center">
           <div className="flex flex-wrap items-baseline justify-center gap-x-2">
             <span className="text-[26px] font-semibold leading-[1.5] tracking-[-0.025em] text-gray-900">
               {book.title}
@@ -300,7 +300,7 @@ function WebBookCard({
             ) : null}
           </div>
           {book.blurb ? (
-            <p className="mt-[18px] max-w-[268px] text-[20px] leading-[1.6] tracking-[-0.025em] text-gray-500">
+            <p className="mt-[18px] max-w-[268px] whitespace-pre-wrap break-words text-[20px] leading-[1.6] tracking-[-0.025em] text-gray-500">
               {book.blurb}
             </p>
           ) : null}
@@ -310,9 +310,7 @@ function WebBookCard({
           <p className="relative z-0 shrink-0 text-[18px] leading-[26px] tracking-[-0.025em] text-gray-300">
             {book.meta}
           </p>
-        ) : (
-          <span className="relative z-0 shrink-0" />
-        )}
+        ) : null}
       </button>
     </li>
   );

@@ -35,6 +35,7 @@ export type BookSummary = {
   title: string;
   author: string;
   coverImageUrl: string | null;
+  publisher?: string | null;
 };
 
 export type BookItem = {
