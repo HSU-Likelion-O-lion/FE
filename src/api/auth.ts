@@ -31,6 +31,18 @@ export async function login(email: string, password: string) {
   return data;
 }
 
+/** 카카오 SDK accessToken → 서비스 로그인(최초면 자동 회원가입) */
+export async function loginWithKakao(accessToken: string) {
+  const data = await apiRequest<LoginResult>("/api/auth/kakao", {
+    method: "POST",
+    auth: false,
+    body: { accessToken },
+  });
+  setTokens(data.accessToken, data.refreshToken);
+  setStoredUser({ userId: data.userId, nickname: data.nickname });
+  return data;
+}
+
 export async function signup(
   email: string,
   password: string,

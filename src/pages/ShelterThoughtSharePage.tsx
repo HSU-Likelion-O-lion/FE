@@ -2,9 +2,12 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ApiError,
-  createShareImage,
-  getShareStatus,
-  getShareThemes,
+  createReflectionShare,
+  getMe,
+  getReflectionShareStatus,
+  getReflectionShareThemes,
+  resolveReflectionId,
+  type Plan,
 } from "../api";
 import Button from "../components/Button";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
@@ -21,6 +24,11 @@ import tapeBlue from "../assets/shelter/thoughts/share/tape-blue.svg";
 import tapeGreen from "../assets/shelter/thoughts/share/tape-green.svg";
 import tapeYellow from "../assets/shelter/thoughts/share/tape-yellow.svg";
 
+/** BASIC·PLUS는 서버가 무시하고 블루(themeId=2)로 고정 */
+const DEFAULT_THEME_ID = 2;
+const POLL_INTERVAL_MS = 2000;
+const POLL_MAX_ATTEMPTS = 30;
+
 function readPositiveInt(raw: string | null): number | null {
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : null;
@@ -33,14 +41,15 @@ type ThemeVisual = {
   tape: string;
 };
 
-const THEME_VISUALS: ThemeVisual[] = [
-  {
+/** themeId 1~4 고정 — 핑크 / 블루 / 그린 / 옐로 */
+const THEME_VISUALS_BY_ID: Record<number, ThemeVisual> = {
+  1: {
     swatch: "#F59ACA",
     cardStyle: { backgroundColor: "rgba(255, 203, 231, 0.58)" },
     glow: glowPink,
     tape: tapePink,
   },
-  {
+  2: {
     swatch: "#ADB9F2",
     cardStyle: {
       backgroundImage:
@@ -49,34 +58,55 @@ const THEME_VISUALS: ThemeVisual[] = [
     glow: glowBlue,
     tape: tapeBlue,
   },
-  {
+  3: {
     swatch: "#93E467",
     cardStyle: { backgroundColor: "rgba(190, 246, 160, 0.58)" },
     glow: glowGreen,
     tape: tapeGreen,
   },
-  {
+  4: {
     swatch: "#F6E36A",
     cardStyle: { backgroundColor: "rgba(255, 242, 156, 0.58)" },
     glow: glowYellow,
     tape: tapeYellow,
   },
-];
+};
+
+const THEME_ORDER = [1, 2, 3, 4] as const;
 
 type ShareThemeOption = {
   themeId: number;
   name: string;
-  previewUrl: string;
   visual: ThemeVisual;
 };
 
-async function pollShareImage(shareId: number, maxAttempts = 30) {
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    const status = await getShareStatus(shareId);
+function buildDefaultThemes(): ShareThemeOption[] {
+  return THEME_ORDER.map((themeId) => ({
+    themeId,
+    name:
+      themeId === 1
+        ? "핑크"
+        : themeId === 2
+          ? "블루"
+          : themeId === 3
+            ? "그린"
+            : "옐로",
+    visual: THEME_VISUALS_BY_ID[themeId]!,
+  }));
+}
+
+async function pollShareImage(shareId: number) {
+  for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt += 1) {
+    const status = await getReflectionShareStatus(shareId);
     if (status.status === "COMPLETED" && status.imageUrl) {
       return status.imageUrl;
     }
-    await new Promise((resolve) => window.setTimeout(resolve, 1000));
+    if (status.status === "FAILED") {
+      throw new Error("SHARE_FAILED");
+    }
+    await new Promise((resolve) =>
+      window.setTimeout(resolve, POLL_INTERVAL_MS),
+    );
   }
   throw new Error("SHARE_TIMEOUT");
 }
@@ -111,12 +141,38 @@ async function saveImageToDevice(imageUrl: string, filename: string) {
     if (error instanceof Error && error.name === "AbortError") {
       return;
     }
-    // CDN CORS 등으로 blob 다운로드 실패 시 — 새 탭에서 길게 눌러 저장
     window.open(imageUrl, "_blank", "noopener,noreferrer");
     window.alert(
       "이미지를 새 탭에서 열었어요. 길게 누르거나 저장 메뉴로 기기에 저장해 주세요.",
     );
   }
+}
+
+function LockIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className="size-5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
+      fill="none"
+    >
+      <path
+        d="M7 11V8a5 5 0 0 1 10 0v3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <rect
+        x="5"
+        y="11"
+        width="14"
+        height="10"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+    </svg>
+  );
 }
 
 /** 나의 사유록 저장하기(테마 선택) — 모바일 Figma 814:3756 / 829:4269 / 4347 / 4425 */
@@ -130,7 +186,13 @@ export default function ShelterThoughtSharePage() {
   const bookId = state?.bookId;
   const roomId =
     state?.roomId ?? readPositiveInt(searchParams.get("roomId")) ?? undefined;
-  /** 저장 API는 URL의 postId를 우선 사용 */
+  const reflectionIdFromQuery = readPositiveInt(
+    searchParams.get("reflectionId"),
+  );
+  const reflectionIdFromState =
+    typeof state?.reflectionId === "number" && state.reflectionId > 0
+      ? state.reflectionId
+      : null;
   const postId =
     readPositiveInt(searchParams.get("postId")) ??
     (typeof state?.postId === "number" && state.postId > 0
@@ -140,43 +202,86 @@ export default function ShelterThoughtSharePage() {
   const date = state?.date ?? "";
   const authorName = state?.authorName ?? "나";
 
-  const [themes, setThemes] = useState<ShareThemeOption[]>(() =>
-    THEME_VISUALS.map((visual, index) => ({
-      themeId: index + 1,
-      name: `theme-${index + 1}`,
-      previewUrl: "",
-      visual,
-    })),
-  );
-  /** 기본 선택: 보라(파랑) 테마 — themeId 2 */
-  const [selectedIndex, setSelectedIndex] = useState(1);
+  const [themes, setThemes] = useState<ShareThemeOption[]>(buildDefaultThemes);
+  /** 기본 선택: 블루 (themeId=2) */
+  const [selectedThemeId, setSelectedThemeId] = useState(DEFAULT_THEME_ID);
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [saving, setSaving] = useState(false);
+  const [reflectionId, setReflectionId] = useState<number | null>(
+    () => reflectionIdFromQuery ?? reflectionIdFromState,
+  );
+
+  const isPro = plan === "PRO";
+  /** PRO만 선택 반영, 그 외·로딩 중에는 항상 블루 */
+  const previewThemeId = isPro ? selectedThemeId : DEFAULT_THEME_ID;
+  const visual =
+    THEME_VISUALS_BY_ID[previewThemeId] ?? THEME_VISUALS_BY_ID[DEFAULT_THEME_ID]!;
 
   useEffect(() => {
     let cancelled = false;
-    getShareThemes()
+
+    void getMe()
+      .then((me) => {
+        if (cancelled) return;
+        setPlan(me.plan);
+        if (me.plan !== "PRO") {
+          setSelectedThemeId(DEFAULT_THEME_ID);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlan("BASIC");
+          setSelectedThemeId(DEFAULT_THEME_ID);
+        }
+      });
+
+    void getReflectionShareThemes()
       .then((data) => {
         if (cancelled) return;
-        // themeId는 항상 1·2·3·4 고정, preview만 서버 값 사용
         setThemes(
-          THEME_VISUALS.map((visual, index) => ({
-            themeId: index + 1,
-            name: data.themes[index]?.name ?? `theme-${index + 1}`,
-            previewUrl: data.themes[index]?.previewUrl ?? "",
-            visual,
-          })),
+          THEME_ORDER.map((themeId) => {
+            const fromApi = data.themes.find((t) => t.themeId === themeId);
+            const fallback = buildDefaultThemes().find(
+              (t) => t.themeId === themeId,
+            )!;
+            return {
+              themeId,
+              name: fromApi?.name ?? fallback.name,
+              // 카드/글로우/스와치는 FE 고정값 사용 (API previewUrl은 색 불일치 유발)
+              visual: THEME_VISUALS_BY_ID[themeId]!,
+            };
+          }),
         );
       })
       .catch(() => {
-        /* 초기 1·2·3·4 유지 */
+        /* 기본 테마 유지 */
       });
+
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const activeTheme = themes[selectedIndex] ?? themes[1] ?? themes[0];
-  const visual = activeTheme?.visual ?? THEME_VISUALS[1] ?? THEME_VISUALS[0]!;
+  // postId만 있는 진입 → 본문으로 reflectionId 복구
+  useEffect(() => {
+    const known = reflectionIdFromQuery ?? reflectionIdFromState;
+    if (known != null) {
+      setReflectionId(known);
+      return;
+    }
+
+    let cancelled = false;
+    void resolveReflectionId({
+      content: body,
+      bookTitle: bookTitle !== "쉼터" ? bookTitle : null,
+    }).then((id) => {
+      if (!cancelled && id != null) setReflectionId(id);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reflectionIdFromQuery, reflectionIdFromState, body, bookTitle]);
 
   const goEdit = () => {
     const query = roomId != null ? `?roomId=${roomId}` : "";
@@ -186,6 +291,7 @@ export default function ShelterThoughtSharePage() {
         bookId,
         roomId,
         postId: postId ?? undefined,
+        reflectionId: reflectionId ?? undefined,
         body,
         date,
         authorName,
@@ -193,21 +299,41 @@ export default function ShelterThoughtSharePage() {
     });
   };
 
+  const handleThemeSelect = (themeId: number) => {
+    if (!isPro) {
+      window.alert("테마 선택은 쓰담 Premium(PRO)에서 이용할 수 있어요.");
+      return;
+    }
+    setSelectedThemeId(themeId);
+  };
+
   const handleSave = async () => {
-    if (postId == null) {
+    let targetReflectionId = reflectionId;
+    if (targetReflectionId == null) {
+      targetReflectionId = await resolveReflectionId({
+        content: body,
+        bookTitle: bookTitle !== "쉼터" ? bookTitle : null,
+      });
+      if (targetReflectionId != null) {
+        setReflectionId(targetReflectionId);
+      }
+    }
+
+    if (targetReflectionId == null) {
       window.alert(
-        "저장할 사유록을 찾을 수 없어요. 내 사유록에서 다시 들어와 주세요.",
+        "저장할 사유록을 찾을 수 없어요. 서재의 나의 사유록에서 다시 들어와 주세요.",
       );
       return;
     }
-    if (!activeTheme) return;
+
+    const themeId = isPro ? previewThemeId : DEFAULT_THEME_ID;
 
     setSaving(true);
     try {
-      const job = await createShareImage(postId, activeTheme.themeId);
+      const job = await createReflectionShare(targetReflectionId, themeId);
       const imageUrl =
         job.status === "COMPLETED"
-          ? (await getShareStatus(job.shareId)).imageUrl
+          ? (await getReflectionShareStatus(job.shareId)).imageUrl
           : await pollShareImage(job.shareId);
 
       if (!imageUrl) {
@@ -223,6 +349,8 @@ export default function ShelterThoughtSharePage() {
         window.alert(
           "이미지 생성이 너무 오래 걸려요. 잠시 후 다시 시도해 주세요.",
         );
+      } else if (error instanceof Error && error.message === "SHARE_FAILED") {
+        window.alert("이미지 생성에 실패했어요. 잠시 후 다시 시도해 주세요.");
       } else {
         window.alert("이미지를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
       }
@@ -306,53 +434,109 @@ export default function ShelterThoughtSharePage() {
         </div>
 
         <div className="absolute inset-x-0 bottom-0 z-40 flex flex-col items-center rounded-t-[24px] bg-[#fdfdff] px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-7 shadow-[0_-4px_4px_rgba(38,39,43,0.07)]">
-          <div className="mb-6 flex items-center justify-center gap-[25px]">
-            {themes.map((item, index) => {
-              const selected = selectedIndex === index;
-              return (
-                <button
-                  key={item.themeId}
-                  type="button"
-                  aria-label={`${item.name} 테마`}
-                  aria-pressed={selected}
-                  onClick={() => setSelectedIndex(index)}
-                  className="relative size-14 shrink-0 overflow-hidden rounded-full"
-                  style={{
-                    backgroundColor: item.visual.swatch,
-                    backgroundImage: item.previewUrl
-                      ? `url(${item.previewUrl})`
-                      : undefined,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }}
-                >
-                  {selected ? (
-                    <svg
-                      aria-hidden
-                      viewBox="0 0 56 56"
-                      className="pointer-events-none absolute inset-0 size-full"
+          {isPro ? (
+            <div className="mb-6 flex items-center justify-center gap-[25px]">
+              {themes.map((item) => {
+                const selected = selectedThemeId === item.themeId;
+                return (
+                  <button
+                    key={item.themeId}
+                    type="button"
+                    aria-label={`${item.name} 테마`}
+                    aria-pressed={selected}
+                    onClick={() => handleThemeSelect(item.themeId)}
+                    className="relative size-14 shrink-0 overflow-hidden rounded-full"
+                    style={{ backgroundColor: item.visual.swatch }}
+                  >
+                    {selected ? (
+                      <svg
+                        aria-hidden
+                        viewBox="0 0 56 56"
+                        className="pointer-events-none absolute inset-0 size-full"
+                      >
+                        <path
+                          d="M16 29.5L23.5 37L40 19"
+                          fill="none"
+                          stroke="#FDFDFF"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mb-6 flex w-full flex-col items-center gap-3">
+              <div className="flex items-center justify-center gap-[25px]">
+                {themes.map((item) => {
+                  const isDefault = item.themeId === DEFAULT_THEME_ID;
+                  return (
+                    <button
+                      key={item.themeId}
+                      type="button"
+                      aria-label={
+                        isDefault
+                          ? `${item.name} 테마 (기본)`
+                          : `${item.name} 테마 (PRO 전용)`
+                      }
+                      aria-disabled={!isDefault}
+                      onClick={() => {
+                        if (!isDefault) {
+                          navigate("/profile/membership");
+                        }
+                      }}
+                      className={`relative size-14 shrink-0 overflow-hidden rounded-full ${
+                        isDefault ? "ring-2 ring-primary-400 ring-offset-2" : ""
+                      }`}
+                      style={{ backgroundColor: item.visual.swatch }}
                     >
-                      <path
-                        d="M16 29.5L23.5 37L40 19"
-                        fill="none"
-                        stroke="#FDFDFF"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : null}
+                      {!isDefault ? (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                          <LockIcon />
+                        </span>
+                      ) : (
+                        <svg
+                          aria-hidden
+                          viewBox="0 0 56 56"
+                          className="pointer-events-none absolute inset-0 size-full"
+                        >
+                          <path
+                            d="M16 29.5L23.5 37L40 19"
+                            fill="none"
+                            stroke="#FDFDFF"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-center text-body2 text-gray-400">
+                테마 선택은{" "}
+                <button
+                  type="button"
+                  className="font-semibold text-primary-500 underline-offset-2 hover:underline"
+                  onClick={() => navigate("/profile/membership")}
+                >
+                  Premium
                 </button>
-              );
-            })}
-          </div>
+                에서 이용할 수 있어요
+              </p>
+            </div>
+          )}
 
           <Button
             text={saving ? "이미지 저장 중…" : "저장하기"}
             variant="primary"
             size="h-[54px] w-full max-w-[353px] rounded-[16px] px-5 py-3"
             className="shadow-none"
-            disabled={saving || !body.trim() || postId == null}
+            disabled={saving || !body.trim()}
             onClick={() => void handleSave()}
           />
         </div>

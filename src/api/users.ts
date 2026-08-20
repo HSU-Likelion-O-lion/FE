@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import { setStoredUser } from "./authStorage";
+import { getStoredUser, setStoredUser } from "./authStorage";
 import type { Plan } from "./types";
 
 export type UserMe = {
@@ -37,7 +37,7 @@ export async function checkNicknameAvailable(nickname: string) {
 }
 
 export async function updateMe(nickname: string) {
-  return apiRequest<{
+  const data = await apiRequest<{
     userId: number;
     nickname: string;
     updatedAt: string;
@@ -45,6 +45,13 @@ export async function updateMe(nickname: string) {
     method: "PATCH",
     body: { nickname },
   });
+  const prev = getStoredUser();
+  setStoredUser({
+    userId: data.userId,
+    nickname: data.nickname,
+    email: prev?.email,
+  });
+  return data;
 }
 
 export async function updatePlan(plan: Plan) {

@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ApiError,
   createCommunityPost,
   getCommunityRooms,
   getRoomPosts,
+  resolveReflectionId,
 } from "../api";
 import Button from "../components/Button";
 import WebGnb from "../components/WebGnb";
-import ThoughtShareSheet from "../components/shelter/ThoughtShareSheet";
 import { SHELTER_BOARD_GRID_STYLE } from "../components/shelter/shelterBoardGrid";
-import { useIsDesktop } from "../hooks/useIsDesktop";
 import iconBackWeb from "../assets/shelter/thoughts/icon-back-web.svg";
 import iconPencil from "../assets/shelter/thoughts/write-icon-pencil.svg";
 import detailAvatar from "../assets/shelter/thoughts/detail-avatar.png";
@@ -48,15 +47,17 @@ export default function ShelterMyThoughtPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const isDesktop = useIsDesktop();
   const state = (location.state as MyThoughtLocationState | null) ?? null;
 
   const bookTitle = state?.title ?? "쉼터";
   const bookId = state?.bookId;
+  const reflectionIdFromQuery = readPositiveInt(
+    searchParams.get("reflectionId"),
+  );
   const reflectionId =
-    typeof state?.reflectionId === "number" && state.reflectionId > 0
+    (typeof state?.reflectionId === "number" && state.reflectionId > 0
       ? state.reflectionId
-      : undefined;
+      : null) ?? reflectionIdFromQuery ?? undefined;
   const roomIdFromQuery = readPositiveInt(searchParams.get("roomId"));
   const postIdFromQuery = readPositiveInt(searchParams.get("postId"));
   const roomId =
@@ -73,12 +74,18 @@ export default function ShelterMyThoughtPage() {
   const [postId, setPostId] = useState<number | undefined>(
     initialPostId ?? undefined,
   );
+  const [resolvedReflectionId, setResolvedReflectionId] = useState<
+    number | undefined
+  >(reflectionId);
   const [resolvedRoomId, setResolvedRoomId] = useState<number | null>(roomId);
   const [loading, setLoading] = useState(!state?.body?.trim());
   const [resolvingPostId, setResolvingPostId] = useState(initialPostId == null);
   const [postingToShelter, setPostingToShelter] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const date = state?.date ?? "";
+
+  useEffect(() => {
+    setResolvedReflectionId(reflectionId);
+  }, [reflectionId]);
 
   useEffect(() => {
     if (initialPostId != null) {
@@ -157,37 +164,66 @@ export default function ShelterMyThoughtPage() {
     };
   }, [bookTitle, initialPostId, roomId, state?.body]);
 
-  // 조회된 postId·roomId를 URL에 반영 (값이 바뀔 때만 — setSearchParams 루프 방지)
+  // postId만 있는 경우 본문으로 reflectionId 복구
   useEffect(() => {
-    if (postId == null) return;
+    if (reflectionId != null) return;
+    const content = body.trim() || state?.body?.trim();
+    if (!content) return;
+
+    let cancelled = false;
+    void resolveReflectionId({
+      content,
+      bookTitle: bookTitle !== "쉼터" ? bookTitle : null,
+    }).then((id) => {
+      if (!cancelled && id != null) setResolvedReflectionId(id);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reflectionId, body, bookTitle, state?.body]);
+
+  // 조회된 postId·roomId·reflectionId를 URL에 반영
+  useEffect(() => {
+    if (postId == null && resolvedReflectionId == null) return;
 
     const room = resolvedRoomId ?? roomId;
-    const samePost = searchParams.get("postId") === String(postId);
+    const samePost =
+      postId == null || searchParams.get("postId") === String(postId);
     const sameRoom =
       room == null || searchParams.get("roomId") === String(room);
-    if (samePost && sameRoom) return;
+    const sameReflection =
+      resolvedReflectionId == null ||
+      searchParams.get("reflectionId") === String(resolvedReflectionId);
+    if (samePost && sameRoom && sameReflection) return;
 
     const next = new URLSearchParams(searchParams);
-    next.set("postId", String(postId));
+    if (postId != null) next.set("postId", String(postId));
     if (room != null) next.set("roomId", String(room));
+    if (resolvedReflectionId != null) {
+      next.set("reflectionId", String(resolvedReflectionId));
+    }
     setSearchParams(next, { replace: true });
-  }, [postId, resolvedRoomId, roomId, searchParams, setSearchParams]);
-
-  const shareText = useMemo(
-    () =>
-      `[${bookTitle}]\n${authorName || "나"}${date ? ` · ${date}` : ""}\n\n${body}`,
-    [authorName, body, bookTitle, date],
-  );
+  }, [
+    postId,
+    resolvedReflectionId,
+    resolvedRoomId,
+    roomId,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const effectiveRoomId = resolvedRoomId ?? roomId;
-  const isOnShelter = postId != null;
+  const effectiveReflectionId = resolvedReflectionId ?? reflectionId;
+  /** 사유록 이미지 저장은 reflectionId 필요 (없으면 본문으로 복구 시도 후) */
+  const canSaveShare = effectiveReflectionId != null || Boolean(body.trim());
 
   const navState = {
     title: bookTitle,
     bookId,
     roomId: effectiveRoomId ?? undefined,
     postId,
-    reflectionId,
+    reflectionId: effectiveReflectionId,
     body,
     date,
     authorName,
@@ -200,20 +236,37 @@ export default function ShelterMyThoughtPage() {
     });
   };
 
-  /** 이미 쉼터에 올린 글 → 이미지 저장 화면 */
-  const handleSave = () => {
-    if (!isDesktop) {
-      if (postId == null) return;
-      const query = new URLSearchParams({ postId: String(postId) });
-      if (effectiveRoomId != null) {
-        query.set("roomId", String(effectiveRoomId));
-      }
-      navigate(`/shelter/thoughts/mine/share?${query.toString()}`, {
-        state: navState,
+  /** 사유록 공유 이미지 저장 화면 (모바일·웹 동일 — 테마 선택 화면) */
+  const handleSave = async () => {
+    let nextReflectionId = effectiveReflectionId ?? null;
+    if (nextReflectionId == null && body.trim()) {
+      nextReflectionId = await resolveReflectionId({
+        content: body,
+        bookTitle: bookTitle !== "쉼터" ? bookTitle : null,
       });
+      if (nextReflectionId != null) {
+        setResolvedReflectionId(nextReflectionId);
+      }
+    }
+    if (nextReflectionId == null) {
+      window.alert(
+        "저장할 사유록을 찾을 수 없어요. 서재의 나의 사유록에서 다시 들어와 주세요.",
+      );
       return;
     }
-    setSheetOpen(true);
+
+    const query = new URLSearchParams({
+      reflectionId: String(nextReflectionId),
+    });
+    if (postId != null) {
+      query.set("postId", String(postId));
+    }
+    if (effectiveRoomId != null) {
+      query.set("roomId", String(effectiveRoomId));
+    }
+    navigate(`/shelter/thoughts/mine/share?${query.toString()}`, {
+      state: { ...navState, reflectionId: nextReflectionId },
+    });
   };
 
   /** 서재 사유만 있고 쉼터 미게시 → 쉼터에 올리기 */
@@ -238,7 +291,7 @@ export default function ShelterMyThoughtPage() {
       const created = await createCommunityPost({
         roomId: nextRoomId,
         content: body.trim(),
-        reflectionId,
+        reflectionId: effectiveReflectionId,
       });
       setResolvedRoomId(nextRoomId);
       setPostId(created.postId);
@@ -255,17 +308,18 @@ export default function ShelterMyThoughtPage() {
     }
   };
 
-  const ctaBusy = resolvingPostId || postingToShelter;
-  const ctaText = resolvingPostId
-    ? "확인 중…"
-    : postingToShelter
-      ? "쉼터에 남기는 중…"
-      : isOnShelter
+  const ctaBusy =
+    postingToShelter || (effectiveReflectionId == null && resolvingPostId);
+  const ctaText = postingToShelter
+    ? "쉼터에 남기는 중…"
+    : effectiveReflectionId == null && resolvingPostId
+      ? "확인 중…"
+      : canSaveShare
         ? "사유록 저장하기"
         : "쉼터에 공유하기";
 
   const handleCta = () => {
-    if (isOnShelter) handleSave();
+    if (canSaveShare) void handleSave();
     else void handlePostToShelter();
   };
 
@@ -501,12 +555,6 @@ export default function ShelterMyThoughtPage() {
           />
         </div>
       </main>
-
-      <ThoughtShareSheet
-        open={sheetOpen}
-        shareText={shareText}
-        onClose={() => setSheetOpen(false)}
-      />
     </>
   );
 }

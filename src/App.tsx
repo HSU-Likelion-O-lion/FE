@@ -53,8 +53,10 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/login/email" element={<LoginEmailPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/signup/nickname" element={<SignupNicknamePage />} />
         </Route>
+
+        {/* 닉네임 — 이메일 가입(게스트) / 카카오 로그인 후(인증됨) 공용 */}
+        <Route path="/signup/nickname" element={<SignupNicknamePage />} />
 
         {/* 앱 본문 — 로그인 필수 */}
         <Route element={<RequireAuth />}>

@@ -5,7 +5,9 @@ import {
   checkNicknameAvailable,
   login,
   signup,
+  updateMe,
 } from "../api";
+import { isLoggedIn } from "../api/authStorage";
 import {
   clearSignupDraft,
   loadSignupDraft,
@@ -20,20 +22,31 @@ const NICKNAME_RE = /^[가-힣a-zA-Z0-9]{2,8}$/;
 const WEB_AUTH_GRADIENT =
   "url(\"data:image/svg+xml;utf8,<svg viewBox='0 0 1440 1024' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect width='100%' height='100%' fill='url(%23g)'/><defs><radialGradient id='g' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(1.35 73.6 -103.5 1.8984 706.5 13)'><stop stop-color='rgba(253,253,255,0)' offset='0'/><stop stop-color='rgba(253,253,255,1)' offset='1'/></radialGradient></defs></svg>\")";
 
-/** 회원가입 닉네임 입력 (Figma 988:6766) */
+/**
+ * 닉네임 설정
+ * - 이메일 회원가입: signup draft + signup/login
+ * - 카카오 로그인: 이미 로그인된 상태에서 PATCH /api/users/me
+ */
 export default function SignupNicknamePage() {
   const navigate = useNavigate();
   const [nickname, setNickname] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [mode, setMode] = useState<"email" | "kakao" | null>(null);
 
   useEffect(() => {
-    if (!loadSignupDraft()) {
-      navigate("/signup", { replace: true });
+    if (loadSignupDraft()) {
+      setMode("email");
+      return;
     }
+    if (isLoggedIn()) {
+      setMode("kakao");
+      return;
+    }
+    navigate("/signup", { replace: true });
   }, [navigate]);
 
-  const canSubmit = NICKNAME_RE.test(nickname) && !submitting;
+  const canSubmit = NICKNAME_RE.test(nickname) && !submitting && mode != null;
 
   const onNicknameChange = (value: string) => {
     setNickname(value.slice(0, NICKNAME_MAX));
@@ -41,12 +54,7 @@ export default function SignupNicknamePage() {
   };
 
   const submit = async () => {
-    if (!canSubmit) return;
-    const draft = loadSignupDraft();
-    if (!draft) {
-      navigate("/signup", { replace: true });
-      return;
-    }
+    if (!canSubmit || mode == null) return;
 
     setSubmitting(true);
     setFormError(null);
@@ -56,23 +64,54 @@ export default function SignupNicknamePage() {
         setFormError("이미 사용 중인 닉네임입니다.");
         return;
       }
+
+      if (mode === "kakao") {
+        await updateMe(nickname);
+        navigate("/mate", { replace: true });
+        return;
+      }
+
+      const draft = loadSignupDraft();
+      if (!draft) {
+        navigate("/signup", { replace: true });
+        return;
+      }
       await signup(draft.email, draft.password, nickname);
       await login(draft.email, draft.password);
       clearSignupDraft();
       navigate("/mate", { replace: true });
     } catch (err) {
-      console.error("[signup]", err);
+      console.error("[nickname]", err);
+      if (err instanceof ApiError && err.httpStatus === 409) {
+        setFormError("이미 사용 중인 닉네임입니다.");
+        return;
+      }
       setFormError(
         err instanceof ApiError
           ? err.message
           : err instanceof Error
             ? err.message
-            : "회원가입에 실패했습니다. 다시 시도해주세요.",
+            : "닉네임 설정에 실패했습니다. 다시 시도해주세요.",
       );
     } finally {
       setSubmitting(false);
     }
   };
+
+  const submitLabel =
+    submitting
+      ? mode === "kakao"
+        ? "저장 중…"
+        : "가입 중…"
+      : "시작하기";
+
+  if (mode == null) {
+    return (
+      <main className="mx-auto flex h-dvh w-full max-w-[430px] items-center justify-center bg-[#fdfdff]">
+        <p className="text-body2 text-gray-400">불러오는 중…</p>
+      </main>
+    );
+  }
 
   return (
     <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff] min-[431px]:max-w-none min-[431px]:overflow-y-auto min-[431px]:bg-transparent">
@@ -135,7 +174,7 @@ export default function SignupNicknamePage() {
               : "bg-gray-100 text-gray-400"
           }`}
         >
-          {submitting ? "가입 중…" : "시작하기"}
+          {submitLabel}
         </button>
       </div>
 
@@ -183,7 +222,7 @@ export default function SignupNicknamePage() {
                 : "bg-gray-100 text-gray-400"
             }`}
           >
-            {submitting ? "가입 중…" : "시작하기"}
+            {submitLabel}
           </button>
         </div>
       </div>

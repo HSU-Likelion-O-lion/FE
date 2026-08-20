@@ -1,18 +1,41 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import iconApple from "../assets/auth/icon-apple.svg";
+import { ApiError, loginWithKakao } from "../api";
+import { getKakaoAccessToken, kakaoErrorMessage } from "../lib/kakaoAuth";
 import iconKakao from "../assets/auth/icon-kakao.svg";
 import loginMascot from "../assets/auth/login-mascot.png";
 import webBg from "../assets/common/web-bg.png";
 import logoDark from "../assets/common/logo-dark.svg";
 import logoWhite from "../assets/common/logo-white.svg";
 
-/** Figma 603:4503 — 웹 로그인 흰 라디얼 오버레이 (1440×1024) */
+/** Figma 603:4503 — 웹 로그인 하단 라디얼 오버레이 (1440×1024) */
 const WEB_LOGIN_GRADIENT =
   "url(\"data:image/svg+xml;utf8,<svg viewBox='0 0 1440 1024' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect width='100%' height='100%' fill='url(%23g)'/><defs><radialGradient id='g' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(1.35 73.6 -103.5 1.8984 706.5 13)'><stop stop-color='rgba(253,253,255,0)' offset='0'/><stop stop-color='rgba(253,253,255,1)' offset='1'/></radialGradient></defs></svg>\")";
 
 /** 로그인 진입 (Figma 445:2099) — 웹 ≥431px (Figma 603:4503) */
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [kakaoLoading, setKakaoLoading] = useState(false);
+
+  const handleKakaoLogin = async () => {
+    if (kakaoLoading) return;
+    setKakaoLoading(true);
+    try {
+      const kakaoAccessToken = await getKakaoAccessToken();
+      await loginWithKakao(kakaoAccessToken);
+      // 신규/기존 구분 없이 닉네임 설정 화면으로
+      navigate("/signup/nickname", { replace: true });
+    } catch (err) {
+      console.error("[kakao-login]", err);
+      const message =
+        err instanceof ApiError
+          ? err.message || "카카오 로그인에 실패했습니다. 다시 시도해주세요."
+          : kakaoErrorMessage(err);
+      window.alert(message);
+    } finally {
+      setKakaoLoading(false);
+    }
+  };
 
   return (
     <main className="relative mx-auto flex h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-[#fdfdff] min-[431px]:max-w-none min-[431px]:overflow-y-auto min-[431px]:bg-transparent">
@@ -58,19 +81,12 @@ export default function LoginPage() {
         <div className="mt-8 flex w-full max-w-[353px] flex-col gap-3">
           <button
             type="button"
-            onClick={() => navigate("/mate", { replace: true })}
-            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800"
+            disabled={kakaoLoading}
+            onClick={() => void handleKakaoLogin()}
+            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800 disabled:opacity-60"
           >
             <img src={iconKakao} alt="" className="size-6 object-contain" />
-            카카오로 시작하기
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/mate", { replace: true })}
-            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-gray-800 text-button1 font-medium text-white"
-          >
-            <img src={iconApple} alt="" className="size-6 object-contain" />
-            Apple로 시작하기
+            {kakaoLoading ? "카카오 로그인 중…" : "카카오로 시작하기"}
           </button>
           <button
             type="button"
@@ -117,19 +133,12 @@ export default function LoginPage() {
           <div className="mt-5 flex w-full flex-col gap-3">
             <button
               type="button"
-              onClick={() => navigate("/mate", { replace: true })}
-              className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800"
+              disabled={kakaoLoading}
+              onClick={() => void handleKakaoLogin()}
+              className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#fee500] text-button1 font-medium text-gray-800 disabled:opacity-60"
             >
               <img src={iconKakao} alt="" className="size-6 object-contain" />
-              카카오로 시작하기
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/mate", { replace: true })}
-              className="flex h-[54px] w-full items-center justify-center gap-2.5 rounded-2xl bg-gray-800 text-button1 font-medium text-white"
-            >
-              <img src={iconApple} alt="" className="size-6 object-contain" />
-              Apple로 시작하기
+              {kakaoLoading ? "카카오 로그인 중…" : "카카오로 시작하기"}
             </button>
             <button
               type="button"

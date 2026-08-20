@@ -18,7 +18,11 @@ export type JobStatus =
   | "FAILED"
   | "CANCELED";
 
-export type ShareJobStatus = "QUEUED" | "PROCESSING" | "COMPLETED";
+export type ShareJobStatus =
+  | "QUEUED"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
 
 export type InterruptionReason =
   | "TASTE_MISMATCH"
