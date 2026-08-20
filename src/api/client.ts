@@ -149,9 +149,20 @@ export async function apiRequest<T>(
     return (await res.blob()) as T;
   }
 
+  const raw = await res.text();
+  if (!raw.trim()) {
+    // DELETE 등 본문 없는 200/204
+    if (res.ok) return null as T;
+    throw new ApiError(
+      "요청에 실패했습니다.",
+      "ERROR",
+      res.status,
+    );
+  }
+
   let json: ApiResponse<T>;
   try {
-    json = (await res.json()) as ApiResponse<T>;
+    json = JSON.parse(raw) as ApiResponse<T>;
   } catch {
     throw new ApiError(
       "서버 응답을 해석할 수 없습니다.",

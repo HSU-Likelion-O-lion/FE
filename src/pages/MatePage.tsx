@@ -311,6 +311,8 @@ export default function MatePage() {
             ? err.message
             : "메이트 책 저장에 실패했어요.";
         alert(message);
+        // 일부만 반영됐을 수 있어 화면을 다시 맞춤
+        window.location.reload();
       }
     },
     [mateBooks, pinLimit],

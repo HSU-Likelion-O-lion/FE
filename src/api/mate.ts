@@ -30,9 +30,17 @@ export async function pinMateBook(userBookId: number) {
 }
 
 export async function unpinMateBook(userBookId: number) {
-  return apiRequest<null>(`/api/mate/pins/${userBookId}`, {
-    method: "DELETE",
-  });
+  try {
+    return await apiRequest<null>(`/api/mate/pins/${userBookId}`, {
+      method: "DELETE",
+    });
+  } catch (err) {
+    // 이미 해제됐거나 없는 핀(COMMON_404_1) → 성공으로 처리
+    if (err instanceof ApiError && err.httpStatus === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /** StrictMode 등에서 동일 bookId 메이트 지정이 겹칠 때 1회로 합침 */

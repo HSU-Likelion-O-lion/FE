@@ -15,7 +15,7 @@ type PickMateBookSheetProps = {
   /** 요금제 핀 한도 — 없으면 시트 오픈 시 /users/me 로 조회 */
   pinLimit?: number;
   onClose: () => void;
-  onConfirm: (selected: LibraryBook[]) => void;
+  onConfirm: (selected: LibraryBook[]) => void | Promise<void>;
 };
 
 export default function PickMateBookSheet({
@@ -106,8 +106,9 @@ export default function PickMateBookSheet({
     const selected = books
       .filter((book) => selectedIds.includes(book.id))
       .slice(0, pinLimit);
-    onConfirm(selected);
-    onClose();
+    void Promise.resolve(onConfirm(selected)).finally(() => {
+      onClose();
+    });
   };
 
   return (
