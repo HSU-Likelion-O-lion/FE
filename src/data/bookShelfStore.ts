@@ -1,5 +1,8 @@
 import type { LibraryBook, MateBookItem } from "../components/mate/types";
-import { MATE_BOOK_LIMIT } from "../components/mate/types";
+import { matePinLimitForPlan } from "../components/mate/types";
+
+/** 로컬 캐시는 요금제 미지정이므로 PRO 상한(7)까지 보존 */
+const LOCAL_MATE_BOOK_LIMIT = matePinLimitForPlan("PRO");
 
 /**
  * 로컬 캐시/추천 세션용.
@@ -48,7 +51,10 @@ export function loadMateBooks(): MateBookItem[] {
 }
 
 export function saveMateBooks(books: MateBookItem[]) {
-  localStorage.setItem(MATE_KEY, JSON.stringify(books.slice(0, MATE_BOOK_LIMIT)));
+  localStorage.setItem(
+    MATE_KEY,
+    JSON.stringify(books.slice(0, LOCAL_MATE_BOOK_LIMIT)),
+  );
 }
 
 /** 서재에도 담고 메이트 맨 앞에 올린다 */
@@ -61,7 +67,7 @@ export function addMateAndLibrary(book: LibraryBook) {
     lastReadDaysAgo: 0,
   };
   const prev = loadMateBooks().filter((b) => b.id !== book.id);
-  const next = [mateItem, ...prev].slice(0, MATE_BOOK_LIMIT);
+  const next = [mateItem, ...prev].slice(0, LOCAL_MATE_BOOK_LIMIT);
   saveMateBooks(next);
   return next;
 }

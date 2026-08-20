@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { getMe } from "../../api";
 import iconModalClose from "../../assets/mate/icon-modal-close.svg";
 import Button from "../Button";
 import BookStatusBadge from "./BookStatusBadge";
-import { MATE_BOOK_LIMIT, type LibraryBook } from "./types";
+import { matePinLimitForPlan, type LibraryBook } from "./types";
 
 const DISMISS_THRESHOLD = 80;
 
@@ -11,6 +12,8 @@ type PickMateBookSheetProps = {
   books: LibraryBook[];
   /** 현재 메이트에 올려둔 책 id (시트가 열릴 때 선택 상태로 반영) */
   selectedMateIds: string[];
+  /** 요금제 핀 한도 — 없으면 시트 오픈 시 /users/me 로 조회 */
+  pinLimit?: number;
   onClose: () => void;
   onConfirm: (selected: LibraryBook[]) => void;
 };
@@ -19,13 +22,23 @@ export default function PickMateBookSheet({
   open,
   books,
   selectedMateIds,
+  pinLimit: pinLimitProp,
   onClose,
   onConfirm,
 }: PickMateBookSheetProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [pinLimit, setPinLimit] = useState(
+    () => pinLimitProp ?? matePinLimitForPlan("BASIC"),
+  );
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startYRef = useRef(0);
+
+  useEffect(() => {
+    if (pinLimitProp != null) {
+      setPinLimit(pinLimitProp);
+    }
+  }, [pinLimitProp]);
 
   useEffect(() => {
     if (!open) {
@@ -37,7 +50,20 @@ export default function PickMateBookSheet({
     setSelectedIds(selectedMateIds);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    let cancelled = false;
+    if (pinLimitProp == null) {
+      void getMe()
+        .then((me) => {
+          if (!cancelled) setPinLimit(matePinLimitForPlan(me.plan));
+        })
+        .catch(() => {
+          if (!cancelled) setPinLimit(matePinLimitForPlan("BASIC"));
+        });
+    }
+
     return () => {
+      cancelled = true;
       document.body.style.overflow = prev;
     };
     // 시트 오픈 시에만 메이트 선택 상태를 시드한다 (편집 중 리셋 방지)
@@ -71,13 +97,15 @@ export default function PickMateBookSheet({
       if (prev.includes(id)) {
         return prev.filter((item) => item !== id);
       }
-      if (prev.length >= MATE_BOOK_LIMIT) return prev;
+      if (prev.length >= pinLimit) return prev;
       return [...prev, id];
     });
   };
 
   const handleConfirm = () => {
-    const selected = books.filter((book) => selectedIds.includes(book.id));
+    const selected = books
+      .filter((book) => selectedIds.includes(book.id))
+      .slice(0, pinLimit);
     onConfirm(selected);
     onClose();
   };
@@ -123,7 +151,7 @@ export default function PickMateBookSheet({
                 메이트에 올려둘 책
               </h2>
               <p className="mt-1 text-left text-body1 text-gray-400">
-                서재에서 최대 5권까지 선택할 수 있어요
+                서재에서 최대 {pinLimit}권까지 선택할 수 있어요
               </p>
             </div>
             {/* 웹: 우상단 X */}
@@ -141,7 +169,7 @@ export default function PickMateBookSheet({
             </button>
           </div>
           <p className="mt-3 text-left text-[16px] font-semibold leading-[1.6] tracking-[-0.025em] text-primary-400 min-[431px]:mt-4">
-            현재선택 : {selectedIds.length} / {MATE_BOOK_LIMIT}권
+            현재선택 : {selectedIds.length} / {pinLimit}권
           </p>
         </div>
 
@@ -154,8 +182,7 @@ export default function PickMateBookSheet({
             <ul className="flex flex-col">
               {books.map((book) => {
                 const selected = selectedIds.includes(book.id);
-                const atLimit =
-                  !selected && selectedIds.length >= MATE_BOOK_LIMIT;
+                const atLimit = !selected && selectedIds.length >= pinLimit;
 
                 return (
                   <li key={book.id}>

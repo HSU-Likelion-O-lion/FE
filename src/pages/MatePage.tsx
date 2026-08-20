@@ -14,7 +14,7 @@ import FocusTimerPopup, {
 import PickMateBookSheet from "../components/mate/PickMateBookSheet";
 import { formatLocalDate } from "../components/mate/streak";
 import {
-  MATE_BOOK_LIMIT,
+  matePinLimitForPlan,
   type LibraryBook,
   type MateBookItem,
   type MateBooks,
@@ -24,6 +24,7 @@ import {
   getActiveReadingSession,
   getBookshelf,
   getMateDashboard,
+  getMe,
   mapBookItemToLibraryBook,
   pinMateBook,
   unpinMateBook,
@@ -166,6 +167,7 @@ export default function MatePage() {
   const [weekWeb, setWeekWeb] = useState<WeekDay[]>(() => buildWebWeekDays());
   const [badgeCount, setBadgeCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pinLimit, setPinLimit] = useState(() => matePinLimitForPlan("BASIC"));
   const [pickSheetOpen, setPickSheetOpen] = useState(false);
   const [focusModalOpen, setFocusModalOpen] = useState(false);
   const [focusUserBookId, setFocusUserBookId] = useState<number | null>(null);
@@ -187,15 +189,17 @@ export default function MatePage() {
   const todayDate = formatLocalDate(new Date());
 
   const refreshDashboard = useCallback(async () => {
-    const [dashboard, shelf] = await Promise.all([
+    const [dashboard, shelf, meResult] = await Promise.all([
       getMateDashboard(),
       getBookshelf(),
+      getMe().catch(() => null),
     ]);
     const library = shelf.books.map(mapBookItemToLibraryBook);
     const byId = new Map(library.map((b) => [b.id, b]));
     const mates = pinsToMateBooks(dashboard.pins, byId);
     setLibraryBooks(library);
     setMateBooks(mates);
+    setPinLimit(matePinLimitForPlan(meResult?.plan));
     setWeekDays(buildMobileWeekDays());
     setWeekWeb(buildWebWeekDays());
     setBadgeCount(dashboard.badgeCount);
@@ -288,7 +292,7 @@ export default function MatePage() {
 
   const handlePickConfirm = useCallback(
     async (selected: LibraryBook[]) => {
-      const nextSelected = selected.slice(0, MATE_BOOK_LIMIT);
+      const nextSelected = selected.slice(0, pinLimit);
       const nextIds = new Set(nextSelected.map((b) => b.id));
       const prevIds = new Set(mateBooks.map((b) => b.id));
       const toUnpin = [...prevIds].filter((id) => !nextIds.has(id));
@@ -309,7 +313,7 @@ export default function MatePage() {
         alert(message);
       }
     },
-    [mateBooks],
+    [mateBooks, pinLimit],
   );
 
   const handleEmptyCta = () => {
@@ -498,6 +502,7 @@ export default function MatePage() {
           <MateBookSection
             books={mateBooks}
             canPick={canPick}
+            pinLimit={pinLimit}
             onStartFocus={openFocusForBook}
             onPickBooks={() => setPickSheetOpen(true)}
           />
@@ -548,6 +553,7 @@ export default function MatePage() {
         open={pickSheetOpen}
         books={libraryBooks}
         selectedMateIds={selectedMateIds}
+        pinLimit={pinLimit}
         onClose={() => setPickSheetOpen(false)}
         onConfirm={handlePickConfirm}
       />

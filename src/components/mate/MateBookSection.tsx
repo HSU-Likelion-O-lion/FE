@@ -8,6 +8,8 @@ type MateBookSectionProps = {
   books: MateBookItem[];
   /** 서재에 꺼낼 수 있는 책이 있으면 pick 슬라이드 표시 */
   canPick?: boolean;
+  /** 요금제별 메이트 핀 한도 (BASIC 3 / PLUS 5 / PRO 7) */
+  pinLimit?: number;
   onStartFocus?: (book: MateBookItem) => void;
   onPickBooks?: () => void;
 };
@@ -71,6 +73,7 @@ function BookShelf({ children }: { children: ReactNode }) {
 export default function MateBookSection({
   books,
   canPick = true,
+  pinLimit = 3,
   onStartFocus,
   onPickBooks,
 }: MateBookSectionProps) {
@@ -135,7 +138,7 @@ export default function MateBookSection({
             메이트에 올려둘 책 고르기
           </h2>
           <p className="mt-2 text-center text-body2 text-gray-400">
-            서재에서 최대 5권까지 선택할 수 있어요.
+            서재에서 최대 {pinLimit}권까지 선택할 수 있어요.
           </p>
           <button
             type="button"
