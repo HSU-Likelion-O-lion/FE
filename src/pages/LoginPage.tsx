@@ -22,9 +22,11 @@ export default function LoginPage() {
     setKakaoLoading(true);
     try {
       const kakaoAccessToken = await getKakaoAccessToken();
-      await loginWithKakao(kakaoAccessToken);
-      // 신규/기존 구분 없이 닉네임 설정 화면으로
-      navigate("/signup/nickname", { replace: true });
+      const { nickname } = await loginWithKakao(kakaoAccessToken);
+      // 임시 닉네임(카카오사용자…)만 온보딩, 이미 설정돼 있으면 바로 진입
+      const needsNickname =
+        !nickname?.trim() || nickname.trim().startsWith("카카오사용자");
+      navigate(needsNickname ? "/signup/nickname" : "/mate", { replace: true });
     } catch (err) {
       console.error("[kakao-login]", err);
       const message =
