@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { getMe, updateMe, uploadProfileImage } from "../../api";
+import { getMe, resolveProfileImageUrl, updateMe, uploadProfileImage } from "../../api";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
 import { useIsDesktop } from "../../hooks/useIsDesktop";
@@ -26,7 +26,9 @@ export default function ProfileEditPage() {
         const me = await getMe();
         if (cancelled) return;
         setNickname(me.nickname);
-        setAvatarUrl(me.profileImageUrl ?? defaultAvatarEdit);
+        setAvatarUrl(
+          resolveProfileImageUrl(me.profileImageUrl, defaultAvatarEdit),
+        );
       } catch (err) {
         if (cancelled) return;
         console.error(err);

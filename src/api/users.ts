@@ -12,6 +12,23 @@ export type UserMe = {
   updatedAt: string;
 };
 
+/** 서버 기본값(`/mascot.png`)·빈 값은 FE 기본 아바타로 대체 */
+export function resolveProfileImageUrl(
+  url: string | null | undefined,
+  fallback: string,
+): string {
+  if (!url?.trim()) return fallback;
+  const normalized = url.trim();
+  if (
+    normalized === "/mascot.png" ||
+    normalized === "mascot.png" ||
+    normalized.endsWith("/mascot.png")
+  ) {
+    return fallback;
+  }
+  return normalized;
+}
+
 export async function getMe() {
   const data = await apiRequest<UserMe>("/api/users/me");
   setStoredUser({

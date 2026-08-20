@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getMe, type UserMe } from "../../api";
+import { getMe, resolveProfileImageUrl, type UserMe } from "../../api";
 import WebGnb from "../WebGnb";
 import defaultAvatar from "../../assets/profile/avatar.png";
 import iconNotification from "../../assets/profile/icon-notification.svg";
@@ -88,7 +88,7 @@ function toProfileUserView(me: UserMe): ProfileUserView {
   return {
     nickname: me.nickname,
     email: me.email,
-    avatarUrl: me.profileImageUrl ?? defaultAvatar,
+    avatarUrl: resolveProfileImageUrl(me.profileImageUrl, defaultAvatar),
   };
 }
 

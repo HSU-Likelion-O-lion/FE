@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMe, updateMe, uploadProfileImage } from "../../api";
+import { getMe, resolveProfileImageUrl, updateMe, uploadProfileImage } from "../../api";
 import Button from "../Button";
 import Input from "../Input";
 import defaultAvatarEdit from "../../assets/profile/avatar-edit.png";
@@ -23,7 +23,9 @@ export default function ProfileEditPanel() {
         if (cancelled) return;
         setNickname(me.nickname);
         setEmail(me.email);
-        setAvatarUrl(me.profileImageUrl ?? defaultAvatarEdit);
+        setAvatarUrl(
+          resolveProfileImageUrl(me.profileImageUrl, defaultAvatarEdit),
+        );
       } catch (err) {
         if (cancelled) return;
         console.error(err);
@@ -42,7 +44,9 @@ export default function ProfileEditPanel() {
       await updateMe(trimmed);
       if (pendingFile) {
         const result = await uploadProfileImage(pendingFile);
-        setAvatarUrl(result.profileImageUrl);
+        setAvatarUrl(
+          resolveProfileImageUrl(result.profileImageUrl, defaultAvatarEdit),
+        );
         setPendingFile(null);
       }
       navigate("/profile");

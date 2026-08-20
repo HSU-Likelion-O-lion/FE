@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMe } from "../../api";
+import { getMe, resolveProfileImageUrl } from "../../api";
 import NavigationBar from "../../components/NavigationBar";
 import ProfileWebShell from "../../components/profile/ProfileWebShell";
 import ProfileEditPanel from "../../components/profile/ProfileEditPanel";
@@ -95,7 +95,7 @@ export default function ProfilePage() {
         if (cancelled) return;
         setNickname(me.nickname);
         setEmail(me.email);
-        setAvatarUrl(me.profileImageUrl ?? defaultAvatar);
+        setAvatarUrl(resolveProfileImageUrl(me.profileImageUrl, defaultAvatar));
       } catch (err) {
         if (cancelled) return;
         console.error(err);
